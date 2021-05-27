@@ -4,18 +4,23 @@
 
 This library implements kinematics and dynamics algorithms for **floating-base** robots, in _mixed representation_ (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)).
 
-Adam employs [CasADi](https://web.casadi.org/),  which embeds the computed kinematics and dynamics quantities in expression graphs and provides if needed, gradients, Jacobians, and Hessians. This approach enables the design of optimal control strategies in robotics. Using its `CodeGenerator`, CasADi enables also the generation of C-code - usable also in `Matlab` or `C++`.
+Adam employs [CasADi](https://web.casadi.org/), which embeds the computed kinematics and dynamics quantities in expression graphs and provides if needed, gradients, Jacobians, and Hessians. This approach enables the design of optimal control strategies in robotics. Using its `CodeGenerator`, CasADi enables also the generation of C-code - usable also in `Matlab` or `C++`.
 
 Adam is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
 
+This work is still at an early stage and bugs could jump out!
+
 ## :hammer: Dependencies
-* `python3`
+
+- `python3`
 
 Other requisites are:
-* `urdf_parser_py`
-* `casadi`
+
+- `urdf_parser_py`
+- `casadi`
 
 They will be installed in the installation step!
+
 ## :floppy_disk: Installation
 
 ```
@@ -24,7 +29,10 @@ cd ADAM
 pip install .
 ```
 
+preferably in a virtual environment.
+
 ## :rocket: Usage
+
 ```python
 from adam.Computations.KinDynComputations import KinDynComputations
 import numpy as np
@@ -48,6 +56,7 @@ print(M(w_H_b, joints))
 ```
 
 ## Todo
+
 - [x] Center of Mass position
 - [x] Jacobians
 - [x] Forward kinematics
