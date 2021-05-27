@@ -436,6 +436,5 @@ class KinDynComputations():
     def aba(self):
         pass
 
-
     def rnea(self):
         pass

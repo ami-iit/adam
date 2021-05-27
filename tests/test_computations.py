@@ -1,4 +1,3 @@
-# import yarp
 from adam.Computations.KinDynComputations import KinDynComputations
 from adam.Geometry import utils
 import idyntree.swig as idyntree
