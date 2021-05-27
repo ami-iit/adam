@@ -4,10 +4,6 @@ import idyntree.swig as idyntree
 import casadi as cs
 import numpy as np
 
-# Initialization
-# file_name = 'model.urdf'
-# rf = yarp.ResourceFinder()
-# model_path = rf.findFileByName(file_name)
 model_path = './urdf/iCubGenova04/model.urdf'
 
 joints_name_list = [
@@ -59,13 +55,9 @@ g.zero()
 kinDyn.setRobotState(H_b_idyn, s, vb, s_dot, g)
 H_b = utils.H_from_PosRPY(xyz, rpy)
 s_ = joints_val
-com_f = comp.CoM_position_fun()
-CoM_cs = SX2DM(com_f(H_b, s_))
-CoM_iDynTree = kinDyn.getCenterOfMassPosition().toNumPy()
-M, Jcm = comp.crba()
-
 
 def test_mass_matrix():
+    M = comp.mass_matrix_fun()
     mass_mx = idyntree.MatrixDynSize()
     kinDyn.getFreeFloatingMassMatrix(mass_mx)
     mass_mxNumpy = mass_mx.toNumPy()
@@ -75,6 +67,7 @@ def test_mass_matrix():
 
 
 def test_CMM():
+    Jcm = comp.centroidal_momentum_matrix_fun()
     cmm_idyntree = idyntree.MatrixDynSize()
     kinDyn.getCentroidalTotalMomentumJacobian(cmm_idyntree)
     cmm_idyntreeNumpy = cmm_idyntree.toNumPy()
@@ -84,6 +77,9 @@ def test_CMM():
 
 
 def test_CoM_pos():
+    com_f = comp.CoM_position_fun()
+    CoM_cs = SX2DM(com_f(H_b, s_))
+    CoM_iDynTree = kinDyn.getCenterOfMassPosition().toNumPy()
     for i in range(3):
         assert (np.abs(CoM_cs[i] - CoM_iDynTree[i]) < 1e-6).all()
 
