@@ -31,13 +31,7 @@ class Element:
 
 class KinDynComputations():
     """This is a small library that retrieves robot quantities represented in a symbolic fashion using casADi.
-    The structure of the library is inspired by the library [urdf2casadi](https://github.com/mahaarbo/urdf2casadi) - working for fixed-based robot, unbranched trees.
-    This library can compute :
-        - CoM position
-        - Mass Matrix
-        - Centroidal Momentum Matrix
-        - Forward kinematics
-        - Jacobians
+    The structure of the class is inspired by the library [urdf2casadi](https://github.com/mahaarbo/urdf2casadi) - working for fixed-based robot, unbranched trees.
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
     joint_types = ["prismatic", "revolute", "continuous"]
