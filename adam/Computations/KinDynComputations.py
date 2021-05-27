@@ -1,5 +1,3 @@
-# To use the library add the folder to the PYTHONPATH in the bashrc
-
 from dataclasses import dataclass
 from os import error
 
