@@ -9,6 +9,7 @@ Adam employs [CasADi](https://web.casadi.org/), which embeds the computed kinema
 Adam is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
 
 This work is still at an early stage and bugs could jump out!
+PRs are welcome! :rocket:
 
 ## :hammer: Dependencies
 
