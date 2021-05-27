@@ -263,8 +263,8 @@ class KinDynComputations():
         Returns:
             Jcc (casADi function): Centroidal Momentum matrix
         """
-        [_, Jcc] = self.crba()
-        return Jcc
+        [_, Jcm] = self.crba()
+        return Jcm
 
     def forward_kinematics_fun(self, frame):
         """Computes the forward kinematics relative to the specified frame
