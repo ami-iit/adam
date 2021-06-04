@@ -11,7 +11,6 @@ from adam.geometry import utils
 
 @dataclass
 class Tree:
-
     def __init__(self) -> None:
         self.joints = []
         self.links = []
@@ -21,25 +20,31 @@ class Tree:
 
 @dataclass
 class Element:
-
     def __init__(self, name) -> None:
         self.name = name
         self.idx = None
 
 
-class KinDynComputations():
+class KinDynComputations:
     """This is a small library that retrieves robot quantities represented in a symbolic fashion using casADi.
     The structure of the class is inspired by the library [urdf2casadi](https://github.com/mahaarbo/urdf2casadi) - working for fixed-based robot, unbranched trees.
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
+
     joint_types = ["prismatic", "revolute", "continuous"]
     # Set "jit":True if you want to generate the .c function
-    f_opts = {"jit": False, "jit_options": {"flags": "-Ofast"}}
+    # f_opts = {
+    #     "jit": False,
+    #     "jit_options": {"flags": "-Ofast"},
+    # }
 
-    def __init__(self,
-                 urdfstring: str,
-                 joints_name_list: list,
-                 root_link: str = 'root_link') -> None:
+    def __init__(
+        self,
+        urdfstring: str,
+        joints_name_list: list,
+        root_link: str = "root_link",
+        jit: bool = False,
+    ) -> None:
         """
         Args:
             urdfstring (str): path of the urdf
@@ -48,14 +53,21 @@ class KinDynComputations():
         """
         self.robot_desc = URDF.from_xml_file(urdfstring)
         self.joints_list = self.get_joints_info_from_reduced_model(
-            joints_name_list)
+            joints_name_list
+        )
         self.NDoF = len(self.joints_list)
         self.root_link = root_link
-        self.links_with_inertia, frames, self.connecting_joints, self.tree = self.load_model(
-        )
+        self.f_opts = dict(jit=jit, jit_options=dict(flags="-Ofast"))
+        (
+            self.links_with_inertia,
+            frames,
+            self.connecting_joints,
+            self.tree,
+        ) = self.load_model()
 
-    def get_joints_info_from_reduced_model(self,
-                                           joints_name_list: list) -> list:
+    def get_joints_info_from_reduced_model(
+        self, joints_name_list: list
+    ) -> list:
         joints_list = []
         for item in self.robot_desc.joint_map:
             self.robot_desc.joint_map[item].idx = None
@@ -86,51 +98,70 @@ class KinDynComputations():
             else:
                 frames += [item]
 
-        table_links = PrettyTable(['Idx', 'Link name'])
-        table_links.title = 'Links'
+        table_links = PrettyTable(["Idx", "Link name"])
+        table_links.title = "Links"
         for [i, item] in enumerate(links):
             table_links.add_row([i, item])
         print(table_links)
-        table_frames = PrettyTable(['Idx', 'Frame name', 'Parent'])
-        table_frames.title = 'Frames'
+        table_frames = PrettyTable(["Idx", "Frame name", "Parent"])
+        table_frames.title = "Frames"
         for [i, item] in enumerate(frames):
             try:
                 table_frames.add_row(
-                    [i, item, self.robot_desc.parent_map[item][1]])
+                    [
+                        i,
+                        item,
+                        self.robot_desc.parent_map[item][1],
+                    ]
+                )
             except:
                 pass
         print(table_frames)
         """The node 0 contains the 1st link, the fictitious joint that connects the root the the world
         and the world"""
         tree.links.append(self.robot_desc.link_map[self.root_link])
-        joint_0 = Element('fictitious_joint')
+        joint_0 = Element("fictitious_joint")
         tree.joints.append(joint_0)
-        parent_0 = Element('world_link')
+        parent_0 = Element("world_link")
         tree.parents.append(parent_0)
 
         i = 1
 
         table_joints = PrettyTable(
-            ['Idx', 'Joint name', 'Type', 'Parent', 'Child'])
-        table_joints.title = 'Joints'
+            ["Idx", "Joint name", "Type", "Parent", "Child"]
+        )
+        table_joints.title = "Joints"
         # Building the tree. Links (with inertia) are connected with joints
         for item in self.robot_desc.joint_map:
             # I'm assuming that the only possible active joint is revolute (not prismatic)
             parent = self.robot_desc.joint_map[item].parent
             child = self.robot_desc.joint_map[item].child
-            if self.robot_desc.link_map[
-                    child].inertial is not None and self.robot_desc.link_map[
-                        parent].inertial is not None:
+            if (
+                self.robot_desc.link_map[child].inertial is not None
+                and self.robot_desc.link_map[parent].inertial is not None
+            ):
                 joints += [item]
-                table_joints.add_row([
-                    i, item, self.robot_desc.joint_map[item].type, parent, child
-                ])
+                table_joints.add_row(
+                    [
+                        i,
+                        item,
+                        self.robot_desc.joint_map[item].type,
+                        parent,
+                        child,
+                    ]
+                )
                 i += 1
                 tree.joints.append(self.robot_desc.joint_map[item])
-                tree.links.append(self.robot_desc.link_map[
-                    self.robot_desc.joint_map[item].child])
-                tree.parents.append(self.robot_desc.link_map[
-                    self.robot_desc.joint_map[item].parent])
+                tree.links.append(
+                    self.robot_desc.link_map[
+                        self.robot_desc.joint_map[item].child
+                    ]
+                )
+                tree.parents.append(
+                    self.robot_desc.link_map[
+                        self.robot_desc.joint_map[item].parent
+                    ]
+                )
         tree.N = len(tree.links)
         print(table_joints)
         return links, frames, joints, tree
@@ -164,23 +195,34 @@ class KinDynComputations():
                 # The first "real" link. The joint is universal.
                 X_p[i] = utils.spatial_transform(np.eye(3), np.zeros(3))
                 Phi[i] = cs.np.eye(6)
-            elif joint_i.type == 'fixed':
-                X_J = utils.X_fixed_joint(joint_i.origin.xyz,
-                                          joint_i.origin.rpy)
+            elif joint_i.type == "fixed":
+                X_J = utils.X_fixed_joint(
+                    joint_i.origin.xyz, joint_i.origin.rpy
+                )
                 X_p[i] = X_J
                 Phi[i] = cs.vertcat(0, 0, 0, 0, 0, 0)
-            elif joint_i.type == 'revolute':
+            elif joint_i.type == "revolute":
                 if joint_i.idx is not None:
                     q_ = q[joint_i.idx]
                 else:
                     q_ = 0.0
-                X_J = utils.X_revolute_joint(joint_i.origin.xyz,
-                                             joint_i.origin.rpy, joint_i.axis,
-                                             q_)
+                X_J = utils.X_revolute_joint(
+                    joint_i.origin.xyz,
+                    joint_i.origin.rpy,
+                    joint_i.axis,
+                    q_,
+                )
                 X_p[i] = X_J
-                Phi[i] = cs.vertcat([
-                    0, 0, 0, joint_i.axis[0], joint_i.axis[1], joint_i.axis[2]
-                ])
+                Phi[i] = cs.vertcat(
+                    [
+                        0,
+                        0,
+                        0,
+                        joint_i.axis[0],
+                        joint_i.axis[1],
+                        joint_i.axis[2],
+                    ]
+                )
 
         for i in range(self.tree.N - 1, -1, -1):
             link_i = self.tree.links[i]
@@ -202,18 +244,23 @@ class KinDynComputations():
                 F = X_p[j].T @ F
                 j = self.tree.links.index(self.tree.parents[j])
                 joint_j = self.tree.joints[j]
-                if joint_i.name == self.tree.joints[
-                        0].name and joint_j.idx is not None:
+                if (
+                    joint_i.name == self.tree.joints[0].name
+                    and joint_j.idx is not None
+                ):
                     M[:6, joint_j.idx + 6] = F.T @ Phi[j]
                     M[joint_j.idx + 6, :6] = M[:6, joint_j.idx + 6].T
-                elif joint_j.name == self.tree.joints[
-                        0].name and joint_i.idx is not None:
+                elif (
+                    joint_j.name == self.tree.joints[0].name
+                    and joint_i.idx is not None
+                ):
                     M[joint_i.idx + 6, :6] = F.T @ Phi[j]
                     M[:6, joint_i.idx + 6] = M[joint_i.idx + 6, :6].T
                 elif joint_i.idx is not None and joint_j.idx is not None:
                     M[joint_i.idx + 6, joint_j.idx + 6] = F.T @ Phi[j]
-                    M[joint_j.idx + 6, joint_i.idx + 6] = M[joint_i.idx + 6,
-                                                            joint_j.idx + 6].T
+                    M[joint_j.idx + 6, joint_i.idx + 6] = M[
+                        joint_i.idx + 6, joint_j.idx + 6
+                    ].T
 
         X_G = [None] * len(self.tree.links)
         O_X_G = cs.SX.eye(6)
@@ -292,9 +339,12 @@ class KinDynComputations():
                         q_ = q[joint.idx]
                     else:
                         q_ = 0.0
-                    T_joint = utils.H_revolute_joint(joint.origin.xyz,
-                                                     joint.origin.rpy,
-                                                     joint.axis, q_)
+                    T_joint = utils.H_revolute_joint(
+                        joint.origin.xyz,
+                        joint.origin.rpy,
+                        joint.axis,
+                        q_,
+                    )
                     T_fk = T_fk @ T_joint
         T_fk = cs.Function("T_fk", [T_b, q], [T_fk], self.f_opts)
         return T_fk
@@ -330,9 +380,12 @@ class KinDynComputations():
                         q_ = q[joint.idx]
                     else:
                         q_ = 0.0
-                    T_joint = utils.H_revolute_joint(joint.origin.xyz,
-                                                     joint.origin.rpy,
-                                                     joint.axis, q_)
+                    T_joint = utils.H_revolute_joint(
+                        joint.origin.xyz,
+                        joint.origin.rpy,
+                        joint.axis,
+                        q_,
+                    )
                     T_fk = T_fk @ T_joint
                     p_prev = P_ee - T_fk[:3, 3]
                     z_prev = T_fk[:3, :3] @ joint.axis
@@ -340,7 +393,8 @@ class KinDynComputations():
                     #     cs.jacobian(P_ee, q[joint.idx]), z_prev) # using casadi jacobian
                     if joint.idx is not None:
                         J[:, joint.idx] = cs.vertcat(
-                            cs.skew(z_prev) @ p_prev, z_prev)
+                            cs.skew(z_prev) @ p_prev, z_prev
+                        )
 
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = cs.SX.zeros(6, self.NDoF + 6)
@@ -382,9 +436,12 @@ class KinDynComputations():
                         q_ = q[joint.idx]
                     else:
                         q_ = 0.0
-                    T_joint = utils.H_revolute_joint(joint.origin.xyz,
-                                                     joint.origin.rpy,
-                                                     joint.axis, q_)
+                    T_joint = utils.H_revolute_joint(
+                        joint.origin.xyz,
+                        joint.origin.rpy,
+                        joint.axis,
+                        q_,
+                    )
                     T_fk = T_fk @ T_joint
                     p_prev = P_ee - T_fk[:3, 3]
                     z_prev = T_fk[:3, :3] @ joint.axis
@@ -392,7 +449,8 @@ class KinDynComputations():
                     #     cs.jacobian(P_ee, q[joint.idx]), z_prev) # using casadi jacobian
                     if joint.idx is not None:
                         J[:, joint.idx] = cs.vertcat(
-                            cs.skew(z_prev) @ p_prev, z_prev)
+                            cs.skew(z_prev) @ p_prev, z_prev
+                        )
         return cs.Function("J", [q], [J], self.f_opts)
 
     def CoM_position_fun(self):
@@ -409,8 +467,10 @@ class KinDynComputations():
             if link.inertial is not None:
                 fk = self.forward_kinematics_fun(item)
                 T_fk = fk(T_b, q)
-                T_link = utils.H_from_PosRPY(link.inertial.origin.xyz,
-                                             link.inertial.origin.rpy)
+                T_link = utils.H_from_PosRPY(
+                    link.inertial.origin.xyz,
+                    link.inertial.origin.rpy,
+                )
                 # Adding the link transform
                 T_fk = T_fk @ T_link
                 com_pos += T_fk[:3, 3] * link.inertial.mass
