@@ -1,6 +1,6 @@
 name: Adam
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   build:
@@ -21,6 +21,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest
           pip install idyntree
+          pip install gym-ignition
           pip install .
       - name: Test with pytest
         run: |
