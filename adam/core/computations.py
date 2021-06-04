@@ -1,5 +1,5 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from os import error
 
 import casadi as cs
@@ -12,18 +12,25 @@ from adam.geometry import utils
 
 @dataclass
 class Tree:
-    def __init__(self) -> None:
-        self.joints = []
-        self.links = []
-        self.parents = []
-        self.N: int = None
+    joints = []
+    links = []
+    parents = []
+    N: int = None
 
 
 @dataclass
 class Element:
-    def __init__(self, name) -> None:
-        self.name = name
-        self.idx = None
+    name: str
+    name_: str = field(init=False, repr=False)
+    idx = None
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, name: str):
+        self._name = name
 
 
 class KinDynComputations:
