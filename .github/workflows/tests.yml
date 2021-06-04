@@ -1,7 +1,6 @@
 name: Adam
 
-on: [push]
-on: [pull-request]
+on: [push, pull_request]
 
 jobs:
   build:
