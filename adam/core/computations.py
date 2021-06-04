@@ -51,7 +51,7 @@ class KinDynComputations:
         urdfstring: str,
         joints_name_list: list,
         root_link: str = "root_link",
-        jit: bool = False,
+        f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast")),
     ) -> None:
         """
         Args:
@@ -63,7 +63,7 @@ class KinDynComputations:
         self.joints_list = self.get_joints_info_from_reduced_model(joints_name_list)
         self.NDoF = len(self.joints_list)
         self.root_link = root_link
-        self.f_opts = dict(jit=jit, jit_options=dict(flags="-Ofast"))
+        self.f_opts = f_opts
         (
             self.links_with_inertia,
             frames,
