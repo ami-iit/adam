@@ -52,9 +52,7 @@ class KinDynComputations:
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
         self.robot_desc = URDF.from_xml_file(urdfstring)
-        self.joints_list = self.get_joints_info_from_reduced_model(
-            joints_name_list
-        )
+        self.joints_list = self.get_joints_info_from_reduced_model(joints_name_list)
         self.NDoF = len(self.joints_list)
         self.root_link = root_link
         self.f_opts = dict(jit=jit, jit_options=dict(flags="-Ofast"))
@@ -65,9 +63,7 @@ class KinDynComputations:
             self.tree,
         ) = self.load_model()
 
-    def get_joints_info_from_reduced_model(
-        self, joints_name_list: list
-    ) -> list:
+    def get_joints_info_from_reduced_model(self, joints_name_list: list) -> list:
         joints_list = []
         for item in self.robot_desc.joint_map:
             self.robot_desc.joint_map[item].idx = None
@@ -127,9 +123,7 @@ class KinDynComputations:
 
         i = 1
 
-        table_joints = PrettyTable(
-            ["Idx", "Joint name", "Type", "Parent", "Child"]
-        )
+        table_joints = PrettyTable(["Idx", "Joint name", "Type", "Parent", "Child"])
         table_joints.title = "Joints"
         # Building the tree. Links (with inertia) are connected with joints
         for item in self.robot_desc.joint_map:
@@ -153,14 +147,10 @@ class KinDynComputations:
                 i += 1
                 tree.joints.append(self.robot_desc.joint_map[item])
                 tree.links.append(
-                    self.robot_desc.link_map[
-                        self.robot_desc.joint_map[item].child
-                    ]
+                    self.robot_desc.link_map[self.robot_desc.joint_map[item].child]
                 )
                 tree.parents.append(
-                    self.robot_desc.link_map[
-                        self.robot_desc.joint_map[item].parent
-                    ]
+                    self.robot_desc.link_map[self.robot_desc.joint_map[item].parent]
                 )
         tree.N = len(tree.links)
         print(table_joints)
@@ -196,9 +186,7 @@ class KinDynComputations:
                 X_p[i] = utils.spatial_transform(np.eye(3), np.zeros(3))
                 Phi[i] = cs.np.eye(6)
             elif joint_i.type == "fixed":
-                X_J = utils.X_fixed_joint(
-                    joint_i.origin.xyz, joint_i.origin.rpy
-                )
+                X_J = utils.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
                 Phi[i] = cs.vertcat(0, 0, 0, 0, 0, 0)
             elif joint_i.type == "revolute":
@@ -244,15 +232,11 @@ class KinDynComputations:
                 F = X_p[j].T @ F
                 j = self.tree.links.index(self.tree.parents[j])
                 joint_j = self.tree.joints[j]
-                if (
-                    joint_i.name == self.tree.joints[0].name
-                    and joint_j.idx is not None
-                ):
+                if joint_i.name == self.tree.joints[0].name and joint_j.idx is not None:
                     M[:6, joint_j.idx + 6] = F.T @ Phi[j]
                     M[joint_j.idx + 6, :6] = M[:6, joint_j.idx + 6].T
                 elif (
-                    joint_j.name == self.tree.joints[0].name
-                    and joint_i.idx is not None
+                    joint_j.name == self.tree.joints[0].name and joint_i.idx is not None
                 ):
                     M[joint_i.idx + 6, :6] = F.T @ Phi[j]
                     M[:6, joint_i.idx + 6] = M[joint_i.idx + 6, :6].T
@@ -392,9 +376,7 @@ class KinDynComputations:
                     # J[:, joint.idx] = cs.vertcat(
                     #     cs.jacobian(P_ee, q[joint.idx]), z_prev) # using casadi jacobian
                     if joint.idx is not None:
-                        J[:, joint.idx] = cs.vertcat(
-                            cs.skew(z_prev) @ p_prev, z_prev
-                        )
+                        J[:, joint.idx] = cs.vertcat(cs.skew(z_prev) @ p_prev, z_prev)
 
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = cs.SX.zeros(6, self.NDoF + 6)
@@ -448,9 +430,7 @@ class KinDynComputations:
                     # J[:, joint.idx] = cs.vertcat(
                     #     cs.jacobian(P_ee, q[joint.idx]), z_prev) # using casadi jacobian
                     if joint.idx is not None:
-                        J[:, joint.idx] = cs.vertcat(
-                            cs.skew(z_prev) @ p_prev, z_prev
-                        )
+                        J[:, joint.idx] = cs.vertcat(cs.skew(z_prev) @ p_prev, z_prev)
         return cs.Function("J", [q], [J], self.f_opts)
 
     def CoM_position_fun(self):
@@ -492,7 +472,7 @@ class KinDynComputations:
         return mass
 
     def aba(self):
-        pass
+        raise NotImplementedError
 
     def rnea(self):
-        pass
+        raise NotImplementedError
