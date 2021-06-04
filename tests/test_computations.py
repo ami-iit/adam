@@ -1,5 +1,5 @@
-from adam.Computations.KinDynComputations import KinDynComputations
-from adam.Geometry import utils
+from adam.core.computations import KinDynComputations
+from adam.geometry import utils
 import idyntree.swig as idyntree
 import casadi as cs
 import numpy as np

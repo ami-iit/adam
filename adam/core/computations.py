@@ -6,7 +6,7 @@ import numpy as np
 from prettytable import PrettyTable
 from urdf_parser_py.urdf import URDF
 
-from adam.Geometry import utils
+from adam.geometry import utils
 
 
 @dataclass
