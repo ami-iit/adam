@@ -4,7 +4,7 @@
 
 This library implements kinematics and dynamics algorithms for **floating-base** robots, in _mixed representation_ (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)).
 
-Adam employs [CasADi](https://web.casadi.org/), which embeds the computed kinematics and dynamics quantities in expression graphs and provides if needed, gradients, Jacobians, and Hessians. This approach enables the design of optimal control strategies in robotics. Using its `CodeGenerator`, CasADi enables also the generation of C-code - usable also in `Matlab` or `C++`.
+ADAM employs [CasADi](https://web.casadi.org/), which embeds the computed kinematics and dynamics quantities in expression graphs and provides if needed, gradients, Jacobians, and Hessians. This approach enables the design of optimal control strategies in robotics. Using its `CodeGenerator`, CasADi enables also the generation of C-code - usable also in `Matlab` or `C++`.
 
 Adam is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
 
@@ -13,7 +13,7 @@ PRs are welcome! :rocket:
 
 ## :hammer: Dependencies
 
-- `python3`
+- `python3` (if not installed, it can be installed with `sudo apt install python3.8` )
 
 Other requisites are:
 
@@ -24,21 +24,28 @@ They will be installed in the installation step!
 
 ## :floppy_disk: Installation
 
-```
+```bash
 git clone https://github.com/dic-iit/ADAM.git
 cd ADAM
 pip install .
 ```
 
-preferably in a virtual environment.
+preferably in a [virtual environment](https://docs.python.org/3/library/venv.html#venv-def): for example:
+
+```bash
+pip install virtualenv
+python3 -m venv your_virtual_env
+```
 
 ## :rocket: Usage
 
 ```python
-from adam.Computations.KinDynComputations import KinDynComputations
+from adam.core.computations import KinDynComputations
+import gym_ignition_models
 import numpy as np
 
-urdf_path = '../urdf/iCubGenova04/model.urdf'
+# if you want to use gym-ignition https://github.com/robotology/gym-ignition to retrieve the urdf
+model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
 # The joint list
 joints_name_list = [
     'torso_pitch', 'torso_roll', 'torso_yaw', 'l_shoulder_pitch',
