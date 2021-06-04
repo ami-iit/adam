@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from os import error
 
@@ -98,7 +99,7 @@ class KinDynComputations:
         table_links.title = "Links"
         for [i, item] in enumerate(links):
             table_links.add_row([i, item])
-        print(table_links)
+        logging.debug(table_links)
         table_frames = PrettyTable(["Idx", "Frame name", "Parent"])
         table_frames.title = "Frames"
         for [i, item] in enumerate(frames):
@@ -112,7 +113,7 @@ class KinDynComputations:
                 )
             except:
                 pass
-        print(table_frames)
+        logging.debug(table_frames)
         """The node 0 contains the 1st link, the fictitious joint that connects the root the the world
         and the world"""
         tree.links.append(self.robot_desc.link_map[self.root_link])
@@ -153,7 +154,7 @@ class KinDynComputations:
                     self.robot_desc.link_map[self.robot_desc.joint_map[item].parent]
                 )
         tree.N = len(tree.links)
-        print(table_joints)
+        logging.debug(table_joints)
         return links, frames, joints, tree
 
     def crba(self):

@@ -1,3 +1,5 @@
+import logging
+
 import casadi as cs
 import gym_ignition_models
 import idyntree.swig as idyntree
@@ -49,6 +51,9 @@ def H_from_PosRPY_idyn(xyz, rpy):
     T.setPosition(p)
     return T
 
+
+logging.basicConfig(level=logging.DEBUG)
+logging.debug("Showing the robot tree.")
 
 root_link = "root_link"
 comp = KinDynComputations(model_path, joints_name_list, root_link)
