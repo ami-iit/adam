@@ -12,9 +12,9 @@ from adam.geometry import utils
 
 @dataclass
 class Tree:
-    joints = []
-    links = []
-    parents = []
+    joints: list = field(default_factory=list)
+    links: list = field(default_factory=list)
+    parents: list = field(default_factory=list)
     N: int = None
 
 
