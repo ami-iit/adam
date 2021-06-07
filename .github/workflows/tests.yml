@@ -20,10 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest
-          pip install idyntree
-          pip install gym-ignition
-          pip install .
+          pip install .[test]
       - name: Test with pytest
         run: |
           pytest
