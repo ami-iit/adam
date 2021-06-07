@@ -21,16 +21,7 @@ class Tree:
 @dataclass
 class Element:
     name: str
-    name_: str = field(init=False, repr=False)
-    idx = None
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @name.setter
-    def name(self, name: str):
-        self._name = name
+    idx: int = None
 
 
 class KinDynComputations:
