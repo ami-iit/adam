@@ -31,11 +31,6 @@ class KinDynComputations:
     """
 
     joint_types = ["prismatic", "revolute", "continuous"]
-    # Set "jit":True if you want to generate the .c function
-    # f_opts = {
-    #     "jit": False,
-    #     "jit_options": {"flags": "-Ofast"},
-    # }
 
     def __init__(
         self,
