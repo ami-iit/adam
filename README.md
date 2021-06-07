@@ -13,7 +13,7 @@ PRs are welcome! :rocket:
 
 ## :hammer: Dependencies
 
-- `python3` (if not installed, it can be installed with `sudo apt install python3.8` )
+- [`python3`](https://wiki.python.org/moin/BeginnersGuide)
 
 Other requisites are:
 
@@ -23,6 +23,14 @@ Other requisites are:
 They will be installed in the installation step!
 
 ## :floppy_disk: Installation
+
+Install `python3`, if not installed (in **Ubuntu 20.04**):
+
+```bash
+sudo apt install python3.8
+```
+
+Clone the repo and install the library:
 
 ```bash
 git clone https://github.com/dic-iit/ADAM.git
