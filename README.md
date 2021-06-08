@@ -38,11 +38,12 @@ cd ADAM
 pip install .
 ```
 
-preferably in a [virtual environment](https://docs.python.org/3/library/venv.html#venv-def): for example:
+preferably in a [virtual environment](https://docs.python.org/3/library/venv.html#venv-def). For example:
 
 ```bash
 pip install virtualenv
 python3 -m venv your_virtual_env
+source your_virtual_env/bin/activate
 ```
 
 ## :rocket: Usage
@@ -83,4 +84,4 @@ print(M(w_H_b, joints))
 
 ---
 
-The structure of the library is inspired by the module [urdf2casadi](https://github.com/mahaarbo/urdf2casadi/blob/master/README.md), which generates kinematic and dynamics quantities using CasADi. Please check their interesting work!
+The structure of the library is inspired by the module [urdf2casadi](https://github.com/mahaarbo/urdf2casadi/blob/master/README.md), which generates kinematic and dynamics quantities using CasADi, for Fixed-Base robots. Please check their interesting work!

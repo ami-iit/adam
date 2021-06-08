@@ -25,8 +25,7 @@ class Element:
 
 
 class KinDynComputations:
-    """This is a small library that retrieves robot quantities represented in a symbolic fashion using casADi.
-    The structure of the class is inspired by the library [urdf2casadi](https://github.com/mahaarbo/urdf2casadi) - working for fixed-based robot, unbranched trees.
+    """This is a small class that retrieves robot quantities represented in a symbolic fashion using CasADi
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
 
