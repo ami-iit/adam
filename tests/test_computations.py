@@ -66,22 +66,33 @@ kinDyn.setFloatingBase(root_link)
 kinDyn.setFrameVelocityRepresentation(idyntree.MIXED_REPRESENTATION)
 n_dofs = len(joints_name_list)
 
+# base pose quantities
 xyz = (np.random.rand(3) - 0.5) * 5
 rpy = (np.random.rand(3) - 0.5) * 5
+base_vel = (np.random.rand(6) - 0.5) * 5
+# joints quantitites
+joints_val = (np.random.rand(n_dofs) - 0.5) * 5
+joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
 
+# set iDynTree kinDyn
 H_b_idyn = H_from_PosRPY_idyn(xyz, rpy)
 vb = idyntree.Twist()
-vb.zero()
+[vb.setVal(i, base_vel[i]) for i in range(6)]
+
 s = idyntree.VectorDynSize(n_dofs)
-joints_val = (np.random.rand(n_dofs) - 0.5) * 5
 [s.setVal(i, joints_val[i]) for i in range(n_dofs)]
 s_dot = idyntree.VectorDynSize(n_dofs)
-[s_dot.setVal(i, 0) for i in range(n_dofs)]
+[s_dot.setVal(i, joints_dot_val[i]) for i in range(n_dofs)]
+
 g = idyntree.Vector3()
 g.zero()
+g.setVal(2, -9.81)
 kinDyn.setRobotState(H_b_idyn, s, vb, s_dot, g)
+# set ADAM
 H_b = utils.H_from_PosRPY(xyz, rpy)
+vb_ = base_vel
 s_ = joints_val
+s_dot_ = joints_dot_val
 
 
 def test_mass_matrix():
@@ -159,3 +170,16 @@ def test_fk_non_actuated():
     H_test = SX2DM(T(H_b, s_))
     assert R_idy2np - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert p_idy2np - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
+
+def test_bias_force():
+    h_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
+    assert kinDyn.generalizedBiasForces(h_iDyn)
+    print((h_iDyn.jointTorques().toNumPy().T))
+    h_iDyn_np = cs.vertcat(
+        h_iDyn.baseWrench().toNumPy().T, h_iDyn.jointTorques().toNumPy().T
+    )
+    h = comp.get_bias_force_fun()
+    h_test = SX2DM(h(H_b, s_, vb_, s_dot_))
+    print(h_iDyn_np)
+    print(h_test)
+    assert h_iDyn_np - h_test == pytest.approx(0.0, abs=1e-4)
