@@ -90,7 +90,7 @@ s_dot = idyntree.VectorDynSize(n_dofs)
 
 g = idyntree.Vector3()
 g.zero()
-g.setVal(2, -9.81)
+g.setVal(2, -9.80665)
 kinDyn.setRobotState(H_b_idyn, s, vb, s_dot, g)
 # set ADAM
 H_b = utils.H_from_PosRPY(xyz, rpy)
