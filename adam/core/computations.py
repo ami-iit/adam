@@ -48,6 +48,7 @@ class KinDynComputations:
         self.joints_list = self.get_joints_info_from_reduced_model(joints_name_list)
         self.NDoF = len(self.joints_list)
         self.root_link = root_link
+        self.g = np.array([0, 0, -9.81, 0, 0, 0])
         self.f_opts = f_opts
         (
             self.links_with_inertia,
@@ -55,6 +56,9 @@ class KinDynComputations:
             self.connecting_joints,
             self.tree,
         ) = self.load_model()
+
+    def set_gravity(g):
+        self.g = g
 
     def get_joints_info_from_reduced_model(self, joints_name_list: list) -> list:
         joints_list = []
@@ -464,17 +468,19 @@ class KinDynComputations:
                 mass += link.inertial.mass
         return mass
 
-    def get_bias_force_fun(self):
-        """Returns the bias force of the floating-base dynamics equation,
-        using a reduced RNEA (no acceleration)
+    def rnea(self):
+        """Implementation of reduced Recursive Newton-Euler algorithm
+        (no acceleration and external forces). For now used to compute the bias force term
 
         Returns:
-            tau (casADi function): the bias force
+            tau (casADi function): generalized force variables
         """
+        # TODO: add accelerations
         T_b = cs.SX.sym("T_b", 4, 4)
         q = cs.SX.sym("q", self.NDoF)
         v_b = cs.SX.sym("v_b", 6)
         q_dot = cs.SX.sym("q_dot", self.NDoF)
+        g = cs.SX.sym("g", 6)
         tau = cs.SX.sym("tau", self.NDoF + 6)
         Ic = [None] * len(self.tree.links)
         X_p = [None] * len(self.tree.links)
@@ -482,7 +488,6 @@ class KinDynComputations:
         v = [None] * len(self.tree.links)
         a = [None] * len(self.tree.links)
         f = [None] * len(self.tree.links)
-        g = np.array([0, 0, -9.81, 0, 0, 0])
 
         X_to_mixed = cs.SX.eye(6)
         X_to_mixed[:3, :3] = T_b[:3, :3].T
@@ -491,9 +496,7 @@ class KinDynComputations:
         acc_to_mixed = cs.SX.zeros(6)
         acc_to_mixed[:3] = -T_b[:3, :3].T @ cs.skew(v_b[3:]) @ v_b[:3]
         acc_to_mixed[3:] = -T_b[:3, :3].T @ cs.skew(v_b[3:]) @ v_b[3:]
-        # acc_to_mixed[:3] = cs.skew(v_b[3:]) @ v_b[:3]
-        # acc_to_mixed[3:] = cs.skew(v_b[3:]) @ v_b[3:]
-
+        # set initial acceleration (rotated gravity + apparent acceleration)
         a[0] = -X_to_mixed @ g + acc_to_mixed
 
         for i in range(self.tree.N):
@@ -558,12 +561,53 @@ class KinDynComputations:
                 f[pi] = f[pi] + X_p[i].T @ f[i]
 
         tau[:6] = X_to_mixed.T @ tau[:6]
-
-        tau = cs.Function("tau", [T_b, q, v_b, q_dot], [tau], self.f_opts)
+        tau = cs.Function("tau", [T_b, q, v_b, q_dot, g], [tau], self.f_opts)
         return tau
 
-    def aba(self):
-        raise NotImplementedError
+    def bias_force_fun(self):
+        """Returns the bias force of the floating-base dynamics equation,
+        using a reduced RNEA (no acceleration and external forces)
 
-    def rnea(self):
+        Returns:
+            h (casADi function): the bias force
+        """
+        T_b = cs.SX.sym("T_b", 4, 4)
+        q = cs.SX.sym("q", self.NDoF)
+        v_b = cs.SX.sym("v_b", 6)
+        q_dot = cs.SX.sym("q_dot", self.NDoF)
+        tau = self.rnea()
+        h = tau(T_b, q, v_b, q_dot, self.g)
+        return cs.Function("h", [T_b, q, v_b, q_dot], [h], self.f_opts)
+
+    def coriolis_term_fun(self):
+        """Returns the coriolis term of the floating-base dynamics equation,
+        using a reduced RNEA (no acceleration and external forces)
+
+        Returns:
+            C (casADi function): the Coriolis term
+        """
+        T_b = cs.SX.sym("T_b", 4, 4)
+        q = cs.SX.sym("q", self.NDoF)
+        v_b = cs.SX.sym("v_b", 6)
+        q_dot = cs.SX.sym("q_dot", self.NDoF)
+        tau = self.rnea()
+        # set in the bias force computation the gravity term to zero
+        C = tau(T_b, q, v_b, q_dot, np.zeros(6))
+        return cs.Function("C", [T_b, q, v_b, q_dot], [C], self.f_opts)
+
+    def gravity_term_fun(self):
+        """Returns the gravity term of the floating-base dynamics equation,
+        using a reduced RNEA (no acceleration and external forces)
+
+        Returns:
+            G (casADi function): the gravity term
+        """
+        T_b = cs.SX.sym("T_b", 4, 4)
+        q = cs.SX.sym("q", self.NDoF)
+        tau = self.rnea()
+        # set in the bias force computation the velocity to zero
+        G = tau(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
+        return cs.Function("G", [T_b, q], [G], self.f_opts)
+
+    def aba(self):
         raise NotImplementedError
