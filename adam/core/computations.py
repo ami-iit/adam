@@ -464,7 +464,7 @@ class KinDynComputations:
                 mass += link.inertial.mass
         return mass
 
-    def get_coriolis_fun(self):
+    def get_bias_force_fun(self):
         """Returns the bias force of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration)
 

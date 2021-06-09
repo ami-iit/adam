@@ -4,8 +4,11 @@ import numpy as np
 
 def R_from_axisAngle(axis, q):
     [cq, sq] = [cs.np.cos(q), cs.np.sin(q)]
-    return cq * (cs.np.eye(3) - cs.np.outer(
-        axis, axis)) + sq * cs.skew(axis) + cs.np.outer(axis, axis)
+    return (
+        cq * (cs.np.eye(3) - cs.np.outer(axis, axis))
+        + sq * cs.skew(axis)
+        + cs.np.outer(axis, axis)
+    )
 
 
 def Rx(q):
@@ -84,11 +87,24 @@ def spatial_inertia(I, mass, c, rpy):
     IO = np.zeros([6, 6])
     Sc = cs.skew(c)
     R = R_from_RPY(rpy)
-    inertia_matrix = np.array([[I.ixx, I.ixy, I.ixz], [I.ixy, I.iyy, I.iyz],
-                               [I.ixz, I.iyz, I.izz]])
+    inertia_matrix = np.array(
+        [[I.ixx, I.ixy, I.ixz], [I.ixy, I.iyy, I.iyz], [I.ixz, I.iyz, I.izz]]
+    )
 
     IO[3:, 3:] = R @ inertia_matrix @ R.T + mass * Sc @ Sc.T
     IO[3:, :3] = mass * Sc
     IO[:3, 3:] = mass * Sc.T
     IO[:3, :3] = np.eye(3) * mass
     return IO
+
+
+def spatial_skew(v):
+    X = cs.SX.zeros(6, 6)
+    X[:3, :3] = cs.skew(v[3:])
+    X[:3, 3:] = cs.skew(v[:3])
+    X[3:, 3:] = cs.skew(v[3:])
+    return X
+
+
+def spatial_skew_star(v):
+    return -spatial_skew(v).T
