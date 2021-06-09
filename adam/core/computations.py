@@ -48,7 +48,7 @@ class KinDynComputations:
         self.joints_list = self.get_joints_info_from_reduced_model(joints_name_list)
         self.NDoF = len(self.joints_list)
         self.root_link = root_link
-        self.g = np.array([0, 0, -9.81, 0, 0, 0])
+        self._g = np.array([0, 0, -9.81, 0, 0, 0])
         self.f_opts = f_opts
         (
             self.links_with_inertia,
@@ -57,8 +57,13 @@ class KinDynComputations:
             self.tree,
         ) = self.load_model()
 
-    def set_gravity(g):
-        self.g = g
+    @property
+    def g(self):
+        return self._g
+
+    @g.setter
+    def g(self, val):
+        self._g = val
 
     def get_joints_info_from_reduced_model(self, joints_name_list: list) -> list:
         joints_list = []
