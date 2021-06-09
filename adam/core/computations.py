@@ -517,8 +517,6 @@ class KinDynComputations:
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = utils.spatial_transform(np.eye(3), np.zeros(3))
-                # X = utils.spatial_transform(T_b[:3, :3], np.zeros(3))
-                # Ic[i] = X.T @ Ic[i] @ X
                 Phi[i] = cs.np.eye(6)
                 v_J = Phi[i] @ X_to_mixed @ v_b
             elif joint_i.type == "fixed":
