@@ -79,7 +79,7 @@ print(M(w_H_b, joints))
 - [x] Forward kinematics
 - [x] Mass Matrix via CRBA
 - [x] Centroidal Momentum Matrix via CRBA
-- [ ] Recursive Newton-Euler algorithm
+- [x] Recursive Newton-Euler algorithm (still no acceleration in the algorithm, since it is used only for the computation of the bias force)
 - [ ] Articulated Body algorithm
 
 ---
