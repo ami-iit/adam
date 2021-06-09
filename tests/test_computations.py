@@ -171,15 +171,41 @@ def test_fk_non_actuated():
     assert R_idy2np - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert p_idy2np - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
 
+
 def test_bias_force():
     h_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
     assert kinDyn.generalizedBiasForces(h_iDyn)
-    print((h_iDyn.jointTorques().toNumPy().T))
     h_iDyn_np = cs.vertcat(
-        h_iDyn.baseWrench().toNumPy().T, h_iDyn.jointTorques().toNumPy().T
+        h_iDyn.baseWrench().toNumPy(), h_iDyn.jointTorques().toNumPy()
     )
-    h = comp.get_bias_force_fun()
+    h = comp.bias_force_fun()
     h_test = SX2DM(h(H_b, s_, vb_, s_dot_))
-    print(h_iDyn_np)
-    print(h_test)
     assert h_iDyn_np - h_test == pytest.approx(0.0, abs=1e-4)
+
+
+def test_coriolis_term():
+    g0 = idyntree.Vector3()
+    g0.zero()
+    kinDyn.setRobotState(H_b_idyn, s, vb, s_dot, g0)
+    C_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
+    assert kinDyn.generalizedBiasForces(C_iDyn)
+    C_iDyn_np = cs.vertcat(
+        C_iDyn.baseWrench().toNumPy(), C_iDyn.jointTorques().toNumPy()
+    )
+    C = comp.coriolis_term_fun()
+    C_test = SX2DM(C(H_b, s_, vb_, s_dot_))
+    assert C_iDyn_np - C_test == pytest.approx(0.0, abs=1e-4)
+
+
+def test_gravity_term():
+    vb0 = idyntree.Twist()
+    s_dot0 = idyntree.VectorDynSize(n_dofs)
+    kinDyn.setRobotState(H_b_idyn, s, vb0, s_dot0, g)
+    G_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
+    assert kinDyn.generalizedBiasForces(G_iDyn)
+    G_iDyn_np = np.concatenate(
+        (G_iDyn.baseWrench().toNumPy(), G_iDyn.jointTorques().toNumPy())
+    )
+    G = comp.gravity_term_fun()
+    G_test = SX2DM(G(H_b, s_))
+    assert G_iDyn_np - G_test == pytest.approx(0.0, abs=1e-4)
