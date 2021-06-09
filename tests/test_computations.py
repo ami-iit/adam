@@ -175,8 +175,8 @@ def test_fk_non_actuated():
 def test_bias_force():
     h_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
     assert kinDyn.generalizedBiasForces(h_iDyn)
-    h_iDyn_np = cs.vertcat(
-        h_iDyn.baseWrench().toNumPy(), h_iDyn.jointTorques().toNumPy()
+    h_iDyn_np = np.concatenate(
+        (h_iDyn.baseWrench().toNumPy(), h_iDyn.jointTorques().toNumPy())
     )
     h = comp.bias_force_fun()
     h_test = SX2DM(h(H_b, s_, vb_, s_dot_))
@@ -189,8 +189,8 @@ def test_coriolis_term():
     kinDyn.setRobotState(H_b_idyn, s, vb, s_dot, g0)
     C_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
     assert kinDyn.generalizedBiasForces(C_iDyn)
-    C_iDyn_np = cs.vertcat(
-        C_iDyn.baseWrench().toNumPy(), C_iDyn.jointTorques().toNumPy()
+    C_iDyn_np = np.concatenate(
+        (C_iDyn.baseWrench().toNumPy(), C_iDyn.jointTorques().toNumPy())
     )
     C = comp.coriolis_term_fun()
     C_test = SX2DM(C(H_b, s_, vb_, s_dot_))
