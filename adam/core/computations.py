@@ -32,8 +32,8 @@ class KinDynComputations(RBDAlgorithms):
             joints_name_list=joints_name_list,
             root_link=root_link,
             gravity=gravity,
-            f_opts=f_opts,
         )
+        self.f_opts = f_opts
 
     def mass_matrix_fun(self):
         """Returns the Mass Matrix functions computed the CRBA
@@ -150,3 +150,18 @@ class KinDynComputations(RBDAlgorithms):
         # set in the bias force computation the velocity to zero
         G = self.rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
         return cs.Function("G", [T_b, q], [G], self.f_opts)
+
+    def zeros(self, *x):
+        return cs.SX.zeros(*x)
+
+    def vertcat(self, *x):
+        return cs.vertcat(*x)
+
+    def eye(self, x):
+        return cs.SX.eye(x)
+
+    def skew(self, x):
+        return cs.skew(x)
+
+    def array(self, *x):
+        return cs.SX.sym("vec", *x)

@@ -5,7 +5,6 @@
 import abc
 from typing import TypeVar
 
-import casadi as cs
 import numpy as np
 
 from adam.core.urdf_tree import URDFTree
@@ -25,7 +24,6 @@ class RBDAlgorithms(abc.ABC):
         joints_name_list: list,
         root_link: str = "root_link",
         gravity: np.array = np.array([0, 0, -9.80665, 0, 0, 0]),
-        f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast")),
     ) -> None:
         """
         Args:
@@ -42,7 +40,6 @@ class RBDAlgorithms(abc.ABC):
         self.NDoF = len(self.joints_list)
         self.root_link = root_link
         self.g = gravity
-        self.f_opts = f_opts
         (
             self.links_with_inertia,
             frames,
@@ -50,7 +47,7 @@ class RBDAlgorithms(abc.ABC):
             self.tree,
         ) = urdf_tree.load_model()
 
-    def crba(self, T_b, q):
+    def crba(self, T_b: T, q: T) -> T:
         """This function computes the Composite Rigid body algorithm (Roy Featherstone) that computes the Mass Matrix.
          The algorithm is complemented with Orin's modifications computing the Centroidal Momentum Matrix
 
@@ -64,7 +61,7 @@ class RBDAlgorithms(abc.ABC):
         Ic = [None] * len(self.tree.links)
         X_p = [None] * len(self.tree.links)
         Phi = [None] * len(self.tree.links)
-        M = cs.SX.zeros(self.NDoF + 6, self.NDoF + 6)
+        M = self.zeros(self.NDoF + 6, self.NDoF + 6)
 
         for i in range(self.tree.N):
             link_i = self.tree.links[i]
@@ -79,11 +76,11 @@ class RBDAlgorithms(abc.ABC):
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = utils.spatial_transform(np.eye(3), np.zeros(3))
-                Phi[i] = cs.np.eye(6)
+                Phi[i] = self.eye(6)
             elif joint_i.type == "fixed":
                 X_J = utils.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
-                Phi[i] = cs.vertcat(0, 0, 0, 0, 0, 0)
+                Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
             elif joint_i.type == "revolute":
                 if joint_i.idx is not None:
                     q_ = q[joint_i.idx]
@@ -96,7 +93,7 @@ class RBDAlgorithms(abc.ABC):
                     q_,
                 )
                 X_p[i] = X_J
-                Phi[i] = cs.vertcat(
+                Phi[i] = self.vertcat(
                     [
                         0,
                         0,
@@ -142,9 +139,9 @@ class RBDAlgorithms(abc.ABC):
                     ].T
 
         X_G = [None] * len(self.tree.links)
-        O_X_G = cs.SX.eye(6)
+        O_X_G = self.eye(6)
         O_X_G[:3, 3:] = M[:3, 3:6].T / M[0, 0]
-        Jcm = cs.SX.zeros(6, self.NDoF + 6)
+        Jcm = self.zeros(6, self.NDoF + 6)
         for i in range(self.tree.N):
             link_i = self.tree.links[i]
             link_pi = self.tree.parents[i]
@@ -162,14 +159,14 @@ class RBDAlgorithms(abc.ABC):
 
         # Until now the algorithm returns the quantities in Body Fixed representation
         # Moving to mixed representation...
-        X_to_mixed = cs.SX.eye(self.NDoF + 6)
+        X_to_mixed = self.eye(self.NDoF + 6)
         X_to_mixed[:3, :3] = T_b[:3, :3].T
         X_to_mixed[3:6, 3:6] = T_b[:3, :3].T
         M = X_to_mixed.T @ M @ X_to_mixed
         Jcm = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
         return M, Jcm
 
-    def forward_kinematics(self, frame, T_b, q):
+    def forward_kinematics(self, frame, T_b: T, q: T):
         """Computes the forward kinematics relative to the specified frame
 
         Args:
@@ -181,7 +178,7 @@ class RBDAlgorithms(abc.ABC):
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
 
-        T_fk = cs.SX.eye(4)
+        T_fk = self.eye(4)
         T_fk = T_fk @ T_b
         for item in chain:
             if item in self.robot_desc.joint_map:
@@ -218,9 +215,9 @@ class RBDAlgorithms(abc.ABC):
             J_tot (T): The Jacobian relative to the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
-        T_fk = cs.SX.eye(4)
+        T_fk = self.eye(4)
         T_fk = T_fk @ T_b
-        J = cs.SX.zeros(6, self.NDoF)
+        J = self.zeros(6, self.NDoF)
         T_ee = self.forward_kinematics(frame, T_b, q)
         P_ee = T_ee[:3, 3]
         for item in chain:
@@ -245,17 +242,19 @@ class RBDAlgorithms(abc.ABC):
                     T_fk = T_fk @ T_joint
                     p_prev = P_ee - T_fk[:3, 3]
                     z_prev = T_fk[:3, :3] @ joint.axis
-                    # J[:, joint.idx] = cs.vertcat(
+                    # J[:, joint.idx] = self.vertcat(
                     #     cs.jacobian(P_ee, q[joint.idx]), z_prev) # using casadi jacobian
                     if joint.idx is not None:
-                        J[:, joint.idx] = cs.vertcat(cs.skew(z_prev) @ p_prev, z_prev)
+                        J[:, joint.idx] = self.vertcat(
+                            self.skew(z_prev) @ p_prev, z_prev
+                        )
 
         # Adding the floating base part of the Jacobian, in Mixed representation
-        J_tot = cs.SX.zeros(6, self.NDoF + 6)
-        J_tot[:3, :3] = cs.np.eye(3)
-        J_tot[:3, 3:6] = -cs.skew((P_ee - T_b[:3, 3]))
+        J_tot = self.zeros(6, self.NDoF + 6)
+        J_tot[:3, :3] = self.eye(3)
+        J_tot[:3, 3:6] = -self.skew((P_ee - T_b[:3, 3]))
         J_tot[:3, 6:] = J[:3, :]
-        J_tot[3:, 3:6] = cs.np.eye(3)
+        J_tot[3:, 3:6] = self.eye(3)
         J_tot[3:, 6:] = J[3:, :]
         return J_tot
 
@@ -271,9 +270,9 @@ class RBDAlgorithms(abc.ABC):
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
         T_b = np.eye(4)
-        T_fk = cs.SX.eye(4)
+        T_fk = self.eye(4)
         T_fk = T_fk @ T_b
-        J = cs.SX.zeros(6, self.NDoF)
+        J = self.zeros(6, self.NDoF)
         T_ee = self.forward_kinematics(frame, T_b, q)
         P_ee = T_ee[:3, 3]
         for item in chain:
@@ -298,10 +297,12 @@ class RBDAlgorithms(abc.ABC):
                     T_fk = T_fk @ T_joint
                     p_prev = P_ee - T_fk[:3, 3]
                     z_prev = T_fk[:3, :3] @ joint.axis
-                    # J[:, joint.idx] = cs.vertcat(
+                    # J[:, joint.idx] = self.vertcat(
                     #     cs.jacobian(P_ee, q[joint.idx]), z_prev) # using casadi jacobian
                     if joint.idx is not None:
-                        J[:, joint.idx] = cs.vertcat(cs.skew(z_prev) @ p_prev, z_prev)
+                        J[:, joint.idx] = self.vertcat(
+                            self.skew(z_prev) @ p_prev, z_prev
+                        )
         return J
 
     def CoM_position(self, T_b, q):
@@ -314,8 +315,7 @@ class RBDAlgorithms(abc.ABC):
         Returns:
             com (T): The CoM position
         """
-
-        com_pos = cs.SX.zeros(3, 1)
+        com_pos = self.zeros(3, 1)
         for item in self.robot_desc.link_map:
             link = self.robot_desc.link_map[item]
             if link.inertial is not None:
@@ -359,7 +359,7 @@ class RBDAlgorithms(abc.ABC):
             tau (T): generalized force variables
         """
         # TODO: add accelerations
-        tau = cs.SX.sym("tau", self.NDoF + 6)
+        tau = self.array(self.NDoF + 6)
         Ic = [None] * len(self.tree.links)
         X_p = [None] * len(self.tree.links)
         Phi = [None] * len(self.tree.links)
@@ -367,13 +367,13 @@ class RBDAlgorithms(abc.ABC):
         a = [None] * len(self.tree.links)
         f = [None] * len(self.tree.links)
 
-        X_to_mixed = cs.SX.eye(6)
+        X_to_mixed = self.eye(6)
         X_to_mixed[:3, :3] = T_b[:3, :3].T
         X_to_mixed[3:6, 3:6] = T_b[:3, :3].T
 
-        acc_to_mixed = cs.SX.zeros(6)
-        acc_to_mixed[:3] = -T_b[:3, :3].T @ cs.skew(v_b[3:]) @ v_b[:3]
-        acc_to_mixed[3:] = -T_b[:3, :3].T @ cs.skew(v_b[3:]) @ v_b[3:]
+        acc_to_mixed = self.zeros(6)
+        acc_to_mixed[:3] = -T_b[:3, :3].T @ self.skew(v_b[3:]) @ v_b[:3]
+        acc_to_mixed[3:] = -T_b[:3, :3].T @ self.skew(v_b[3:]) @ v_b[3:]
         # set initial acceleration (rotated gravity + apparent acceleration)
         a[0] = -X_to_mixed @ g + acc_to_mixed
 
@@ -390,13 +390,13 @@ class RBDAlgorithms(abc.ABC):
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = utils.spatial_transform(np.eye(3), np.zeros(3))
-                Phi[i] = cs.np.eye(6)
+                Phi[i] = self.eye(6)
                 v_J = Phi[i] @ X_to_mixed @ v_b
             elif joint_i.type == "fixed":
                 X_J = utils.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
-                Phi[i] = cs.vertcat(0, 0, 0, 0, 0, 0)
-                v_J = cs.SX.zeros(6, 1)
+                Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
+                v_J = self.zeros(6, 1)
             elif joint_i.type == "revolute":
                 if joint_i.idx is not None:
                     q_ = q[joint_i.idx]
@@ -409,7 +409,7 @@ class RBDAlgorithms(abc.ABC):
                     joint_i.origin.xyz, joint_i.origin.rpy, joint_i.axis, q_
                 )
                 X_p[i] = X_J
-                Phi[i] = cs.vertcat(
+                Phi[i] = self.vertcat(
                     [0, 0, 0, joint_i.axis[0], joint_i.axis[1], joint_i.axis[2]]
                 )
                 v_J = Phi[i] @ q_dot_
