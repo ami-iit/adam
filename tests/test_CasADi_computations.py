@@ -10,7 +10,7 @@ import idyntree.swig as idyntree
 import numpy as np
 import pytest
 
-from adam.core.computations import KinDynComputations
+from adam.casadi.computations import CasADiKinDynComputations
 from adam.geometry import utils
 
 model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
@@ -60,7 +60,7 @@ logging.basicConfig(level=logging.DEBUG)
 logging.debug("Showing the robot tree.")
 
 root_link = "root_link"
-comp = KinDynComputations(model_path, joints_name_list, root_link)
+comp = CasADiKinDynComputations(model_path, joints_name_list, root_link)
 robot_iDyn = idyntree.ModelLoader()
 robot_iDyn.loadReducedModelFromFile(model_path, joints_name_list)
 
@@ -135,8 +135,6 @@ def test_jacobian():
     iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
     kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
     iDynNumpyJ_ = iDyntreeJ_.toNumPy()
-    s_ = joints_val
-    H_b = utils.H_from_PosRPY(xyz, rpy)
     J_test = SX2DM(J_tot(H_b, s_))
     assert iDynNumpyJ_ - J_test == pytest.approx(0.0, abs=1e-5)
 
@@ -146,8 +144,6 @@ def test_jacobian_non_actuated():
     iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
     kinDyn.getFrameFreeFloatingJacobian("head", iDyntreeJ_)
     iDynNumpyJ_ = iDyntreeJ_.toNumPy()
-    s_ = joints_val
-    H_b = utils.H_from_PosRPY(xyz, rpy)
     J_test = SX2DM(J_tot(H_b, s_))
     assert iDynNumpyJ_ - J_test == pytest.approx(0.0, abs=1e-5)
 
@@ -157,8 +153,6 @@ def test_fk():
     p_idy2np = H_idyntree.getPosition().toNumPy()
     R_idy2np = H_idyntree.getRotation().toNumPy()
     T = comp.forward_kinematics_fun("l_sole")
-    s_ = joints_val
-    H_b = utils.H_from_PosRPY(xyz, rpy)
     H_test = SX2DM(T(H_b, s_))
     assert R_idy2np - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert p_idy2np - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
@@ -169,8 +163,6 @@ def test_fk_non_actuated():
     p_idy2np = H_idyntree.getPosition().toNumPy()
     R_idy2np = H_idyntree.getRotation().toNumPy()
     T = comp.forward_kinematics_fun("head")
-    s_ = joints_val
-    H_b = utils.H_from_PosRPY(xyz, rpy)
     H_test = SX2DM(T(H_b, s_))
     assert R_idy2np - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert p_idy2np - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
