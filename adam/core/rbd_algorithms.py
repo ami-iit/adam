@@ -22,8 +22,8 @@ class RBDAlgorithms(AbstractTranforms):
         self,
         urdfstring: str,
         joints_name_list: list,
-        root_link: str = "root_link",
-        gravity: np.array = np.array([0, 0, -9.80665, 0, 0, 0], dtype=object),
+        root_link: str,
+        gravity: np.array,
     ) -> None:
         """
         Args:

@@ -18,7 +18,7 @@ class CasADiKinDynComputations(RBDAlgorithms):
         urdfstring: str,
         joints_name_list: list,
         root_link: str = "root_link",
-        gravity: np.array = np.array([0, 0, -9.80665, 0, 0, 0]),
+        gravity: np.array = np.array([0, 0, -9.80665, 0, 0, 0], dtype=object),
         f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast")),
     ) -> None:
         """
@@ -148,7 +148,7 @@ class CasADiKinDynComputations(RBDAlgorithms):
         T_b = cs.SX.sym("T_b", 4, 4)
         q = cs.SX.sym("q", self.NDoF)
         # set in the bias force computation the velocity to zero
-        G = self.rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
+        G = super().rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
         return cs.Function("G", [T_b, q], [G], self.f_opts)
 
     @staticmethod
