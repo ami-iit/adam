@@ -9,7 +9,6 @@ import gym_ignition_models
 import idyntree.swig as idyntree
 import numpy as np
 import pytest
-from icecream import ic
 
 from adam.geometry import utils
 from adam.numpy.computations import NumPyKinDynComputations
