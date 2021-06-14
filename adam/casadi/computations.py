@@ -8,7 +8,7 @@ import numpy as np
 from adam.core.rbd_algorithms import RBDAlgorithms
 
 
-class KinDynComputations(RBDAlgorithms):
+class CasADiKinDynComputations(RBDAlgorithms):
     """This is a small class that retrieves robot quantities represented in a symbolic fashion using CasADi
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -151,17 +151,22 @@ class KinDynComputations(RBDAlgorithms):
         G = self.rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
         return cs.Function("G", [T_b, q], [G], self.f_opts)
 
-    def zeros(self, *x):
+    @staticmethod
+    def zeros(*x):
         return cs.SX.zeros(*x)
 
-    def vertcat(self, *x):
+    @staticmethod
+    def vertcat(*x):
         return cs.vertcat(*x)
 
-    def eye(self, x):
+    @staticmethod
+    def eye(x):
         return cs.SX.eye(x)
 
-    def skew(self, x):
+    @staticmethod
+    def skew(x):
         return cs.skew(x)
 
-    def array(self, *x):
+    @staticmethod
+    def array(*x):
         return cs.SX.sym("vec", *x)
