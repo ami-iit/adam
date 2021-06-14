@@ -2,18 +2,18 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
-import abc
+
 from typing import TypeVar
 
 import numpy as np
 
+from adam.core.transforms import AbstractTranforms
 from adam.core.urdf_tree import URDFTree
-from adam.geometry import utils
 
 T = TypeVar("T")
 
 
-class RBDAlgorithms(abc.ABC):
+class RBDAlgorithms(AbstractTranforms):
     """This is a small abstract class that implements Rigid body algorithms retrieving robot quantities represented
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -23,7 +23,7 @@ class RBDAlgorithms(abc.ABC):
         urdfstring: str,
         joints_name_list: list,
         root_link: str = "root_link",
-        gravity: np.array = np.array([0, 0, -9.80665, 0, 0, 0]),
+        gravity: np.array = np.array([0, 0, -9.80665, 0, 0, 0], dtype=object),
     ) -> None:
         """
         Args:
@@ -71,14 +71,14 @@ class RBDAlgorithms(abc.ABC):
             mass = link_i.inertial.mass
             o = link_i.inertial.origin.xyz
             rpy = link_i.inertial.origin.rpy
-            Ic[i] = utils.spatial_inertia(I, mass, o, rpy)
+            Ic[i] = self.spatial_inertia(I, mass, o, rpy)
 
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
-                X_p[i] = utils.spatial_transform(np.eye(3), np.zeros(3))
+                X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
                 Phi[i] = self.eye(6)
             elif joint_i.type == "fixed":
-                X_J = utils.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
+                X_J = self.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
             elif joint_i.type == "revolute":
@@ -86,7 +86,7 @@ class RBDAlgorithms(abc.ABC):
                     q_ = q[joint_i.idx]
                 else:
                     q_ = 0.0
-                X_J = utils.X_revolute_joint(
+                X_J = self.X_revolute_joint(
                     joint_i.origin.xyz,
                     joint_i.origin.rpy,
                     joint_i.axis,
@@ -94,14 +94,12 @@ class RBDAlgorithms(abc.ABC):
                 )
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(
-                    [
-                        0,
-                        0,
-                        0,
-                        joint_i.axis[0],
-                        joint_i.axis[1],
-                        joint_i.axis[2],
-                    ]
+                    0,
+                    0,
+                    0,
+                    joint_i.axis[0],
+                    joint_i.axis[1],
+                    joint_i.axis[2],
                 )
 
         for i in range(self.tree.N - 1, -1, -1):
@@ -155,7 +153,7 @@ class RBDAlgorithms(abc.ABC):
             if link_i.name == self.tree.links[0].name:
                 Jcm[:, :6] = X_G[i].T @ Ic[i] @ Phi[i]
             elif joint_i.idx is not None:
-                Jcm[:, joint_i.idx + 6] = X_G[i].T @ Ic[i] @ Phi[i]
+                Jcm[:, [joint_i.idx + 6]] = X_G[i].T @ Ic[i] @ Phi[i]
 
         # Until now the algorithm returns the quantities in Body Fixed representation
         # Moving to mixed representation...
@@ -186,7 +184,7 @@ class RBDAlgorithms(abc.ABC):
                 if joint.type == "fixed":
                     xyz = joint.origin.xyz
                     rpy = joint.origin.rpy
-                    joint_frame = utils.H_from_PosRPY(xyz, rpy)
+                    joint_frame = self.H_from_PosRPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     # if the joint is actuated set the value
@@ -194,7 +192,7 @@ class RBDAlgorithms(abc.ABC):
                         q_ = q[joint.idx]
                     else:
                         q_ = 0.0
-                    T_joint = utils.H_revolute_joint(
+                    T_joint = self.H_revolute_joint(
                         joint.origin.xyz,
                         joint.origin.rpy,
                         joint.axis,
@@ -226,14 +224,14 @@ class RBDAlgorithms(abc.ABC):
                 if joint.type == "fixed":
                     xyz = joint.origin.xyz
                     rpy = joint.origin.rpy
-                    joint_frame = utils.H_from_PosRPY(xyz, rpy)
+                    joint_frame = self.H_from_PosRPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     if joint.idx is not None:
                         q_ = q[joint.idx]
                     else:
                         q_ = 0.0
-                    T_joint = utils.H_revolute_joint(
+                    T_joint = self.H_revolute_joint(
                         joint.origin.xyz,
                         joint.origin.rpy,
                         joint.axis,
@@ -281,14 +279,14 @@ class RBDAlgorithms(abc.ABC):
                 if joint.type == "fixed":
                     xyz = joint.origin.xyz
                     rpy = joint.origin.rpy
-                    joint_frame = utils.H_from_PosRPY(xyz, rpy)
+                    joint_frame = self.H_from_PosRPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     if joint.idx is not None:
                         q_ = q[joint.idx]
                     else:
                         q_ = 0.0
-                    T_joint = utils.H_revolute_joint(
+                    T_joint = self.H_revolute_joint(
                         joint.origin.xyz,
                         joint.origin.rpy,
                         joint.axis,
@@ -315,12 +313,12 @@ class RBDAlgorithms(abc.ABC):
         Returns:
             com (T): The CoM position
         """
-        com_pos = self.zeros(3, 1)
+        com_pos = self.zeros(3)
         for item in self.robot_desc.link_map:
             link = self.robot_desc.link_map[item]
             if link.inertial is not None:
                 T_fk = self.forward_kinematics(item, T_b, q)
-                T_link = utils.H_from_PosRPY(
+                T_link = self.H_from_PosRPY(
                     link.inertial.origin.xyz,
                     link.inertial.origin.rpy,
                 )
@@ -359,7 +357,7 @@ class RBDAlgorithms(abc.ABC):
             tau (T): generalized force variables
         """
         # TODO: add accelerations
-        tau = self.array(self.NDoF + 6)
+        tau = self.zeros(self.NDoF + 6, 1)
         Ic = [None] * len(self.tree.links)
         X_p = [None] * len(self.tree.links)
         Phi = [None] * len(self.tree.links)
@@ -371,11 +369,12 @@ class RBDAlgorithms(abc.ABC):
         X_to_mixed[:3, :3] = T_b[:3, :3].T
         X_to_mixed[3:6, 3:6] = T_b[:3, :3].T
 
-        acc_to_mixed = self.zeros(6)
+        acc_to_mixed = self.zeros(6, 1)
         acc_to_mixed[:3] = -T_b[:3, :3].T @ self.skew(v_b[3:]) @ v_b[:3]
         acc_to_mixed[3:] = -T_b[:3, :3].T @ self.skew(v_b[3:]) @ v_b[3:]
         # set initial acceleration (rotated gravity + apparent acceleration)
-        a[0] = -X_to_mixed @ g + acc_to_mixed
+        # reshape g as a vertical vector
+        a[0] = -X_to_mixed @ g.reshape(6, 1) + acc_to_mixed
 
         for i in range(self.tree.N):
             link_i = self.tree.links[i]
@@ -385,15 +384,15 @@ class RBDAlgorithms(abc.ABC):
             mass = link_i.inertial.mass
             o = link_i.inertial.origin.xyz
             rpy = link_i.inertial.origin.rpy
-            Ic[i] = utils.spatial_inertia(I, mass, o, rpy)
+            Ic[i] = self.spatial_inertia(I, mass, o, rpy)
 
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
-                X_p[i] = utils.spatial_transform(np.eye(3), np.zeros(3))
+                X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
                 Phi[i] = self.eye(6)
                 v_J = Phi[i] @ X_to_mixed @ v_b
             elif joint_i.type == "fixed":
-                X_J = utils.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
+                X_J = self.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
                 v_J = self.zeros(6, 1)
@@ -405,14 +404,14 @@ class RBDAlgorithms(abc.ABC):
                     q_ = 0.0
                     q_dot_ = 0.0
 
-                X_J = utils.X_revolute_joint(
+                X_J = self.X_revolute_joint(
                     joint_i.origin.xyz, joint_i.origin.rpy, joint_i.axis, q_
                 )
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(
-                    [0, 0, 0, joint_i.axis[0], joint_i.axis[1], joint_i.axis[2]]
+                    0, 0, 0, joint_i.axis[0], joint_i.axis[1], joint_i.axis[2]
                 )
-                v_J = Phi[i] @ q_dot_
+                v_J = Phi[i] * q_dot_
 
             if link_i.name == self.root_link:
                 v[i] = v_J
@@ -420,9 +419,9 @@ class RBDAlgorithms(abc.ABC):
             else:
                 pi = self.tree.links.index(link_pi)
                 v[i] = X_p[i] @ v[pi] + v_J
-                a[i] = X_p[i] @ a[pi] + utils.spatial_skew(v[i]) @ v_J
+                a[i] = X_p[i] @ a[pi] + self.spatial_skew(v[i]) @ v_J
 
-            f[i] = Ic[i] @ a[i] + utils.spatial_skew_star(v[i]) @ Ic[i] @ v[i]
+            f[i] = Ic[i] @ a[i] + self.spatial_skew_star(v[i]) @ Ic[i] @ v[i]
 
         for i in range(self.tree.N - 1, -1, -1):
             joint_i = self.tree.joints[i]
