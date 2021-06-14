@@ -3,6 +3,7 @@
 # GNU Lesser General Public License v2.1 or any later version.
 
 import logging
+import time
 
 import casadi as cs
 import gym_ignition_models
@@ -185,13 +186,19 @@ def test_coriolis_term():
 
 
 def test_gravity_term():
+    kinDyn2 = idyntree.KinDynComputations()
+    kinDyn2.loadRobotModel(robot_iDyn.model())
+    kinDyn2.setFloatingBase(root_link)
+    kinDyn2.setFrameVelocityRepresentation(idyntree.MIXED_REPRESENTATION)
     vb0 = idyntree.Twist()
     s_dot0 = idyntree.VectorDynSize(n_dofs)
-    kinDyn.setRobotState(H_b_idyn, s, vb0, s_dot0, g)
-    G_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
-    assert kinDyn.generalizedBiasForces(G_iDyn)
+    kinDyn2.setRobotState(H_b_idyn, s, vb0, s_dot0, g)
+    G_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn2.model())
+    assert kinDyn2.generalizedBiasForces(G_iDyn)
     G_iDyn_np = np.concatenate(
         (G_iDyn.baseWrench().toNumPy(), G_iDyn.jointTorques().toNumPy())
     )
+    print(G_iDyn_np)
     G_test = comp.gravity_term(H_b, s_)
+    print(G_test)
     assert G_iDyn_np - G_test == pytest.approx(0.0, abs=1e-4)
