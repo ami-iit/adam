@@ -23,7 +23,7 @@ jobs:
           pip install .[test]
       - name: Test with pytest
         run: |
-          pytest
+          pytest --verbose
       - name: Run black --check
         run: |
           pip install black
