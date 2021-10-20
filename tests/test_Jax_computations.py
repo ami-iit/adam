@@ -80,9 +80,12 @@ vb = idyntree.Twist()
 [vb.setVal(i, base_vel[i]) for i in range(6)]
 
 s = idyntree.VectorDynSize(n_dofs)
-s.FromPython(joints_val)
+s = s.FromPython(joints_val)
+print(s.FromPython(joints_val))
+print(s)
+print(joints_val)
 s_dot = idyntree.VectorDynSize(n_dofs)
-s_dot.FromPython(joints_dot_val)
+s_dot = s_dot.FromPython(joints_dot_val)
 
 g = idyntree.Vector3()
 g.zero()
@@ -100,7 +103,10 @@ def test_mass_matrix():
     kinDyn.getFreeFloatingMassMatrix(mass_mx)
     mass_mxNumpy = mass_mx.toNumPy()
     mass_test = comp.mass_matrix(H_b, s_)
-    assert np.array(mass_test) - mass_mxNumpy == pytest.approx(0.0, abs=1e-5)
+    print(mass_mxNumpy[:2, :])
+    print(np.asarray(mass_test[:2, :]))
+    print(np.asarray(mass_test)[:2, :] - mass_mxNumpy[:2, :])
+    assert np.asarray(mass_test) - mass_mxNumpy == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CMM():

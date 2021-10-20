@@ -336,6 +336,10 @@ class JaxKinDynComputations(RBDAlgorithms):
                     T_fk = T_fk @ T_joint
         return T_fk
 
+    def forward_kinematics_fun(self, frame):
+        fk_frame = lambda T, q: self.forward_kinematics(T, q, frame)
+        return jit(fk_frame)
+
     def jacobian(self, T_b, q, frame):
         """Returns the Jacobian relative to the specified frame
 
