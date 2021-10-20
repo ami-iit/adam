@@ -3,9 +3,7 @@
 # GNU Lesser General Public License v2.1 or any later version.
 
 import logging
-import time
 
-import casadi as cs
 import gym_ignition_models
 import idyntree.swig as idyntree
 import numpy as np
@@ -41,10 +39,6 @@ joints_name_list = [
     "r_ankle_pitch",
     "r_ankle_roll",
 ]
-
-
-def SX2DM(x):
-    return cs.DM(x)
 
 
 def H_from_PosRPY_idyn(xyz, rpy):
