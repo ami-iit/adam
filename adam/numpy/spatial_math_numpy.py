@@ -1,23 +1,23 @@
 import abc
 from typing import TypeVar
 
-import casadi as cs
+import numpy as np
 
 from adam.core.spatial_math import SpatialMathAbstract
 
 
-class SpatialMathCasadi(SpatialMathAbstract):
+class SpatialMathNumpy(SpatialMathAbstract):
     def R_from_axisAngle(cls, axis, q):
-        [cq, sq] = [cs.cos(q), cs.sin(q)]
+        [cq, sq] = [np.cos(q), np.sin(q)]
         return (
-            cq * (cls.eye(3) - cs.np.outer(axis, axis))
+            cq * (cls.eye(3) - np.outer(axis, axis))
             + sq * cls.skew(axis)
-            + cs.np.outer(axis, axis)
+            + np.outer(axis, axis)
         )
 
     def Rx(cls, q):
         R = cls.eye(3)
-        [cq, sq] = [cs.cos(q), cs.sin(q)]
+        [cq, sq] = [np.cos(q), np.sin(q)]
         R[1, 1] = cq
         R[1, 2] = -sq
         R[2, 1] = sq
@@ -26,7 +26,7 @@ class SpatialMathCasadi(SpatialMathAbstract):
 
     def Ry(cls, q):
         R = cls.eye(3)
-        [cq, sq] = [cs.cos(q), cs.sin(q)]
+        [cq, sq] = [np.cos(q), np.sin(q)]
         R[0, 0] = cq
         R[0, 2] = sq
         R[2, 0] = -sq
@@ -35,7 +35,7 @@ class SpatialMathCasadi(SpatialMathAbstract):
 
     def Rz(cls, q):
         R = cls.eye(3)
-        [cq, sq] = [cs.cos(q), cs.sin(q)]
+        [cq, sq] = [np.cos(q), np.sin(q)]
         R[0, 0] = cq
         R[0, 1] = -sq
         R[1, 0] = sq
@@ -82,14 +82,14 @@ class SpatialMathCasadi(SpatialMathAbstract):
         IO = cls.zeros(6, 6)
         Sc = cls.skew(c)
         R = cls.R_from_RPY(rpy)
-        inertia_matrix = cs.np.array(
+        inertia_matrix = np.array(
             [[I.ixx, I.ixy, I.ixz], [I.ixy, I.iyy, I.iyz], [I.ixz, I.iyz, I.izz]]
         )
 
         IO[3:, 3:] = R @ inertia_matrix @ R.T + mass * Sc @ Sc.T
         IO[3:, :3] = mass * Sc
         IO[:3, 3:] = mass * Sc.T
-        IO[:3, :3] = cs.np.eye(3) * mass
+        IO[:3, :3] = np.eye(3) * mass
         return IO
 
     def spatial_skew(cls, v):
@@ -104,20 +104,27 @@ class SpatialMathCasadi(SpatialMathAbstract):
 
     @staticmethod
     def zeros(*x):
-        return cs.SX.zeros(*x)
+        return np.zeros(x)
 
     @staticmethod
     def vertcat(*x):
-        return cs.vertcat(*x)
+        v = np.vstack(x)
+        # This check is needed since vercat is used for two types of data structure in RBDAlgo class.
+        # CasADi handles the cases smootly, with NumPy I need to handle the two cases.
+        # It should be improved
+        if v.shape[1] > 1:
+            v = np.concatenate(x)
+        return v
 
     @staticmethod
     def eye(x):
-        return cs.SX.eye(x)
+        return np.eye(x)
 
     @staticmethod
     def skew(x):
-        return cs.skew(x)
+        # Retrieving the skew sym matrix using a cross product
+        return -np.cross(x, np.eye(3), axisa=0, axisb=0)
 
     @staticmethod
     def array(*x):
-        return cs.SX.sym("vec", *x)
+        return np.empty(x)
