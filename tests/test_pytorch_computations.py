@@ -42,7 +42,7 @@ joints_name_list = [
 ]
 
 
-def H_from_PosRPY_idyn(xyz, rpy):
+def H_from_Pos_RPY_idyn(xyz, rpy):
     T = idyntree.Transform.Identity()
     R = idyntree.Rotation.RPY(rpy[0], rpy[1], rpy[2])
     p = idyntree.Position()
@@ -75,7 +75,7 @@ joints_val = (np.random.rand(n_dofs) - 0.5) * 5
 joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
 
 # set iDynTree kinDyn
-H_b_idyn = H_from_PosRPY_idyn(xyz, rpy)
+H_b_idyn = H_from_Pos_RPY_idyn(xyz, rpy)
 vb = idyntree.Twist()
 [vb.setVal(i, base_vel[i]) for i in range(6)]
 
@@ -89,7 +89,7 @@ g.zero()
 g.setVal(2, -9.80665)
 kinDyn.setRobotState(H_b_idyn, s, vb, s_dot, g)
 # set ADAM
-H_b = torch.FloatTensor(utils.H_from_PosRPY(xyz, rpy))
+H_b = torch.FloatTensor(utils.H_from_Pos_RPY(xyz, rpy))
 vb_ = torch.FloatTensor(base_vel)
 s_ = torch.FloatTensor(joints_val)
 s_dot_ = torch.FloatTensor(joints_dot_val)
@@ -198,7 +198,7 @@ def test_gravity_term():
 
 
 def test_relative_jacobian():
-    kinDyn.setRobotState(H_from_PosRPY_idyn(np.zeros(3), np.zeros(3)), s, vb, s_dot, g)
+    kinDyn.setRobotState(H_from_Pos_RPY_idyn(np.zeros(3), np.zeros(3)), s, vb, s_dot, g)
     iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
     kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
     iDynNumpyRelativeJ = (iDyntreeJ_.toNumPy())[:, 6:]

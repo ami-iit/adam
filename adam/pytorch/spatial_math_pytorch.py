@@ -9,7 +9,7 @@ from adam.core.spatial_math import SpatialMathAbstract
 
 
 class SpatialMathPytorch(SpatialMathAbstract):
-    def R_from_axisAngle(cls, axis, q):
+    def R_from_axis_angle(cls, axis, q):
         # q = torch.tensor(q)
         [cq, sq] = [np.cos(q), np.sin(q)]
         return (
@@ -50,12 +50,12 @@ class SpatialMathPytorch(SpatialMathAbstract):
 
     def H_revolute_joint(cls, xyz, rpy, axis, q):
         T = cls.eye(4)
-        R = cls.R_from_RPY(rpy).float() @ cls.R_from_axisAngle(axis, q).float()
+        R = cls.R_from_RPY(rpy).float() @ cls.R_from_axis_angle(axis, q).float()
         T[:3, :3] = R
         T[:3, 3] = torch.FloatTensor(xyz)
         return T
 
-    def H_from_PosRPY(cls, xyz, rpy):
+    def H_from_Pos_RPY(cls, xyz, rpy):
         T = cls.eye(4)
         T[:3, :3] = cls.R_from_RPY(rpy)
         T[:3, 3] = torch.FloatTensor(xyz)
@@ -71,7 +71,7 @@ class SpatialMathPytorch(SpatialMathAbstract):
         return cls.spatial_transform(R, p)
 
     def X_fixed_joint(cls, xyz, rpy):
-        T = cls.H_from_PosRPY(xyz, rpy)
+        T = cls.H_from_Pos_RPY(xyz, rpy)
         R = T[:3, :3].T
         p = -T[:3, :3].T @ T[:3, 3]
         return cls.spatial_transform(R, p)

@@ -260,7 +260,7 @@ class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
                 if joint.type == "fixed":
                     xyz = joint.origin.xyz
                     rpy = joint.origin.rpy
-                    joint_frame = self.H_from_PosRPY(xyz, rpy)
+                    joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     if joint.idx is not None:

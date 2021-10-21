@@ -6,7 +6,7 @@ import numpy as np
 
 class SpatialMathAbstract(abc.ABC):
     @abc.abstractmethod
-    def R_from_axisAngle(cls, axis, q):
+    def R_from_axis_angle(cls, axis, q):
         pass
 
     @abc.abstractmethod
@@ -26,7 +26,7 @@ class SpatialMathAbstract(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def H_from_PosRPY(cls, xyz, rpy):
+    def H_from_Pos_RPY(cls, xyz, rpy):
         pass
 
     @abc.abstractmethod

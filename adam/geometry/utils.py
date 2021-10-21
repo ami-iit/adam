@@ -7,7 +7,7 @@ import casadi as cs
 import numpy as np
 
 
-def R_from_axisAngle(axis, q):
+def R_from_axis_angle(axis, q):
     [cq, sq] = [np.cos(q), np.sin(q)]
     return (
         cq * (np.eye(3) - np.outer(axis, axis))
@@ -48,13 +48,13 @@ def Rz(q):
 
 def H_revolute_joint(xyz, rpy, axis, q):
     T = np.eye(4)
-    R = R_from_RPY(rpy) @ R_from_axisAngle(axis, q)
+    R = R_from_RPY(rpy) @ R_from_axis_angle(axis, q)
     T[:3, :3] = R
     T[:3, 3] = xyz
     return T
 
 
-def H_from_PosRPY(xyz, rpy):
+def H_from_Pos_RPY(xyz, rpy):
     T = np.eye(4)
     T[:3, :3] = R_from_RPY(rpy)
     T[:3, 3] = xyz
@@ -73,7 +73,7 @@ def X_revolute_joint(xyz, rpy, axis, q):
 
 
 def X_fixed_joint(xyz, rpy):
-    T = H_from_PosRPY(xyz, rpy)
+    T = H_from_Pos_RPY(xyz, rpy)
     R = T[:3, :3].T
     p = -T[:3, :3].T @ T[:3, 3]
     return spatial_transform(R, p)

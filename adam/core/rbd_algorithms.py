@@ -184,7 +184,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                 if joint.type == "fixed":
                     xyz = joint.origin.xyz
                     rpy = joint.origin.rpy
-                    joint_frame = self.H_from_PosRPY(xyz, rpy)
+                    joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     # if the joint is actuated set the value
@@ -224,7 +224,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                 if joint.type == "fixed":
                     xyz = joint.origin.xyz
                     rpy = joint.origin.rpy
-                    joint_frame = self.H_from_PosRPY(xyz, rpy)
+                    joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     if joint.idx is not None:
@@ -279,7 +279,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                 if joint.type == "fixed":
                     xyz = joint.origin.xyz
                     rpy = joint.origin.rpy
-                    joint_frame = self.H_from_PosRPY(xyz, rpy)
+                    joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     if joint.idx is not None:
@@ -318,7 +318,7 @@ class RBDAlgorithms(SpatialMathAbstract):
             link = self.robot_desc.link_map[item]
             if link.inertial is not None:
                 T_fk = self.forward_kinematics(item, T_b, q)
-                T_link = self.H_from_PosRPY(
+                T_link = self.H_from_Pos_RPY(
                     link.inertial.origin.xyz,
                     link.inertial.origin.rpy,
                 )

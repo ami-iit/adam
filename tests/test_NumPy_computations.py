@@ -41,7 +41,7 @@ joints_name_list = [
 ]
 
 
-def H_from_PosRPY_idyn(xyz, rpy):
+def H_from_Pos_RPY_idyn(xyz, rpy):
     T = idyntree.Transform.Identity()
     R = idyntree.Rotation.RPY(rpy[0], rpy[1], rpy[2])
     p = idyntree.Position()
@@ -74,7 +74,7 @@ joints_val = (np.random.rand(n_dofs) - 0.5) * 5
 joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
 
 # set iDynTree kinDyn
-H_b_idyn = H_from_PosRPY_idyn(xyz, rpy)
+H_b_idyn = H_from_Pos_RPY_idyn(xyz, rpy)
 vb = idyntree.Twist()
 [vb.setVal(i, base_vel[i]) for i in range(6)]
 
@@ -88,7 +88,7 @@ g.zero()
 g.setVal(2, -9.80665)
 kinDyn.setRobotState(H_b_idyn, s, vb, s_dot, g)
 # set ADAM
-H_b = utils.H_from_PosRPY(xyz, rpy)
+H_b = utils.H_from_Pos_RPY(xyz, rpy)
 vb_ = base_vel
 s_ = joints_val
 s_dot_ = joints_dot_val

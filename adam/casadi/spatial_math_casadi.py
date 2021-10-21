@@ -7,7 +7,7 @@ from adam.core.spatial_math import SpatialMathAbstract
 
 
 class SpatialMathCasadi(SpatialMathAbstract):
-    def R_from_axisAngle(cls, axis, q):
+    def R_from_axis_angle(cls, axis, q):
         [cq, sq] = [cs.cos(q), cs.sin(q)]
         return (
             cq * (cls.eye(3) - cs.np.outer(axis, axis))
@@ -44,12 +44,12 @@ class SpatialMathCasadi(SpatialMathAbstract):
 
     def H_revolute_joint(cls, xyz, rpy, axis, q):
         T = cls.eye(4)
-        R = cls.R_from_RPY(rpy) @ cls.R_from_axisAngle(axis, q)
+        R = cls.R_from_RPY(rpy) @ cls.R_from_axis_angle(axis, q)
         T[:3, :3] = R
         T[:3, 3] = xyz
         return T
 
-    def H_from_PosRPY(cls, xyz, rpy):
+    def H_from_Pos_RPY(cls, xyz, rpy):
         T = cls.eye(4)
         T[:3, :3] = cls.R_from_RPY(rpy)
         T[:3, 3] = xyz
@@ -65,7 +65,7 @@ class SpatialMathCasadi(SpatialMathAbstract):
         return cls.spatial_transform(R, p)
 
     def X_fixed_joint(cls, xyz, rpy):
-        T = cls.H_from_PosRPY(xyz, rpy)
+        T = cls.H_from_Pos_RPY(xyz, rpy)
         R = T[:3, :3].T
         p = -T[:3, :3].T @ T[:3, 3]
         return cls.spatial_transform(R, p)

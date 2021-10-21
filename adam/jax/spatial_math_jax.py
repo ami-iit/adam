@@ -2,8 +2,6 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
-import abc
-
 import casadi as cs
 import jax.numpy as jnp
 import numpy as np
@@ -13,7 +11,7 @@ from adam.core.spatial_math import SpatialMathAbstract
 
 
 class SpatialMathJax(SpatialMathAbstract):
-    def R_from_axisAngle(cls, axis, q):
+    def R_from_axis_angle(cls, axis, q):
         [cq, sq] = [jnp.cos(q), jnp.sin(q)]
         return (
             cq * (jnp.eye(3) - jnp.outer(np.array(axis), np.array(axis)))
@@ -50,12 +48,12 @@ class SpatialMathJax(SpatialMathAbstract):
 
     def H_revolute_joint(cls, xyz, rpy, axis, q):
         T = jnp.eye(4)
-        R = cls.R_from_RPY(rpy) @ cls.R_from_axisAngle(axis, q)
+        R = cls.R_from_RPY(rpy) @ cls.R_from_axis_angle(axis, q)
         T = index_update(T, index[:3, :3], R)
         T = index_update(T, index[:3, 3], xyz)
         return T
 
-    def H_from_PosRPY(cls, xyz, rpy):
+    def H_from_Pos_RPY(cls, xyz, rpy):
         T = jnp.eye(4)
         T = index_update(T, index[:3, :3], cls.R_from_RPY(rpy))
         T = index_update(T, index[:3, 3], xyz)
@@ -71,7 +69,7 @@ class SpatialMathJax(SpatialMathAbstract):
         return cls.spatial_transform(R, p)
 
     def X_fixed_joint(cls, xyz, rpy):
-        T = cls.H_from_PosRPY(xyz, rpy)
+        T = cls.H_from_Pos_RPY(xyz, rpy)
         R = T[:3, :3].T
         p = -T[:3, :3].T @ T[:3, 3]
         return cls.spatial_transform(R, p)
