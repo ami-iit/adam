@@ -7,7 +7,7 @@ from typing import TypeVar
 
 import numpy as np
 
-from adam.core.transforms import SpatialMathAbstract
+from adam.core.spatial_math import SpatialMathAbstract
 from adam.core.urdf_tree import URDFTree
 
 T = TypeVar("T")

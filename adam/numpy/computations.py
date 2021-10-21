@@ -5,9 +5,10 @@
 import numpy as np
 
 from adam.core.rbd_algorithms import RBDAlgorithms
+from adam.numpy.spatial_math_numpy import SpatialMathNumpy
 
 
-class NumPyKinDynComputations(RBDAlgorithms):
+class NumPyKinDynComputations(RBDAlgorithms, SpatialMathNumpy):
     """This is a small class that retrieves robot quantities using NumPy
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -160,30 +161,3 @@ class NumPyKinDynComputations(RBDAlgorithms):
             self.g,
         )
         return G[:, 0]
-
-    @staticmethod
-    def zeros(*x):
-        return np.zeros(x)
-
-    @staticmethod
-    def vertcat(*x):
-        v = np.vstack(x)
-        # This check is needed since vercat is used for two types of data structure in RBDAlgo class.
-        # CasADi handles the cases smootly, with NumPy I need to handle the two cases.
-        # It should be improved
-        if v.shape[1] > 1:
-            v = np.concatenate(x)
-        return v
-
-    @staticmethod
-    def eye(x):
-        return np.eye(x)
-
-    @staticmethod
-    def skew(x):
-        # Retrieving the skew sym matrix using a cross product
-        return -np.cross(x, np.eye(3), axisa=0, axisb=0)
-
-    @staticmethod
-    def array(*x):
-        return np.empty(x)
