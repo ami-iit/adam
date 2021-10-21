@@ -114,11 +114,31 @@ def test_CMM():
     assert np.array(Jcm_test) - cmm_idyntreeNumpy == pytest.approx(0.0, abs=1e-5)
 
 
+def test_CoM_pos():
+    CoM_test = comp.CoM_position(H_b, s_)
+    CoM_iDynTree = kinDyn.getCenterOfMassPosition().toNumPy()
+    assert CoM_test - CoM_iDynTree == pytest.approx(0.0, abs=1e-5)
+
+
+def test_total_mass():
+    assert comp.get_total_mass() - robot_iDyn.model().getTotalMass() == pytest.approx(
+        0.0, abs=1e-5
+    )
+
+
 def test_jacobian():
     iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
     kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
     iDynNumpyJ_ = iDyntreeJ_.toNumPy()
-    J_test = comp.jacobian(H_b, s_, "l_sole")
+    J_test = comp.jacobian("l_sole", H_b, s_)
+    assert iDynNumpyJ_ - np.array(J_test) == pytest.approx(0.0, abs=1e-5)
+
+
+def test_jacobian_non_actuated():
+    iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
+    kinDyn.getFrameFreeFloatingJacobian("head", iDyntreeJ_)
+    iDynNumpyJ_ = iDyntreeJ_.toNumPy()
+    J_test = comp.jacobian("head", H_b, s_)
     assert iDynNumpyJ_ - np.array(J_test) == pytest.approx(0.0, abs=1e-5)
 
 
@@ -126,6 +146,57 @@ def test_fk():
     H_idyntree = kinDyn.getWorldTransform("l_sole")
     p_idy2np = H_idyntree.getPosition().toNumPy()
     R_idy2np = H_idyntree.getRotation().toNumPy()
-    H_test = comp.forward_kinematics(H_b, s_, "l_sole")
+    H_test = comp.forward_kinematics("l_sole", H_b, s_)
     assert R_idy2np - np.array(H_test[:3, :3]) == pytest.approx(0.0, abs=1e-5)
     assert p_idy2np - np.array(H_test[:3, 3]) == pytest.approx(0.0, abs=1e-5)
+
+
+def test_fk_non_actuated():
+    H_idyntree = kinDyn.getWorldTransform("head")
+    p_idy2np = H_idyntree.getPosition().toNumPy()
+    R_idy2np = H_idyntree.getRotation().toNumPy()
+    H_test = comp.forward_kinematics("head", H_b, s_)
+    assert R_idy2np - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
+    assert p_idy2np - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
+
+
+def test_bias_force():
+    h_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
+    assert kinDyn.generalizedBiasForces(h_iDyn)
+    h_iDyn_np = np.concatenate(
+        (h_iDyn.baseWrench().toNumPy(), h_iDyn.jointTorques().toNumPy())
+    )
+    h_test = comp.bias_force(H_b, s_, vb_, s_dot_)
+    assert h_iDyn_np - h_test == pytest.approx(0.0, abs=1e-4)
+
+
+def test_coriolis_term():
+    g0 = idyntree.Vector3()
+    g0.zero()
+    kinDyn.setRobotState(H_b_idyn, s, vb, s_dot, g0)
+    C_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
+    assert kinDyn.generalizedBiasForces(C_iDyn)
+    C_iDyn_np = np.concatenate(
+        (C_iDyn.baseWrench().toNumPy(), C_iDyn.jointTorques().toNumPy())
+    )
+    C_test = comp.coriolis_term(H_b, s_, vb_, s_dot_)
+    assert C_iDyn_np - C_test == pytest.approx(0.0, abs=1e-4)
+
+
+def test_gravity_term():
+    kinDyn2 = idyntree.KinDynComputations()
+    kinDyn2.loadRobotModel(robot_iDyn.model())
+    kinDyn2.setFloatingBase(root_link)
+    kinDyn2.setFrameVelocityRepresentation(idyntree.MIXED_REPRESENTATION)
+    vb0 = idyntree.Twist()
+    s_dot0 = idyntree.VectorDynSize(n_dofs)
+    kinDyn2.setRobotState(H_b_idyn, s, vb0, s_dot0, g)
+    G_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn2.model())
+    assert kinDyn2.generalizedBiasForces(G_iDyn)
+    G_iDyn_np = np.concatenate(
+        (G_iDyn.baseWrench().toNumPy(), G_iDyn.jointTorques().toNumPy())
+    )
+    print(G_iDyn_np)
+    G_test = comp.gravity_term(H_b, s_)
+    print(G_test)
+    assert G_iDyn_np - G_test == pytest.approx(0.0, abs=1e-4)
