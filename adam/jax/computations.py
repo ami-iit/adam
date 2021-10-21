@@ -8,10 +8,10 @@ from jax import grad, jit, vmap
 from jax.ops import index, index_add, index_update
 
 from adam.core.rbd_algorithms import RBDAlgorithms
-from adam.jax import spatial_math_jax as utils
+from adam.jax.spatial_math_jax import SpatialMathJax
 
 
-class JaxKinDynComputations(RBDAlgorithms):
+class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
     """This is a small class that retrieves robot quantities using NumPy
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -190,14 +190,14 @@ class JaxKinDynComputations(RBDAlgorithms):
             mass = link_i.inertial.mass
             o = link_i.inertial.origin.xyz
             rpy = link_i.inertial.origin.rpy
-            Ic[i] = utils.spatial_inertia(I, mass, o, rpy)
+            Ic[i] = self.spatial_inertia(I, mass, o, rpy)
 
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
-                X_p[i] = utils.spatial_transform(np.eye(3), np.zeros(3))
+                X_p[i] = self.spatial_transform(np.eye(3), np.zeros(3))
                 Phi[i] = jnp.eye(6)
             elif joint_i.type == "fixed":
-                X_J = utils.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
+                X_J = self.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
                 Phi[i] = jnp.zeros([6, 1])  # cs.vertcat(0, 0, 0, 0, 0, 0)
             elif joint_i.type == "revolute":
@@ -205,7 +205,7 @@ class JaxKinDynComputations(RBDAlgorithms):
                     q_ = q[joint_i.idx]
                 else:
                     q_ = 0.0
-                X_J = utils.X_revolute_joint(
+                X_J = self.X_revolute_joint(
                     joint_i.origin.xyz,
                     joint_i.origin.rpy,
                     joint_i.axis,
@@ -319,7 +319,7 @@ class JaxKinDynComputations(RBDAlgorithms):
                 if joint.type == "fixed":
                     xyz = joint.origin.xyz
                     rpy = joint.origin.rpy
-                    joint_frame = utils.H_from_PosRPY(xyz, rpy)
+                    joint_frame = self.H_from_PosRPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     # if the joint is actuated set the value
@@ -327,7 +327,7 @@ class JaxKinDynComputations(RBDAlgorithms):
                         q_ = q[joint.idx]
                     else:
                         q_ = 0.0
-                    T_joint = utils.H_revolute_joint(
+                    T_joint = self.H_revolute_joint(
                         joint.origin.xyz,
                         joint.origin.rpy,
                         joint.axis,
@@ -364,14 +364,14 @@ class JaxKinDynComputations(RBDAlgorithms):
                 if joint.type == "fixed":
                     xyz = joint.origin.xyz
                     rpy = joint.origin.rpy
-                    joint_frame = utils.H_from_PosRPY(xyz, rpy)
+                    joint_frame = self.H_from_PosRPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     if joint.idx is not None:
                         q_ = q[joint.idx]
                     else:
                         q_ = 0.0
-                    T_joint = utils.H_revolute_joint(
+                    T_joint = self.H_revolute_joint(
                         joint.origin.xyz,
                         joint.origin.rpy,
                         joint.axis,
@@ -385,42 +385,15 @@ class JaxKinDynComputations(RBDAlgorithms):
                             J,
                             index[:, joint.idx],
                             jnp.vstack(
-                                [[utils.skew(z_prev) @ p_prev], [z_prev]]
+                                [[self.skew(z_prev) @ p_prev], [z_prev]]
                             ).reshape(-1),
                         )
 
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = jnp.zeros([6, self.NDoF + 6])
         J_tot = index_update(J_tot, index[:3, :3], jnp.eye(3))
-        J_tot = index_update(J_tot, index[:3, 3:6], -utils.skew((P_ee - T_b[:3, 3])))
+        J_tot = index_update(J_tot, index[:3, 3:6], -self.skew((P_ee - T_b[:3, 3])))
         J_tot = index_update(J_tot, index[:3, 6:], J[:3, :])
         J_tot = index_update(J_tot, index[3:, 3:6], jnp.eye(3))
         J_tot = index_update(J_tot, index[3:, 6:], J[3:, :])
         return J_tot
-
-    @staticmethod
-    def zeros(*x):
-        pass
-
-    @staticmethod
-    def vertcat(*x):
-        v = jnp.vstack(x)
-        # This check is needed since vercat is used for two types of data structure in RBDAlgo class.
-        # CasADi handles the cases smootly, with NumPy I need to handle the two cases.
-        # It should be improved
-        if v.shape[1] > 1:
-            v = jnp.concatenate(x)
-        return v
-
-    @staticmethod
-    def eye(x):
-        pass
-
-    @staticmethod
-    def skew(x):
-        S = jnp.array([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
-        return S
-
-    @staticmethod
-    def array(*x):
-        pass
