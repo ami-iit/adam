@@ -14,7 +14,7 @@ T = TypeVar("T")
 
 
 class RBDAlgorithms(SpatialMathAbstract):
-    """This is a small abstract class that implements Rigid body algorithms retrieving robot quantities represented
+    """This is a small abstract class that implements Rigid body algorithms retrieving robot joint_positionsuantities represented
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
 
@@ -47,13 +47,13 @@ class RBDAlgorithms(SpatialMathAbstract):
             self.tree,
         ) = urdf_tree.load_model()
 
-    def crba(self, T_b: T, q: T) -> T:
+    def crba(self, base_transform: T, joint_positions: T) -> T:
         """This function computes the Composite Rigid body algorithm (Roy Featherstone) that computes the Mass Matrix.
          The algorithm is complemented with Orin's modifications computing the Centroidal Momentum Matrix
 
         Args:
-            T_b (T): The homogenous transform from base to world frame
-            q (T): The joints position
+            base_transform (T): The homogenous transform from base to world frame
+            joint_positions (T): The joints position
         Returns:
             M (T): Mass Matrix
             Jcm (T): Centroidal Momentum Matrix
@@ -83,7 +83,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
             elif joint_i.type == "revolute":
                 if joint_i.idx is not None:
-                    q_ = q[joint_i.idx]
+                    q_ = joint_positions[joint_i.idx]
                 else:
                     q_ = 0.0
                 X_J = self.X_revolute_joint(
@@ -155,29 +155,29 @@ class RBDAlgorithms(SpatialMathAbstract):
             elif joint_i.idx is not None:
                 Jcm[:, [joint_i.idx + 6]] = X_G[i].T @ Ic[i] @ Phi[i]
 
-        # Until now the algorithm returns the quantities in Body Fixed representation
+        # Until now the algorithm returns the joint_positionsuantities in Body Fixed representation
         # Moving to mixed representation...
         X_to_mixed = self.eye(self.NDoF + 6)
-        X_to_mixed[:3, :3] = T_b[:3, :3].T
-        X_to_mixed[3:6, 3:6] = T_b[:3, :3].T
+        X_to_mixed[:3, :3] = base_transform[:3, :3].T
+        X_to_mixed[3:6, 3:6] = base_transform[:3, :3].T
         M = X_to_mixed.T @ M @ X_to_mixed
         Jcm = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
         return M, Jcm
 
-    def forward_kinematics(self, frame, T_b: T, q: T):
+    def forward_kinematics(self, frame, base_transform: T, joint_positions: T) -> T:
         """Computes the forward kinematics relative to the specified frame
 
         Args:
             frame (str): The frame to which the fk will be computed
-            T_b (T): The homogenous transform from base to world frame
-            q (T): The joints position
+            base_transform (T): The homogenous transform from base to world frame
+            joint_positions (T): The joints position
         Returns:
             T_fk (T): The fk represented as Homogenous transformation matrix
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
 
         T_fk = self.eye(4)
-        T_fk = T_fk @ T_b
+        T_fk = T_fk @ base_transform
         for item in chain:
             if item in self.robot_desc.joint_map:
                 joint = self.robot_desc.joint_map[item]
@@ -189,7 +189,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                 if joint.type == "revolute":
                     # if the joint is actuated set the value
                     if joint.idx is not None:
-                        q_ = q[joint.idx]
+                        q_ = joint_positions[joint.idx]
                     else:
                         q_ = 0.0
                     T_joint = self.H_revolute_joint(
@@ -201,22 +201,22 @@ class RBDAlgorithms(SpatialMathAbstract):
                     T_fk = T_fk @ T_joint
         return T_fk
 
-    def jacobian(self, frame, T_b, q):
+    def jacobian(self, frame: str, base_transform: T, joint_positions: T) -> T:
         """Returns the Jacobian relative to the specified frame
 
         Args:
             frame (str): The frame to which the jacobian will be computed
-            T_b (T): The homogenous transform from base to world frame
-            q (T): The joints position
+            base_transform (T): The homogenous transform from base to world frame
+            joint_positions (T): The joints position
 
         Returns:
             J_tot (T): The Jacobian relative to the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
         T_fk = self.eye(4)
-        T_fk = T_fk @ T_b
+        T_fk = T_fk @ base_transform
         J = self.zeros(6, self.NDoF)
-        T_ee = self.forward_kinematics(frame, T_b, q)
+        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
         for item in chain:
             if item in self.robot_desc.joint_map:
@@ -228,7 +228,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     if joint.idx is not None:
-                        q_ = q[joint.idx]
+                        q_ = joint_positions[joint.idx]
                     else:
                         q_ = 0.0
                     T_joint = self.H_revolute_joint(
@@ -241,7 +241,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                     p_prev = P_ee - T_fk[:3, 3]
                     z_prev = T_fk[:3, :3] @ joint.axis
                     # J[:, joint.idx] = self.vertcat(
-                    #     cs.jacobian(P_ee, q[joint.idx]), z_prev) # using casadi jacobian
+                    #     cs.jacobian(P_ee, joint_positions[joint.idx]), z_prev) # using casadi jacobian
                     if joint.idx is not None:
                         J[:, joint.idx] = self.vertcat(
                             self.skew(z_prev) @ p_prev, z_prev
@@ -250,28 +250,28 @@ class RBDAlgorithms(SpatialMathAbstract):
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.zeros(6, self.NDoF + 6)
         J_tot[:3, :3] = self.eye(3)
-        J_tot[:3, 3:6] = -self.skew((P_ee - T_b[:3, 3]))
+        J_tot[:3, 3:6] = -self.skew((P_ee - base_transform[:3, 3]))
         J_tot[:3, 6:] = J[:3, :]
         J_tot[3:, 3:6] = self.eye(3)
         J_tot[3:, 6:] = J[3:, :]
         return J_tot
 
-    def relative_jacobian(self, frame, q):
+    def relative_jacobian(self, frame: str, joint_positions: T) -> T:
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
             frame (str): The tip of the chain
-            q (T): The joints position
+            joint_positions (T): The joints position
 
         Returns:
             J (T): The Jacobian between the root and the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
-        T_b = self.eye(4)
+        base_transform = self.eye(4)
         T_fk = self.eye(4)
-        T_fk = T_fk @ T_b
+        T_fk = T_fk @ base_transform
         J = self.zeros(6, self.NDoF)
-        T_ee = self.forward_kinematics(frame, T_b, q)
+        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
         for item in chain:
             if item in self.robot_desc.joint_map:
@@ -283,7 +283,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     if joint.idx is not None:
-                        q_ = q[joint.idx]
+                        q_ = joint_positions[joint.idx]
                     else:
                         q_ = 0.0
                     T_joint = self.H_revolute_joint(
@@ -296,19 +296,19 @@ class RBDAlgorithms(SpatialMathAbstract):
                     p_prev = P_ee - T_fk[:3, 3]
                     z_prev = T_fk[:3, :3] @ joint.axis
                     # J[:, joint.idx] = self.vertcat(
-                    #     cs.jacobian(P_ee, q[joint.idx]), z_prev) # using casadi jacobian
+                    #     cs.jacobian(P_ee, joint_positions[joint.idx]), z_prev) # using casadi jacobian
                     if joint.idx is not None:
                         J[:, joint.idx] = self.vertcat(
                             self.skew(z_prev) @ p_prev, z_prev
                         )
         return J
 
-    def CoM_position(self, T_b, q):
+    def CoM_position(self, base_transform: T, joint_positions: T) -> T:
         """Returns the CoM positon
 
         Args:
-            T_b (T): The homogenous transform from base to world frame
-            q (T): The joints position
+            base_transform (T): The homogenous transform from base to world frame
+            joint_positions (T): The joints position
 
         Returns:
             com (T): The CoM position
@@ -317,7 +317,7 @@ class RBDAlgorithms(SpatialMathAbstract):
         for item in self.robot_desc.link_map:
             link = self.robot_desc.link_map[item]
             if link.inertial is not None:
-                T_fk = self.forward_kinematics(item, T_b, q)
+                T_fk = self.forward_kinematics(item, base_transform, joint_positions)
                 T_link = self.H_from_Pos_RPY(
                     link.inertial.origin.xyz,
                     link.inertial.origin.rpy,
@@ -341,16 +341,23 @@ class RBDAlgorithms(SpatialMathAbstract):
                 mass += link.inertial.mass
         return mass
 
-    def rnea(self, T_b, q, v_b, q_dot, g):
+    def rnea(
+        self,
+        base_transform: T,
+        joint_positions: T,
+        base_velocity: T,
+        joint_velocities: T,
+        g: T,
+    ) -> T:
         """Implementation of reduced Recursive Newton-Euler algorithm
         (no acceleration and external forces). For now used to compute the bias force term
 
         Args:
             frame (str): The frame to which the jacobian will be computed
-            T_b (T): The homogenous transform from base to world frame
-            q (T): The joints position
-            v_b (T): The base velocity in mixed representation
-            q_dot (T): The joints velocity
+            base_transform (T): The homogenous transform from base to world frame
+            joint_positions (T): The joints position
+            base_velocity (T): The base velocity in mixed representation
+            joint_velocities (T): The joints velocity
             g (T): The 6D gravity acceleration
 
         Returns:
@@ -366,12 +373,16 @@ class RBDAlgorithms(SpatialMathAbstract):
         f = [None] * len(self.tree.links)
 
         X_to_mixed = self.eye(6)
-        X_to_mixed[:3, :3] = T_b[:3, :3].T
-        X_to_mixed[3:6, 3:6] = T_b[:3, :3].T
+        X_to_mixed[:3, :3] = base_transform[:3, :3].T
+        X_to_mixed[3:6, 3:6] = base_transform[:3, :3].T
 
         acc_to_mixed = self.zeros(6, 1)
-        acc_to_mixed[:3] = -T_b[:3, :3].T @ self.skew(v_b[3:]) @ v_b[:3]
-        acc_to_mixed[3:] = -T_b[:3, :3].T @ self.skew(v_b[3:]) @ v_b[3:]
+        acc_to_mixed[:3] = (
+            -base_transform[:3, :3].T @ self.skew(base_velocity[3:]) @ base_velocity[:3]
+        )
+        acc_to_mixed[3:] = (
+            -base_transform[:3, :3].T @ self.skew(base_velocity[3:]) @ base_velocity[3:]
+        )
         # set initial acceleration (rotated gravity + apparent acceleration)
         # reshape g as a vertical vector
         a[0] = -X_to_mixed @ g.reshape(6, 1) + acc_to_mixed
@@ -390,7 +401,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
                 Phi[i] = self.eye(6)
-                v_J = Phi[i] @ X_to_mixed @ v_b
+                v_J = Phi[i] @ X_to_mixed @ base_velocity
             elif joint_i.type == "fixed":
                 X_J = self.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
@@ -398,20 +409,23 @@ class RBDAlgorithms(SpatialMathAbstract):
                 v_J = self.zeros(6, 1)
             elif joint_i.type == "revolute":
                 if joint_i.idx is not None:
-                    q_ = q[joint_i.idx]
-                    q_dot_ = q_dot[joint_i.idx]
+                    q_ = joint_positions[joint_i.idx]
+                    joint_velocities_ = joint_velocities[joint_i.idx]
                 else:
                     q_ = 0.0
-                    q_dot_ = 0.0
+                    joint_velocities_ = 0.0
 
                 X_J = self.X_revolute_joint(
-                    joint_i.origin.xyz, joint_i.origin.rpy, joint_i.axis, q_
+                    joint_i.origin.xyz,
+                    joint_i.origin.rpy,
+                    joint_i.axis,
+                    q_,
                 )
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(
                     0, 0, 0, joint_i.axis[0], joint_i.axis[1], joint_i.axis[2]
                 )
-                v_J = Phi[i] * q_dot_
+                v_J = Phi[i] * joint_velocities_
 
             if link_i.name == self.root_link:
                 v[i] = v_J

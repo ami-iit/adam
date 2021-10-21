@@ -10,7 +10,7 @@ from adam.pytorch.spatial_math_pytorch import SpatialMathPytorch
 
 
 class PytorchKinDynComputations(RBDAlgorithms, SpatialMathPytorch):
-    """This is a small class that retrieves robot quantities using NumPy
+    """This is a small class that retrieves robot joint_positionsuantities using Pytorch
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
 
@@ -34,63 +34,63 @@ class PytorchKinDynComputations(RBDAlgorithms, SpatialMathPytorch):
             gravity=gravity,
         )
 
-    def mass_matrix(self, T_b, s):
+    def mass_matrix(self, base_transform, s):
         """Returns the Mass Matrix functions computed the CRBA
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (torch.tensor): The homogenous transform from base to world frame
+            s (torch.tensor): The joints position
 
         Returns:
-            M (np.ndarray): Mass Matrix
+            M (torch.tensor): Mass Matrix
         """
-        [M, _] = super().crba(T_b, s)
+        [M, _] = super().crba(base_transform, s)
         return M
 
-    def centroidal_momentum_matrix(self, T_b, s):
+    def centroidal_momentum_matrix(self, base_transform, s):
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (torch.tensor): The homogenous transform from base to world frame
+            s (torch.tensor): The joints position
 
         Returns:
-            Jcc (np.ndarray): Centroidal Momentum matrix
+            Jcc (torch.tensor): Centroidal Momentum matrix
         """
-        [_, Jcm] = super().crba(T_b, s)
+        [_, Jcm] = super().crba(base_transform, s)
         return Jcm
 
-    def forward_kinematics(self, frame, T_b, s):
+    def forward_kinematics(self, frame, base_transform, s):
         """Computes the forward kinematics relative to the specified frame
 
         Args:
             frame (str): The frame to which the fk will be computed
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (torch.tensor): The homogenous transform from base to world frame
+            s (torch.tensor): The joints position
 
         Returns:
-            T_fk (np.ndarray): The fk represented as Homogenous transformation matrix
+            T_fk (torch.tensor): The fk represented as Homogenous transformation matrix
         """
         return super().forward_kinematics(
-            frame, torch.FloatTensor(T_b), torch.FloatTensor(s)
+            frame, torch.FloatTensor(base_transform), torch.FloatTensor(s)
         )
 
-    def jacobian(self, frame, T_b, q):
+    def jacobian(self, frame, base_transform, joint_positions):
         """Returns the Jacobian relative to the specified frame
 
         Args:
             frame (str): The frame to which the jacobian will be computed
-            T_b (T): The homogenous transform from base to world frame
-            q (T): The joints position
+            base_transform (torch.tensor): The homogenous transform from base to world frame
+            joint_positions (torch.tensor): The joints position
 
         Returns:
-            J_tot (T): The Jacobian relative to the frame
+            J_tot (torch.tensor): The Jacobian relative to the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
         T_fk = self.eye(4)
-        T_fk = T_fk @ T_b
+        T_fk = T_fk @ base_transform
         J = self.zeros(6, self.NDoF)
-        T_ee = self.forward_kinematics(frame, T_b, q)
+        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
         for item in chain:
             if item in self.robot_desc.joint_map:
@@ -102,7 +102,7 @@ class PytorchKinDynComputations(RBDAlgorithms, SpatialMathPytorch):
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     if joint.idx is not None:
-                        q_ = q[joint.idx]
+                        q_ = joint_positions[joint.idx]
                     else:
                         q_ = 0.0
                     T_joint = self.H_revolute_joint(
@@ -121,28 +121,28 @@ class PytorchKinDynComputations(RBDAlgorithms, SpatialMathPytorch):
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.zeros(6, self.NDoF + 6)
         J_tot[:3, :3] = self.eye(3)
-        J_tot[:3, 3:6] = -self.skew((P_ee - T_b[:3, 3]))
+        J_tot[:3, 3:6] = -self.skew((P_ee - base_transform[:3, 3]))
         J_tot[:3, 6:] = J[:3, :]
         J_tot[3:, 3:6] = self.eye(3)
         J_tot[3:, 6:] = J[3:, :]
         return J_tot
 
-    def relative_jacobian(self, frame, q):
+    def relative_jacobian(self, frame, joint_positions):
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
             frame (str): The tip of the chain
-            q (T): The joints position
+            joint_positions (torch.tensor): The joints position
 
         Returns:
-            J (T): The Jacobian between the root and the frame
+            J (torch.tensor): The Jacobian between the root and the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
-        T_b = self.eye(4)
+        base_transform = self.eye(4)
         T_fk = self.eye(4)
-        T_fk = T_fk @ T_b
+        T_fk = T_fk @ base_transform
         J = self.zeros(6, self.NDoF)
-        T_ee = self.forward_kinematics(frame, T_b, q)
+        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
         for item in chain:
             if item in self.robot_desc.joint_map:
@@ -154,7 +154,7 @@ class PytorchKinDynComputations(RBDAlgorithms, SpatialMathPytorch):
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     if joint.idx is not None:
-                        q_ = q[joint.idx]
+                        q_ = joint_positions[joint.idx]
                     else:
                         q_ = 0.0
                     T_joint = self.H_revolute_joint(
@@ -171,65 +171,75 @@ class PytorchKinDynComputations(RBDAlgorithms, SpatialMathPytorch):
                         J[:, joint.idx] = torch.tensor(stack)
         return J
 
-    def CoM_position(self, T_b, s):
+    def CoM_position(self, base_transform, joint_positions):
         """Returns the CoM positon
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (torch.tensor): The homogenous transform from base to world frame
+            joint_positions (torch.tensor): The joints position
 
         Returns:
-            com (np.ndarray): The CoM position
+            com (torch.tensor): The CoM position
         """
-        return super().CoM_position(T_b, s)
+        return super().CoM_position(base_transform, joint_positions)
 
-    def bias_force(self, T_b, s, v_b, s_dot):
-        """Returns the bias force of the floating-base dynamics equation,
+    def bias_force(self, base_transform, s, base_velocity, joint_velocities):
+        """Returns the bias force of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
-            v_b (np.ndarray): The base velocity in mixed representation
-            s_dot (np.ndarray): The joints velocity
+            base_transform (torch.tensor): The homogenous transform from base to world frame
+            s (torch.tensor): The joints position
+            base_velocity (torch.tensor): The base velocity in mixed representation
+            joint_velocities (torch.tensor): The joints velocity
 
         Returns:
-            h (np.ndarray): the bias force
+            h (torch.tensor): the bias force
         """
-        h = super().rnea(T_b, s, v_b.reshape(6, 1), s_dot, self.g)
+        h = super().rnea(
+            base_transform, s, base_velocity.reshape(6, 1), joint_velocities, self.g
+        )
         return h[:, 0]
 
-    def coriolis_term(self, T_b, s, v_b, s_dot):
-        """Returns the coriolis term of the floating-base dynamics equation,
+    def coriolis_term(
+        self, base_transform, joint_positions, base_velocity, joint_velocities
+    ):
+        """Returns the coriolis term of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
-            v_b (np.ndarray): The base velocity in mixed representation
-            s_dot (np.ndarray): The joints velocity
+            base_transform (torch.tensor): The homogenous transform from base to world frame
+            joint_positions (torch.tensor): The joints position
+            base_velocity (torch.tensor): The base velocity in mixed representation
+            joint_velocities (torch.tensor): The joints velocity
 
         Returns:
-            C (np.ndarray): the Coriolis term
+            C (torch.tensor): the Coriolis term
         """
         # set in the bias force computation the gravity term to zero
-        C = super().rnea(T_b, s, v_b.reshape(6, 1), s_dot, torch.zeros(6))
+        C = super().rnea(
+            base_transform,
+            joint_positions,
+            base_velocity.reshape(6, 1),
+            joint_velocities,
+            torch.zeros(6),
+        )
         return C[:, 0]
 
-    def gravity_term(self, T_b, s):
-        """Returns the gravity term of the floating-base dynamics equation,
+    def gravity_term(self, base_transform, base_positions):
+        """Returns the gravity term of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (torch.tensor): The homogenous transform from base to world frame
+            base_positions (torch.tensor): The joints position
 
         Returns:
-            G (np.ndarray): the gravity term
+            G (torch.tensor): the gravity term
         """
         G = super().rnea(
-            T_b,
-            s,
+            base_transform,
+            base_positions,
             torch.zeros(6).reshape(6, 1),
             torch.zeros(self.NDoF),
             torch.FloatTensor(self.g),

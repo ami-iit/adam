@@ -12,7 +12,7 @@ from adam.jax.spatial_math_jax import SpatialMathJax
 
 
 class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
-    """This is a small class that retrieves robot quantities using NumPy
+    """This is a small class that retrieves robot joint_positionsuantities using Jax
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
 
@@ -36,63 +36,63 @@ class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
             gravity=gravity,
         )
 
-    def mass_matrix(self, T_b, s):
+    def mass_matrix(self, base_transform, joint_positions):
         """Returns the Mass Matrix functions computed the CRBA
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (jnp.ndarray): The homogenous transform from base to world frame
+            joint_positions (jnp.ndarray): The joints position
 
         Returns:
             M (jax): Mass Matrix
         """
-        [M, _] = self.crba(T_b, s)
+        [M, _] = self.crba(base_transform, joint_positions)
         return M
 
-    def centroidal_momentum_matrix(self, T_b, s):
+    def centroidal_momentum_matrix(self, base_transform, joint_positions):
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (jnp.ndarray): The homogenous transform from base to world frame
+            joint_positions (jnp.ndarray): The joints position
 
         Returns:
-            Jcc (np.ndarray): Centroidal Momentum matrix
+            Jcc (jnp.ndarray): Centroidal Momentum matrix
         """
-        [_, Jcm] = self.crba(T_b, s)
+        [_, Jcm] = self.crba(base_transform, joint_positions)
         return Jcm
 
-    def relative_jacobian(self, frame, s):
+    def relative_jacobian(self, frame, joint_positions):
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
             frame (str): The tip of the chain
-            s (np.ndarray): The joints position
+            joint_positions (jnp.ndarray): The joints position
 
         Returns:
-            J (np.ndarray): The Jacobian between the root and the frame
+            J (jnp.ndarray): The Jacobian between the root and the frame
         """
-        return super().relative_jacobian(frame, s)
+        return super().relative_jacobian(frame, joint_positions)
 
-    def CoM_position(self, T_b, s):
+    def CoM_position(self, base_transform, joint_positions):
         """Returns the CoM positon
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (jnp.ndarray): The homogenous transform from base to world frame
+            joint_positions (jnp.ndarray): The joints position
 
         Returns:
-            com (np.ndarray): The CoM position
+            com (jnp.ndarray): The CoM position
         """
-        return super().CoM_position(T_b, s)
+        return super().CoM_position(base_transform, joint_positions)
 
-    def crba(self, T_b, q):
+    def crba(self, base_transform, joint_positions):
         """This function computes the Composite Rigid body algorithm (Roy Featherstone) that computes the Mass Matrix.
          The algorithm is complemented with Orin's modifications computing the Centroidal Momentum Matrix
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (jnp.ndarray): The homogenous transform from base to world frame
+            joint_positions (jnp.ndarray): The joints position
 
         Returns:
             M (jax): Mass Matrix
@@ -123,7 +123,7 @@ class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
                 Phi[i] = self.zeros(6, 1)  # cs.vertcat(0, 0, 0, 0, 0, 0)
             elif joint_i.type == "revolute":
                 if joint_i.idx is not None:
-                    q_ = q[joint_i.idx]
+                    q_ = joint_positions[joint_i.idx]
                 else:
                     q_ = 0.0
                 X_J = self.X_revolute_joint(
@@ -210,49 +210,51 @@ class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
                     Jcm, index[:, joint_i.idx + 6], (X_G[i].T @ Ic[i] @ Phi[i])[:, 0]
                 )
 
-        # Until now the algorithm returns the quantities in Body Fixed representation
+        # Until now the algorithm returns the joint_positionsuantities in Body Fixed representation
         # Moving to mixed representation...
         X_to_mixed = self.eye(self.NDoF + 6)
-        X_to_mixed = index_update(X_to_mixed, index[:3, :3], T_b[:3, :3].T)
-        X_to_mixed = index_update(X_to_mixed, index[3:6, 3:6], T_b[:3, :3].T)
+        X_to_mixed = index_update(X_to_mixed, index[:3, :3], base_transform[:3, :3].T)
+        X_to_mixed = index_update(X_to_mixed, index[3:6, 3:6], base_transform[:3, :3].T)
         M = X_to_mixed.T @ M @ X_to_mixed
         Jcc = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
         return M, Jcc
 
-    def forward_kinematics(self, frame, T_b, s):
+    def forward_kinematics(self, frame, base_transform, joint_positions):
         """Computes the forward kinematics relative to the specified frame
 
         Args:
             frame (str): The frame to which the fk will be computed
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (jnp.ndarray): The homogenous transform from base to world frame
+            joint_positions (jnp.ndarray): The joints position
 
         Returns:
-            T_fk (np.ndarray): The fk represented as Homogenous transformation matrix
+            T_fk (jnp.ndarray): The fk represented as Homogenous transformation matrix
         """
-        return super().forward_kinematics(frame, T_b, s)
+        return super().forward_kinematics(frame, base_transform, joint_positions)
 
     def forward_kinematics_fun(self, frame):
-        fk_frame = lambda T, q: self.forward_kinematics(frame, T, q)
-        return jit(fk_frame)
+        fk_frame = lambda T, joint_positions: self.forward_kinematics(
+            frame, T, joint_positions
+        )
+        return fk_frame
 
-    def jacobian(self, frame, T_b, q):
+    def jacobian(self, frame, base_transform, joint_positions):
         """Returns the Jacobian relative to the specified frame
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (jnp.ndarray): The homogenous transform from base to world frame
+            s (jnp.ndarray): The joints position
             frame (str): The frame to which the jacobian will be computed
 
         Returns:
-            J_tot (jax): The Jacobian relative to the frame
+            J_tot (jnp.ndarray): The Jacobian relative to the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
         T_fk = self.eye(4)
-        T_fk = T_fk @ T_b
+        T_fk = T_fk @ base_transform
         J = self.zeros(6, self.NDoF)
         T_ee = self.forward_kinematics_fun(frame)
-        T_ee = T_ee(T_b, q)
+        T_ee = T_ee(base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
         for item in chain:
             if item in self.robot_desc.joint_map:
@@ -264,7 +266,7 @@ class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
                     T_fk = T_fk @ joint_frame
                 if joint.type == "revolute":
                     if joint.idx is not None:
-                        q_ = q[joint.idx]
+                        q_ = joint_positions[joint.idx]
                     else:
                         q_ = 0.0
                     T_joint = self.H_revolute_joint(
@@ -288,18 +290,35 @@ class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.zeros(6, self.NDoF + 6)
         J_tot = index_update(J_tot, index[:3, :3], self.eye(3))
-        J_tot = index_update(J_tot, index[:3, 3:6], -self.skew((P_ee - T_b[:3, 3])))
+        J_tot = index_update(
+            J_tot, index[:3, 3:6], -self.skew((P_ee - base_transform[:3, 3]))
+        )
         J_tot = index_update(J_tot, index[:3, 6:], J[:3, :])
         J_tot = index_update(J_tot, index[3:, 3:6], self.eye(3))
         J_tot = index_update(J_tot, index[3:, 6:], J[3:, :])
         return J_tot
 
-    def rnea(self, T_b, q, v_b, q_dot, g):
+    def rnea(
+        self,
+        base_transform: jnp.array,
+        joint_positions: jnp.array,
+        base_velocity: jnp.array,
+        joint_velocities: jnp.array,
+        g: jnp.array,
+    ) -> jnp.array:
         """Implementation of reduced Recursive Newton-Euler algorithm
         (no acceleration and external forces). For now used to compute the bias force term
 
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            joint_positions (jnp.array): The joints position
+            base_velocity (jnp.array): The base velocity in mixed representation
+            joint_velocities (jnp.array): The joints velocity
+            g (jnp.array): The 6D gravity acceleration
+
         Returns:
-            tau (casADi function): generalized force variables
+            tau (jnp.array): generalized force variables
         """
         # TODO: add accelerations
         tau = self.zeros(self.NDoF + 6)
@@ -311,18 +330,22 @@ class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
         f = [None] * len(self.tree.links)
 
         X_to_mixed = self.eye(6)
-        X_to_mixed = index_update(X_to_mixed, index[:3, :3], T_b[:3, :3].T)
-        X_to_mixed = index_update(X_to_mixed, index[3:6, 3:6], T_b[:3, :3].T)
+        X_to_mixed = index_update(X_to_mixed, index[:3, :3], base_transform[:3, :3].T)
+        X_to_mixed = index_update(X_to_mixed, index[3:6, 3:6], base_transform[:3, :3].T)
         acc_to_mixed = self.zeros(6, 1)
         acc_to_mixed = index_update(
             acc_to_mixed,
             index[:3],
-            -T_b[:3, :3].T @ self.skew(v_b[3:]) @ v_b[:3].reshape(-1, 1),
+            -base_transform[:3, :3].T
+            @ self.skew(base_velocity[3:])
+            @ base_velocity[:3].reshape(-1, 1),
         )
         acc_to_mixed = index_update(
             acc_to_mixed,
             index[3:],
-            -T_b[:3, :3].T @ self.skew(v_b[3:]) @ v_b[3:].reshape(-1, 1),
+            -base_transform[:3, :3].T
+            @ self.skew(base_velocity[3:])
+            @ base_velocity[3:].reshape(-1, 1),
         )
         # set initial acceleration (rotated gravity + apparent acceleration)
         a[0] = -X_to_mixed @ g.reshape(-1, 1) + acc_to_mixed
@@ -341,7 +364,7 @@ class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.spatial_transform(np.eye(3), np.zeros(3))
                 Phi[i] = self.eye(6)
-                v_J = Phi[i] @ X_to_mixed @ v_b.reshape(-1, 1)
+                v_J = Phi[i] @ X_to_mixed @ base_velocity.reshape(-1, 1)
             elif joint_i.type == "fixed":
                 X_J = self.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
@@ -349,14 +372,17 @@ class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
                 v_J = self.zeros(6, 1)
             elif joint_i.type == "revolute":
                 if joint_i.idx is not None:
-                    q_ = q[joint_i.idx]
-                    q_dot_ = q_dot[joint_i.idx]
+                    q_ = joint_positions[joint_i.idx]
+                    q_dot_ = joint_velocities[joint_i.idx]
                 else:
                     q_ = 0.0
                     q_dot_ = 0.0
 
                 X_J = self.X_revolute_joint(
-                    joint_i.origin.xyz, joint_i.origin.rpy, joint_i.axis, q_
+                    joint_i.origin.xyz,
+                    joint_i.origin.rpy,
+                    joint_i.axis,
+                    q_,
                 )
                 X_p[i] = X_J
                 Phi[i] = self.array(
@@ -388,67 +414,89 @@ class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
         tau = index_update(tau, index[:6], X_to_mixed.T @ tau[:6])
         return tau
 
-    def bias_force(self, T_b, s, v_b, s_dot):
-        """Returns the bias force of the floating-base dynamics equation,
+    def bias_force(
+        self,
+        base_transform: jnp.array,
+        joint_positions: jnp.array,
+        base_velocity: jnp.array,
+        s_dot: jnp.array,
+    ) -> jnp.array:
+        """Returns the bias force of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
-            v_b (np.ndarray): The base velocity in mixed representation
-            s_dot (np.ndarray): The joints velocity
+            base_transform (jnp.ndarray): The homogenous transform from base to world frame
+            joint_positions (jnp.ndarray): The joints position
+            base_velocity (jnp.ndarray): The base velocity in mixed representation
+            s_dot (jnp.ndarray): The joints velocity
 
         Returns:
-            h (np.ndarray): the bias force
+            h (jnp.ndarray): the bias force
         """
-        h = self.rnea(T_b, s, v_b, s_dot, self.g)
+        h = self.rnea(base_transform, joint_positions, base_velocity, s_dot, self.g)
         return h
 
-    def coriolis_term(self, T_b, s, v_b, s_dot):
-        """Returns the coriolis term of the floating-base dynamics equation,
+    def coriolis_term(
+        self,
+        base_transform: jnp.array,
+        joint_positions: jnp.array,
+        base_velocity: jnp.array,
+        s_dot: jnp.array,
+    ) -> jnp.array:
+        """Returns the coriolis term of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
-            v_b (np.ndarray): The base velocity in mixed representation
-            s_dot (np.ndarray): The joints velocity
+            base_transform (jnp.ndarray): The homogenous transform from base to world frame
+            joint_positions (jnp.ndarray): The joints position
+            base_velocity (jnp.ndarray): The base velocity in mixed representation
+            s_dot (jnp.ndarray): The joints velocity
 
         Returns:
-            C (np.ndarray): the Coriolis term
+            C (jnp.ndarray): the Coriolis term
         """
         # set in the bias force computation the gravity term to zero
-        C = self.rnea(T_b, s, v_b.reshape(6, 1), s_dot, np.zeros(6))
+        C = self.rnea(
+            base_transform,
+            joint_positions,
+            base_velocity.reshape(6, 1),
+            s_dot,
+            np.zeros(6),
+        )
         return C
 
-    def gravity_term(self, T_b, s):
-        """Returns the gravity term of the floating-base dynamics equation,
+    def gravity_term(
+        self, base_transform: jnp.array, joint_positions: jnp.array
+    ) -> jnp.array:
+        """Returns the gravity term of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (jnp.ndarray): The homogenous transform from base to world frame
+            joint_positions (jnp.ndarray): The joints position
 
         Returns:
-            G (np.ndarray): the gravity term
+            G (jnp.ndarray): the gravity term
         """
         G = self.rnea(
-            T_b,
-            s,
+            base_transform,
+            joint_positions,
             np.zeros(6).reshape(6, 1),
             np.zeros(self.NDoF),
             self.g,
         )
         return G
 
-    def CoM_position(self, T_b, s):
+    def CoM_position(
+        self, base_transform: jnp.array, joint_positions: jnp.array
+    ) -> jnp.array:
         """Returns the CoM positon
 
         Args:
-            T_b (np.ndarray): The homogenous transform from base to world frame
-            s (np.ndarray): The joints position
+            base_transform (jnp.ndarray): The homogenous transform from base to world frame
+            joint_positions (jnp.ndarray): The joints position
 
         Returns:
-            com (np.ndarray): The CoM position
+            com (jnp.ndarray): The CoM position
         """
-        return super().CoM_position(T_b, s)
+        return super().CoM_position(base_transform, joint_positions)

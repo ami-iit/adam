@@ -36,7 +36,7 @@ class CasADiKinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         )
         self.f_opts = f_opts
 
-    def mass_matrix_fun(self):
+    def mass_matrix_fun(self) -> cs.Function:
         """Returns the Mass Matrix functions computed the CRBA
 
         Returns:
@@ -47,7 +47,7 @@ class CasADiKinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         [M, _] = super().crba(T_b, s)
         return cs.Function("M", [T_b, s], [M], self.f_opts)
 
-    def centroidal_momentum_matrix_fun(self):
+    def centroidal_momentum_matrix_fun(self) -> cs.Function:
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
         Returns:
@@ -58,7 +58,7 @@ class CasADiKinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         [_, Jcm] = super().crba(T_b, s)
         return cs.Function("Jcm", [T_b, s], [Jcm], self.f_opts)
 
-    def forward_kinematics_fun(self, frame):
+    def forward_kinematics_fun(self, frame: str) -> cs.Function:
         """Computes the forward kinematics relative to the specified frame
 
         Args:
@@ -72,7 +72,7 @@ class CasADiKinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         T_fk = super().forward_kinematics(frame, T_b, s)
         return cs.Function("T_fk", [T_b, s], [T_fk], self.f_opts)
 
-    def jacobian_fun(self, frame):
+    def jacobian_fun(self, frame: str) -> cs.Function:
         """Returns the Jacobian relative to the specified frame
 
         Args:
@@ -86,7 +86,7 @@ class CasADiKinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         J_tot = super().jacobian(frame, T_b, s)
         return cs.Function("J_tot", [T_b, s], [J_tot], self.f_opts)
 
-    def relative_jacobian_fun(self, frame):
+    def relative_jacobian_fun(self, frame: str) -> cs.Function:
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
@@ -99,7 +99,7 @@ class CasADiKinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         J = super().relative_jacobian(frame, s)
         return cs.Function("J", [s], [J], self.f_opts)
 
-    def CoM_position_fun(self):
+    def CoM_position_fun(self) -> cs.Function:
         """Returns the CoM positon
 
         Returns:
@@ -110,7 +110,7 @@ class CasADiKinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         com_pos = super().CoM_position(T_b, s)
         return cs.Function("CoM_pos", [T_b, s], [com_pos], self.f_opts)
 
-    def bias_force_fun(self):
+    def bias_force_fun(self) -> cs.Function:
         """Returns the bias force of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
@@ -124,7 +124,7 @@ class CasADiKinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         h = super().rnea(T_b, s, v_b, s_dot, self.g)
         return cs.Function("h", [T_b, s, v_b, s_dot], [h], self.f_opts)
 
-    def coriolis_term_fun(self):
+    def coriolis_term_fun(self) -> cs.Function:
         """Returns the coriolis term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
@@ -139,7 +139,7 @@ class CasADiKinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         C = super().rnea(T_b, q, v_b, q_dot, np.zeros(6))
         return cs.Function("C", [T_b, q, v_b, q_dot], [C], self.f_opts)
 
-    def gravity_term_fun(self):
+    def gravity_term_fun(self) -> cs.Function:
         """Returns the gravity term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
