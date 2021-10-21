@@ -5,6 +5,7 @@
 import logging
 from dataclasses import dataclass, field
 from os import error
+from typing import List
 
 from prettytable import PrettyTable
 from urdf_parser_py.urdf import URDF
@@ -13,8 +14,8 @@ from urdf_parser_py.urdf import URDF
 @dataclass
 class Tree:
     joints: list = field(default_factory=list)
-    links: list = field(default_factory=list)
-    parents: list = field(default_factory=list)
+    links: List[str] = field(default_factory=list)
+    parents: List[str] = field(default_factory=list)
     N: int = None
 
 
