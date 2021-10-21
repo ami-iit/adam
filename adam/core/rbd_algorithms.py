@@ -7,13 +7,13 @@ from typing import TypeVar
 
 import numpy as np
 
-from adam.core.transforms import AbstractTranforms
+from adam.core.transforms import SpatialMathAbstract
 from adam.core.urdf_tree import URDFTree
 
 T = TypeVar("T")
 
 
-class RBDAlgorithms(AbstractTranforms):
+class RBDAlgorithms(SpatialMathAbstract):
     """This is a small abstract class that implements Rigid body algorithms retrieving robot quantities represented
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -267,7 +267,7 @@ class RBDAlgorithms(AbstractTranforms):
             J (T): The Jacobian between the root and the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
-        T_b = np.eye(4)
+        T_b = self.eye(4)
         T_fk = self.eye(4)
         T_fk = T_fk @ T_b
         J = self.zeros(6, self.NDoF)
