@@ -5,10 +5,11 @@
 import casadi as cs
 import numpy as np
 
+from adam.casadi.spatial_math_casadi import SpatialMathCasadi
 from adam.core.rbd_algorithms import RBDAlgorithms
 
 
-class CasADiKinDynComputations(RBDAlgorithms):
+class CasADiKinDynComputations(RBDAlgorithms, SpatialMathCasadi):
     """This is a small class that retrieves robot quantities represented in a symbolic fashion using CasADi
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -150,23 +151,3 @@ class CasADiKinDynComputations(RBDAlgorithms):
         # set in the bias force computation the velocity to zero
         G = super().rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
         return cs.Function("G", [T_b, q], [G], self.f_opts)
-
-    @staticmethod
-    def zeros(*x):
-        return cs.SX.zeros(*x)
-
-    @staticmethod
-    def vertcat(*x):
-        return cs.vertcat(*x)
-
-    @staticmethod
-    def eye(x):
-        return cs.SX.eye(x)
-
-    @staticmethod
-    def skew(x):
-        return cs.skew(x)
-
-    @staticmethod
-    def array(*x):
-        return cs.SX.sym("vec", *x)
