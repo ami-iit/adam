@@ -81,9 +81,6 @@ vb = idyntree.Twist()
 
 s = idyntree.VectorDynSize(n_dofs)
 s = s.FromPython(joints_val)
-print(s.FromPython(joints_val))
-print(s)
-print(joints_val)
 s_dot = idyntree.VectorDynSize(n_dofs)
 s_dot = s_dot.FromPython(joints_dot_val)
 
