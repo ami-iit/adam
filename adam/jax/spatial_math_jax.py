@@ -12,7 +12,7 @@ from adam.core.spatial_math import SpatialMathAbstract
 
 class SpatialMathJax(SpatialMathAbstract):
     def R_from_axis_angle(cls, axis, q):
-        [cq, sq] = [jnp.cos(q), jnp.sin(q)]
+        cq, sq = jnp.cos(q), jnp.sin(q)
         return (
             cq * (jnp.eye(3) - jnp.outer(np.array(axis), np.array(axis)))
             + sq * cls.skew(axis)
@@ -21,7 +21,7 @@ class SpatialMathJax(SpatialMathAbstract):
 
     def Rx(cls, q):
         R = jnp.eye(3)
-        [cq, sq] = [jnp.cos(q), jnp.sin(q)]
+        cq, sq = jnp.cos(q), jnp.sin(q)
         R = index_update(R, index[1, 1], cq)
         R = index_update(R, index[1, 2], -sq)
         R = index_update(R, index[2, 1], sq)
@@ -30,7 +30,7 @@ class SpatialMathJax(SpatialMathAbstract):
 
     def Ry(cls, q):
         R = jnp.eye(3)
-        [cq, sq] = [jnp.cos(q), jnp.sin(q)]
+        cq, sq = jnp.cos(q), jnp.sin(q)
         R = index_update(R, index[0, 0], cq)
         R = index_update(R, index[0, 2], sq)
         R = index_update(R, index[2, 0], -sq)
@@ -39,7 +39,7 @@ class SpatialMathJax(SpatialMathAbstract):
 
     def Rz(cls, q):
         R = jnp.eye(3)
-        [cq, sq] = [jnp.cos(q), jnp.sin(q)]
+        cq, sq = jnp.cos(q), jnp.sin(q)
         R = index_update(R, index[0, 0], cq)
         R = index_update(R, index[0, 1], -sq)
         R = index_update(R, index[1, 0], sq)

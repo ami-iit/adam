@@ -10,8 +10,8 @@ from adam.core.spatial_math import SpatialMathAbstract
 
 class SpatialMathPytorch(SpatialMathAbstract):
     def R_from_axis_angle(cls, axis, q):
-        # q = torch.tensor(q)
-        [cq, sq] = [np.cos(q), np.sin(q)]
+        q = torch.tensor(q)
+        cq, sq = torch.cos(q), torch.sin(q)
         return (
             cq * (cls.eye(3) - np.outer(axis, axis))
             + sq * cls.skew(axis)
@@ -21,7 +21,7 @@ class SpatialMathPytorch(SpatialMathAbstract):
     def Rx(cls, q):
         R = cls.eye(3)
         q = torch.tensor(q)
-        [cq, sq] = [torch.cos(q), torch.sin(q)]
+        cq, sq = torch.cos(q), torch.sin(q)
         R[1, 1] = cq
         R[1, 2] = -sq
         R[2, 1] = sq
@@ -31,7 +31,7 @@ class SpatialMathPytorch(SpatialMathAbstract):
     def Ry(cls, q):
         R = cls.eye(3)
         q = torch.tensor(q)
-        [cq, sq] = [torch.cos(q), torch.sin(q)]
+        cq, sq = torch.cos(q), torch.sin(q)
         R[0, 0] = cq
         R[0, 2] = sq
         R[2, 0] = -sq
@@ -41,7 +41,7 @@ class SpatialMathPytorch(SpatialMathAbstract):
     def Rz(cls, q):
         R = cls.eye(3)
         q = torch.tensor(q)
-        [cq, sq] = [torch.cos(q), torch.sin(q)]
+        cq, sq = torch.cos(q), torch.sin(q)
         R[0, 0] = cq
         R[0, 1] = -sq
         R[1, 0] = sq
