@@ -101,10 +101,10 @@ class SpatialMathJax(SpatialMathAbstract):
         return IO
 
     def spatial_skew(cls, v):
-        X = jnp.zeros(6, 6)
-        X[:3, :3] = cls.skew(v[3:])
-        X[:3, 3:] = cls.skew(v[:3])
-        X[3:, 3:] = cls.skew(v[3:])
+        X = cls.zeros(6, 6)
+        X = index_update(X, index[:3, :3], cls.skew(v[3:]))
+        X = index_update(X, index[:3, 3:], cls.skew(v[:3]))
+        X = index_update(X, index[3:, 3:], cls.skew(v[3:]))
         return X
 
     def spatial_skew_star(cls, v):
@@ -116,7 +116,7 @@ class SpatialMathJax(SpatialMathAbstract):
 
     @staticmethod
     def zeros(*x):
-        pass
+        return jnp.zeros(x)
 
     @staticmethod
     def vertcat(*x):
@@ -130,13 +130,12 @@ class SpatialMathJax(SpatialMathAbstract):
 
     @staticmethod
     def eye(x):
-        pass
+        return jnp.eye(x)
 
     @staticmethod
     def skew(x):
-        S = jnp.array([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
-        return S
+        return -jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0)
 
     @staticmethod
     def array(*x):
-        pass
+        return jnp.array(x)
