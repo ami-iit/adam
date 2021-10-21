@@ -1,62 +1,48 @@
-import abc
 from typing import TypeVar
 
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 from adam.core.spatial_math import SpatialMathAbstract
 
 
 class SpatialMathNumpy(SpatialMathAbstract):
-    def R_from_axisAngle(cls, axis, q):
-        [cq, sq] = [np.cos(q), np.sin(q)]
-        return (
-            cq * (cls.eye(3) - np.outer(axis, axis))
-            + sq * cls.skew(axis)
-            + np.outer(axis, axis)
-        )
+    def R_from_axis_angle(cls, axis, q):
+        quat = cls.axis_angle_to_quat(axis, q)
+        return Rotation.from_quat(quat).as_matrix()
+
+    def axis_angle_to_quat(cls, axis, q):
+        s = np.sin(q / 2)
+        x = axis[0] * s
+        y = axis[1] * s
+        z = axis[2] * s
+        w = np.cos(q / 2)
+        return np.array([x, y, z, w])
 
     def Rx(cls, q):
-        R = cls.eye(3)
-        [cq, sq] = [np.cos(q), np.sin(q)]
-        R[1, 1] = cq
-        R[1, 2] = -sq
-        R[2, 1] = sq
-        R[2, 2] = cq
-        return R
+        return Rotation.from_euler("x", q).as_matrix()
 
     def Ry(cls, q):
-        R = cls.eye(3)
-        [cq, sq] = [np.cos(q), np.sin(q)]
-        R[0, 0] = cq
-        R[0, 2] = sq
-        R[2, 0] = -sq
-        R[2, 2] = cq
-        return R
+        return Rotation.from_euler("y", q).as_matrix()
 
     def Rz(cls, q):
-        R = cls.eye(3)
-        [cq, sq] = [np.cos(q), np.sin(q)]
-        R[0, 0] = cq
-        R[0, 1] = -sq
-        R[1, 0] = sq
-        R[1, 1] = cq
-        return R
+        return Rotation.from_euler("z", q).as_matrix()
 
     def H_revolute_joint(cls, xyz, rpy, axis, q):
         T = cls.eye(4)
-        R = cls.R_from_RPY(rpy) @ cls.R_from_axisAngle(axis, q)
+        R = cls.R_from_RPY(rpy) @ cls.R_from_axis_angle(axis, q)
         T[:3, :3] = R
         T[:3, 3] = xyz
         return T
 
-    def H_from_PosRPY(cls, xyz, rpy):
+    def H_from_Pos_RPY(cls, xyz, rpy):
         T = cls.eye(4)
         T[:3, :3] = cls.R_from_RPY(rpy)
         T[:3, 3] = xyz
         return T
 
     def R_from_RPY(cls, rpy):
-        return cls.Rz(rpy[2]) @ cls.Ry(rpy[1]) @ cls.Rx(rpy[0])
+        return Rotation.from_euler("xyz", rpy).as_matrix()
 
     def X_revolute_joint(cls, xyz, rpy, axis, q):
         T = cls.H_revolute_joint(xyz, rpy, axis, q)
@@ -65,7 +51,7 @@ class SpatialMathNumpy(SpatialMathAbstract):
         return cls.spatial_transform(R, p)
 
     def X_fixed_joint(cls, xyz, rpy):
-        T = cls.H_from_PosRPY(xyz, rpy)
+        T = cls.H_from_Pos_RPY(xyz, rpy)
         R = T[:3, :3].T
         p = -T[:3, :3].T @ T[:3, 3]
         return cls.spatial_transform(R, p)
