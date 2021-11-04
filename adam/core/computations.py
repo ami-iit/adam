@@ -188,7 +188,7 @@ class KinDynComputations:
                 X_J = utils.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
                 Phi[i] = cs.vertcat(0, 0, 0, 0, 0, 0)
-            elif joint_i.type == "revolute":
+            elif joint_i.type == "revolute" or joint_i.type == "continuous":
                 if joint_i.idx is not None:
                     q_ = q[joint_i.idx]
                 else:
@@ -316,7 +316,7 @@ class KinDynComputations:
                     rpy = joint.origin.rpy
                     joint_frame = utils.H_from_PosRPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute":
+                if joint.type == "revolute" or joint.type == "continuous":
                     # if the joint is actuated set the value
                     if joint.idx is not None:
                         q_ = q[joint.idx]
@@ -358,7 +358,7 @@ class KinDynComputations:
                     rpy = joint.origin.rpy
                     joint_frame = utils.H_from_PosRPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute":
+                if joint.type == "revolute" or joint.type == "continuous":
                     if joint.idx is not None:
                         q_ = q[joint.idx]
                     else:
@@ -412,7 +412,7 @@ class KinDynComputations:
                     rpy = joint.origin.rpy
                     joint_frame = utils.H_from_PosRPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute":
+                if joint.type == "revolute" or joint.type == "continuous":
                     if joint.idx is not None:
                         q_ = q[joint.idx]
                     else:
@@ -521,7 +521,7 @@ class KinDynComputations:
                 X_p[i] = X_J
                 Phi[i] = cs.vertcat(0, 0, 0, 0, 0, 0)
                 v_J = cs.SX.zeros(6, 1)
-            elif joint_i.type == "revolute":
+            elif joint_i.type == "revolute" or joint_i.type == "continuous":
                 if joint_i.idx is not None:
                     q_ = q[joint_i.idx]
                     q_dot_ = q_dot[joint_i.idx]
