@@ -13,7 +13,7 @@ from urdf_parser_py.urdf import URDF
 
 @dataclass
 class Tree:
-    joints: list = field(default_factory=list)
+    joints: List[str] = field(default_factory=list)
     links: List[str] = field(default_factory=list)
     parents: List[str] = field(default_factory=list)
     N: int = None

@@ -8,7 +8,7 @@ from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.numpy.spatial_math_numpy import SpatialMathNumpy
 
 
-class NumPyKinDynComputations(RBDAlgorithms, SpatialMathNumpy):
+class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
     """This is a small class that retrieves robot quantities using NumPy
     in mixed representation, for Floating Base systems - as humanoid robots.
     """

@@ -14,7 +14,7 @@ T = TypeVar("T")
 
 
 class RBDAlgorithms(SpatialMathAbstract):
-    """This is a small abstract class that implements Rigid body algorithms retrieving robot joint_positionsuantities represented
+    """This is a small abstract class that implements Rigid body algorithms retrieving robot quantities represented
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
 

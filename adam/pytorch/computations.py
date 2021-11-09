@@ -9,8 +9,8 @@ from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.pytorch.spatial_math_pytorch import SpatialMathPytorch
 
 
-class PytorchKinDynComputations(RBDAlgorithms, SpatialMathPytorch):
-    """This is a small class that retrieves robot joint_positionsuantities using Pytorch
+class KinDynComputations(RBDAlgorithms, SpatialMathPytorch):
+    """This is a small class that retrieves robot quantities using Pytorch
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
 

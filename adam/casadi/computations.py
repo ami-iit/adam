@@ -9,7 +9,7 @@ from adam.casadi.spatial_math_casadi import SpatialMathCasadi
 from adam.core.rbd_algorithms import RBDAlgorithms
 
 
-class CasADiKinDynComputations(RBDAlgorithms, SpatialMathCasadi):
+class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
     """This is a small class that retrieves robot quantities represented in a symbolic fashion using CasADi
     in mixed representation, for Floating Base systems - as humanoid robots.
     """

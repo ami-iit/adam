@@ -11,8 +11,8 @@ from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.jax.spatial_math_jax import SpatialMathJax
 
 
-class JaxKinDynComputations(RBDAlgorithms, SpatialMathJax):
-    """This is a small class that retrieves robot joint_positionsuantities using Jax
+class KinDynComputations(RBDAlgorithms, SpatialMathJax):
+    """This is a small class that retrieves robot quantities using Jax
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
 

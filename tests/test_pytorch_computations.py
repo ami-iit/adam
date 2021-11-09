@@ -11,7 +11,7 @@ import pytest
 import torch
 
 from adam.geometry import utils
-from adam.pytorch.computations import PytorchKinDynComputations
+from adam.pytorch.computations import KinDynComputations
 
 model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
 
@@ -56,7 +56,7 @@ logging.basicConfig(level=logging.DEBUG)
 logging.debug("Showing the robot tree.")
 
 root_link = "root_link"
-comp = PytorchKinDynComputations(model_path, joints_name_list, root_link)
+comp = KinDynComputations(model_path, joints_name_list, root_link)
 robot_iDyn = idyntree.ModelLoader()
 robot_iDyn.loadReducedModelFromFile(model_path, joints_name_list)
 
