@@ -6,19 +6,19 @@ import numpy.typing as npt
 
 class SpatialMathAbstract(abc.ABC):
     @abc.abstractmethod
-    def R_from_axis_angle(axis: npt.NDArray, joint_positions: npt.NDArray):
+    def R_from_axis_angle(axis: npt.NDArray, q: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def Rx(joint_positions: npt.NDArray):
+    def Rx(q: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def Ry(joint_positions: npt.NDArray):
+    def Ry(q: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def Rz(joint_positions: npt.NDArray):
+    def Rz(q: npt.NDArray):
         pass
 
     @abc.abstractmethod
@@ -26,7 +26,7 @@ class SpatialMathAbstract(abc.ABC):
         xyz: npt.NDArray,
         rpy: npt.NDArray,
         axis: npt.NDArray,
-        joint_positions: npt.NDArray,
+        q: npt.NDArray,
     ):
         pass
 
@@ -43,7 +43,7 @@ class SpatialMathAbstract(abc.ABC):
         xyz: npt.NDArray,
         rpy: npt.NDArray,
         axis: npt.NDArray,
-        joint_positions: npt.NDArray,
+        q: npt.NDArray,
     ):
         pass
 
