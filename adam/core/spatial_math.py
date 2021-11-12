@@ -1,78 +1,90 @@
 import abc
-from typing import TypeVar
 
 import numpy as np
+import numpy.typing as npt
 
 
 class SpatialMathAbstract(abc.ABC):
     @abc.abstractmethod
-    def R_from_axis_angle(cls, axis, q):
+    def R_from_axis_angle(axis: npt.NDArray, joint_positions: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def Rx(cls, q):
+    def Rx(joint_positions: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def Ry(cls, q):
+    def Ry(joint_positions: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def Rz(cls, q):
+    def Rz(joint_positions: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def H_revolute_joint(cls, xyz, rpy, axis, q):
+    def H_revolute_joint(
+        xyz: npt.NDArray,
+        rpy: npt.NDArray,
+        axis: npt.NDArray,
+        joint_positions: npt.NDArray,
+    ):
         pass
 
     @abc.abstractmethod
-    def H_from_Pos_RPY(cls, xyz, rpy):
+    def H_from_Pos_RPY(xyz: npt.NDArray, rpy: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def R_from_RPY(cls, rpy):
+    def R_from_RPY(rpy: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def X_revolute_joint(cls, xyz, rpy, axis, q):
+    def X_revolute_joint(
+        xyz: npt.NDArray,
+        rpy: npt.NDArray,
+        axis: npt.NDArray,
+        joint_positions: npt.NDArray,
+    ):
         pass
 
     @abc.abstractmethod
-    def X_fixed_joint(cls, xyz, rpy):
+    def X_fixed_joint(xyz: npt.NDArray, rpy: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def spatial_transform(cls, R, p):
+    def spatial_transform(R: npt.NDArray, p: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def spatial_inertia(cls, I, mass, c, rpy):
+    def spatial_inertia(
+        I: npt.NDArray, mass: npt.NDArray, c: npt.NDArray, rpy: npt.NDArray
+    ):
         pass
 
     @abc.abstractmethod
-    def spatial_skew(cls, v):
+    def spatial_skew(v: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def spatial_skew_star(cls, v):
+    def spatial_skew_star(v: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def zeros(cls, x):
+    def zeros(x: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def vertcat(cls, x):
+    def vertcat(x: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def eye(cls, x):
+    def eye(x: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def skew(cls, x):
+    def skew(x: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def array(cls, x):
+    def array(x: npt.NDArray):
         pass
