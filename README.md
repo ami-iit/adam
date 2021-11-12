@@ -5,7 +5,7 @@
 ADAM implements a collection of algorithms for calculating rigid-body dynamics for **floating-base** robots, in _mixed representation_ (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)) using:
 
 - [Jax](https://github.com/google/jax)
-- [CasADi](<(https://web.casadi.org/)>)
+- [CasADi](https://web.casadi.org/)
 - [PyTorch](https://github.com/pytorch/pytorch)
 - [NumPy](https://numpy.org/)
 
@@ -62,7 +62,7 @@ Have also a look at te `tests` folder.
 ### Jax
 
 ```python
-from adam.casadi.computations import KinDynComputations
+from adam.jax.computations import KinDynComputations
 import gym_ignition_models
 import numpy as np
 
@@ -114,7 +114,7 @@ print(M(w_H_b, joints))
 ### PyTorch
 
 ```python
-from adam.casadi.computations import KinDynComputations
+from adam.pytorch.computations import KinDynComputations
 import gym_ignition_models
 import numpy as np
 
