@@ -5,7 +5,6 @@
 import jax.numpy as jnp
 import numpy as np
 from jax import grad, jit, vmap
-from jax.ops import index, index_add, index_update
 
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.jax.spatial_math_jax import SpatialMathJax
@@ -122,10 +121,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
                 X_p[i] = X_J
                 Phi[i] = self.zeros(6, 1)  # cs.vertcat(0, 0, 0, 0, 0, 0)
             elif joint_i.type == "revolute":
-                if joint_i.idx is not None:
-                    q_ = joint_positions[joint_i.idx]
-                else:
-                    q_ = 0.0
+                q_ = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
                 X_J = self.X_revolute_joint(
                     joint_i.origin.xyz,
                     joint_i.origin.rpy,
@@ -153,11 +149,9 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
                 Ic[pi] = Ic[pi] + X_p[i].T @ Ic[i] @ X_p[i]
             F = Ic[i] @ Phi[i]
             if joint_i.idx is not None:
-                M = index_update(
-                    M, index[joint_i.idx + 6, joint_i.idx + 6], (Phi[i].T @ F)[0, 0]
-                )
+                M = M.at[joint_i.idx + 6, joint_i.idx + 6].set((Phi[i].T @ F)[0, 0])
             if link_i.name == self.root_link:
-                M = index_update(M, index[:6, :6], Phi[i].T @ F)
+                M = M.at[:6, :6].set(Phi[i].T @ F)
             j = i
             link_j = self.tree.links[j]
             link_pj = self.tree.parents[j]
@@ -167,30 +161,22 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
                 j = self.tree.links.index(self.tree.parents[j])
                 joint_j = self.tree.joints[j]
                 if joint_i.name == self.tree.joints[0].name and joint_j.idx is not None:
-                    M = index_update(M, index[:6, joint_j.idx + 6], F.T @ Phi[j])
-                    M = index_update(
-                        M, index[joint_j.idx + 6, :6], M[:6, joint_j.idx + 6].T
-                    )
+                    M = M.at[:6, joint_j.idx + 6].set(F.T @ Phi[j])
+                    M = M.at[joint_j.idx + 6, :6].set(M[:6, joint_j.idx + 6].T)
                 elif (
                     joint_j.name == self.tree.joints[0].name and joint_i.idx is not None
                 ):
-                    M = index_update(M, index[joint_i.idx + 6, :6], (F.T @ Phi[j])[0])
-                    M = index_update(
-                        M, index[:6, joint_i.idx + 6], M[joint_i.idx + 6, :6].T
-                    )
+                    M = M.at[joint_i.idx + 6, :6].set((F.T @ Phi[j])[0])
+                    M = M.at[:6, joint_i.idx + 6].set(M[joint_i.idx + 6, :6].T)
                 elif joint_i.idx is not None and joint_j.idx is not None:
-                    M = index_update(
-                        M, index[joint_i.idx + 6, joint_j.idx + 6], (F.T @ Phi[j])[0, 0]
-                    )
-                    M = index_update(
-                        M,
-                        index[joint_j.idx + 6, joint_i.idx + 6],
+                    M = M.at[joint_i.idx + 6, joint_j.idx + 6].set((F.T @ Phi[j])[0, 0])
+                    M = M.at[joint_j.idx + 6, joint_i.idx + 6].set(
                         M[joint_i.idx + 6, joint_j.idx + 6].T,
                     )
 
         X_G = [None] * len(self.tree.links)
         O_X_G = self.eye(6)
-        O_X_G = index_update(O_X_G, index[:3, 3:], M[:3, 3:6].T / M[0, 0])
+        O_X_G = O_X_G.at[:3, 3:].set(M[:3, 3:6].T / M[0, 0])
         Jcm = self.zeros(6, self.NDoF + 6)
         for i in range(self.tree.N):
             link_i = self.tree.links[i]
@@ -203,18 +189,15 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
                 pi_X_G = O_X_G
             X_G[i] = X_p[i] @ pi_X_G
             if link_i.name == self.tree.links[0].name:
-                Jcm = index_update(Jcm, index[:, :6], X_G[i].T @ Ic[i] @ Phi[i])
-                # Jcm[:, :6] = X_G[i].T @ Ic[i] @ Phi[i]
+                Jcm = Jcm.at[:, :6].set(X_G[i].T @ Ic[i] @ Phi[i])
             elif joint_i.idx is not None:
-                Jcm = index_update(
-                    Jcm, index[:, joint_i.idx + 6], (X_G[i].T @ Ic[i] @ Phi[i])[:, 0]
-                )
+                Jcm = Jcm.at[:, joint_i.idx + 6].set((X_G[i].T @ Ic[i] @ Phi[i])[:, 0])
 
         # Until now the algorithm returns the joint_positionsuantities in Body Fixed representation
         # Moving to mixed representation...
         X_to_mixed = self.eye(self.NDoF + 6)
-        X_to_mixed = index_update(X_to_mixed, index[:3, :3], base_transform[:3, :3].T)
-        X_to_mixed = index_update(X_to_mixed, index[3:6, 3:6], base_transform[:3, :3].T)
+        X_to_mixed = X_to_mixed.at[:3, :3].set(base_transform[:3, :3].T)
+        X_to_mixed = X_to_mixed.at[3:6, 3:6].set(base_transform[:3, :3].T)
         M = X_to_mixed.T @ M @ X_to_mixed
         Jcc = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
         return M, Jcc
@@ -279,9 +262,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
                     p_prev = P_ee - T_fk[:3, 3]
                     z_prev = T_fk[:3, :3] @ jnp.array(joint.axis)
                     if joint.idx is not None:
-                        J = index_update(
-                            J,
-                            index[:, joint.idx],
+                        J = J.at[:, joint.idx].set(
                             jnp.vstack(
                                 [[self.skew(z_prev) @ p_prev], [z_prev]]
                             ).reshape(-1),
@@ -289,13 +270,11 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
 
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.zeros(6, self.NDoF + 6)
-        J_tot = index_update(J_tot, index[:3, :3], self.eye(3))
-        J_tot = index_update(
-            J_tot, index[:3, 3:6], -self.skew((P_ee - base_transform[:3, 3]))
-        )
-        J_tot = index_update(J_tot, index[:3, 6:], J[:3, :])
-        J_tot = index_update(J_tot, index[3:, 3:6], self.eye(3))
-        J_tot = index_update(J_tot, index[3:, 6:], J[3:, :])
+        J_tot = J_tot.at[:3, :3].set(self.eye(3))
+        J_tot = J_tot.at[:3, 3:6].set(-self.skew((P_ee - base_transform[:3, 3])))
+        J_tot = J_tot.at[:3, 6:].set(J[:3, :])
+        J_tot = J_tot.at[3:, 3:6].set(self.eye(3))
+        J_tot = J_tot.at[3:, 6:].set(J[3:, :])
         return J_tot
 
     def rnea(
@@ -330,19 +309,15 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
         f = [None] * len(self.tree.links)
 
         X_to_mixed = self.eye(6)
-        X_to_mixed = index_update(X_to_mixed, index[:3, :3], base_transform[:3, :3].T)
-        X_to_mixed = index_update(X_to_mixed, index[3:6, 3:6], base_transform[:3, :3].T)
+        X_to_mixed = X_to_mixed.at[:3, :3].set(base_transform[:3, :3].T)
+        X_to_mixed = X_to_mixed.at[3:6, 3:6].set(base_transform[:3, :3].T)
         acc_to_mixed = self.zeros(6, 1)
-        acc_to_mixed = index_update(
-            acc_to_mixed,
-            index[:3],
+        acc_to_mixed = acc_to_mixed.at[:3].set(
             -base_transform[:3, :3].T
             @ self.skew(base_velocity[3:])
             @ base_velocity[:3].reshape(-1, 1),
         )
-        acc_to_mixed = index_update(
-            acc_to_mixed,
-            index[3:],
+        acc_to_mixed = acc_to_mixed.at[3:].set(
             -base_transform[:3, :3].T
             @ self.skew(base_velocity[3:])
             @ base_velocity[3:].reshape(-1, 1),
@@ -405,13 +380,13 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
             link_i = self.tree.links[i]
             link_pi = self.tree.parents[i]
             if joint_i.name == self.tree.joints[0].name:
-                tau = index_update(tau, index[:6], (Phi[i].T @ f[i]).reshape(-1))
+                tau = tau.at[:6].set((Phi[i].T @ f[i]).reshape(-1))
             elif joint_i.idx is not None:
-                tau = index_update(tau, index[joint_i.idx + 6], (Phi[i].T @ f[i])[0, 0])
+                tau = tau.at[joint_i.idx + 6].set((Phi[i].T @ f[i])[0, 0])
             if link_pi.name != self.tree.parents[0].name:
                 pi = self.tree.links.index(link_pi)
                 f[pi] = f[pi] + X_p[i].T @ f[i]
-        tau = index_update(tau, index[:6], X_to_mixed.T @ tau[:6])
+        tau = tau.at[:6].set(X_to_mixed.T @ tau[:6])
         return tau
 
     def bias_force(

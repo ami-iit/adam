@@ -5,7 +5,6 @@
 import casadi as cs
 import jax.numpy as jnp
 import numpy as np
-from jax.ops import index, index_add, index_update
 
 from adam.core.spatial_math import SpatialMathAbstract
 
@@ -24,45 +23,45 @@ class SpatialMathJax(SpatialMathAbstract):
     def Rx(cls, q):
         R = jnp.eye(3)
         cq, sq = jnp.cos(q), jnp.sin(q)
-        R = index_update(R, index[1, 1], cq)
-        R = index_update(R, index[1, 2], -sq)
-        R = index_update(R, index[2, 1], sq)
-        R = index_update(R, index[2, 2], cq)
+        R = R.at[1, 1].set(cq)
+        R = R.at[1, 2].set(-sq)
+        R = R.at[2, 1].set(sq)
+        R = R.at[2, 2].set(cq)
         return R
 
     @classmethod
     def Ry(cls, q):
         R = jnp.eye(3)
         cq, sq = jnp.cos(q), jnp.sin(q)
-        R = index_update(R, index[0, 0], cq)
-        R = index_update(R, index[0, 2], sq)
-        R = index_update(R, index[2, 0], -sq)
-        R = index_update(R, index[2, 2], cq)
+        R = R.at[0, 0].set(cq)
+        R = R.at[0, 2].set(sq)
+        R = R.at[2, 0].set(-sq)
+        R = R.at[2, 2].set(cq)
         return R
 
     @classmethod
     def Rz(cls, q):
         R = jnp.eye(3)
         cq, sq = jnp.cos(q), jnp.sin(q)
-        R = index_update(R, index[0, 0], cq)
-        R = index_update(R, index[0, 1], -sq)
-        R = index_update(R, index[1, 0], sq)
-        R = index_update(R, index[1, 1], cq)
+        R = R.at[0, 0].set(cq)
+        R = R.at[0, 1].set(-sq)
+        R = R.at[1, 0].set(sq)
+        R = R.at[1, 1].set(cq)
         return R
 
     @classmethod
     def H_revolute_joint(cls, xyz, rpy, axis, q):
         T = jnp.eye(4)
         R = cls.R_from_RPY(rpy) @ cls.R_from_axis_angle(axis, q)
-        T = index_update(T, index[:3, :3], R)
-        T = index_update(T, index[:3, 3], xyz)
+        T = T.at[:3, :3].set(R)
+        T = T.at[:3, 3].set(xyz)
         return T
 
     @classmethod
     def H_from_Pos_RPY(cls, xyz, rpy):
         T = jnp.eye(4)
-        T = index_update(T, index[:3, :3], cls.R_from_RPY(rpy))
-        T = index_update(T, index[:3, 3], xyz)
+        T = T.at[:3, :3].set(cls.R_from_RPY(rpy))
+        T = T.at[:3, 3].set(xyz)
         return T
 
     @classmethod
@@ -86,9 +85,9 @@ class SpatialMathJax(SpatialMathAbstract):
     @classmethod
     def spatial_transform(cls, R, p):
         X = jnp.zeros([6, 6])
-        X = index_update(X, index[:3, :3], R)
-        X = index_update(X, index[3:, 3:], R)
-        X = index_update(X, index[:3, 3:], cls.skew(p) @ R)
+        X = X.at[:3, :3].set(R)
+        X = X.at[3:, 3:].set(R)
+        X = X.at[:3, 3:].set(cls.skew(p) @ R)
         return X
 
     @classmethod
@@ -100,21 +99,19 @@ class SpatialMathJax(SpatialMathAbstract):
         inertia_matrix = np.array(
             [[I.ixx, I.ixy, I.ixz], [I.ixy, I.iyy, I.iyz], [I.ixz, I.iyz, I.izz]]
         )
-        IO = index_update(IO, index[:3, :3], jnp.eye(3) * mass)
-        IO = index_update(
-            IO, index[3:, 3:], R @ inertia_matrix @ R.T + mass * Sc @ Sc.T
-        )
-        IO = index_update(IO, index[3:, :3], mass * Sc)
-        IO = index_update(IO, index[:3, 3:], mass * Sc.T)
-        IO = index_update(IO, index[:3, :3], np.eye(3) * mass)
+        IO = IO.at[:3, :3].set(jnp.eye(3) * mass)
+        IO = IO.at[3:, 3:].set(R @ inertia_matrix @ R.T + mass * Sc @ Sc.T)
+        IO = IO.at[3:, :3].set(mass * Sc)
+        IO = IO.at[:3, 3:].set(mass * Sc.T)
+        IO = IO.at[:3, :3].set(np.eye(3) * mass)
         return IO
 
     @classmethod
     def spatial_skew(cls, v):
         X = cls.zeros(6, 6)
-        X = index_update(X, index[:3, :3], cls.skew(v[3:]))
-        X = index_update(X, index[:3, 3:], cls.skew(v[:3]))
-        X = index_update(X, index[3:, 3:], cls.skew(v[3:]))
+        X = X.at[:3, :3].set(cls.skew(v[3:]))
+        X = X.at[:3, 3:].set(cls.skew(v[:3]))
+        X = X.at[3:, 3:].set(cls.skew(v[3:]))
         return X
 
     @classmethod
