@@ -56,6 +56,9 @@ source your_virtual_env/bin/activate
 
 ## :rocket: Usage
 
+The following are small snippets of the use of ADAM. More examples are arriving!
+Have also a look at te `tests` folder.
+
 ### Jax
 
 ```python
