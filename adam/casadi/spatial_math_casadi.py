@@ -9,7 +9,7 @@ from adam.core.spatial_math import SpatialMathAbstract
 class SpatialMathCasadi(SpatialMathAbstract):
     @classmethod
     def R_from_axis_angle(cls, axis, q):
-        [cq, sq] = [cs.cos(q), cs.sin(q)]
+        cq, sq = cs.cos(q), cs.sin(q)
         return (
             cq * (cls.eye(3) - cs.np.outer(axis, axis))
             + sq * cls.skew(axis)
@@ -19,7 +19,7 @@ class SpatialMathCasadi(SpatialMathAbstract):
     @classmethod
     def Rx(cls, q):
         R = cls.eye(3)
-        [cq, sq] = [cs.cos(q), cs.sin(q)]
+        cq, sq = cs.cos(q), cs.sin(q)
         R[1, 1] = cq
         R[1, 2] = -sq
         R[2, 1] = sq
@@ -29,7 +29,7 @@ class SpatialMathCasadi(SpatialMathAbstract):
     @classmethod
     def Ry(cls, q):
         R = cls.eye(3)
-        [cq, sq] = [cs.cos(q), cs.sin(q)]
+        cq, sq = cs.cos(q), cs.sin(q)
         R[0, 0] = cq
         R[0, 2] = sq
         R[2, 0] = -sq
@@ -39,7 +39,7 @@ class SpatialMathCasadi(SpatialMathAbstract):
     @classmethod
     def Rz(cls, q):
         R = cls.eye(3)
-        [cq, sq] = [cs.cos(q), cs.sin(q)]
+        cq, sq = cs.cos(q), cs.sin(q)
         R[0, 0] = cq
         R[0, 1] = -sq
         R[1, 0] = sq

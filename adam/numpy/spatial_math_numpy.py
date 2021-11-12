@@ -7,10 +7,12 @@ from adam.core.spatial_math import SpatialMathAbstract
 
 
 class SpatialMathNumpy(SpatialMathAbstract):
+    @classmethod
     def R_from_axis_angle(cls, axis, q):
         quat = cls.axis_angle_to_quat(axis, q)
         return Rotation.from_quat(quat).as_matrix()
 
+    @classmethod
     def axis_angle_to_quat(cls, axis, q):
         s = np.sin(q / 2)
         x = axis[0] * s
@@ -19,15 +21,19 @@ class SpatialMathNumpy(SpatialMathAbstract):
         w = np.cos(q / 2)
         return np.array([x, y, z, w])
 
+    @classmethod
     def Rx(cls, q):
         return Rotation.from_euler("x", q).as_matrix()
 
+    @classmethod
     def Ry(cls, q):
         return Rotation.from_euler("y", q).as_matrix()
 
+    @classmethod
     def Rz(cls, q):
         return Rotation.from_euler("z", q).as_matrix()
 
+    @classmethod
     def H_revolute_joint(cls, xyz, rpy, axis, q):
         T = cls.eye(4)
         R = cls.R_from_RPY(rpy) @ cls.R_from_axis_angle(axis, q)
@@ -35,27 +41,32 @@ class SpatialMathNumpy(SpatialMathAbstract):
         T[:3, 3] = xyz
         return T
 
+    @classmethod
     def H_from_Pos_RPY(cls, xyz, rpy):
         T = cls.eye(4)
         T[:3, :3] = cls.R_from_RPY(rpy)
         T[:3, 3] = xyz
         return T
 
+    @classmethod
     def R_from_RPY(cls, rpy):
         return Rotation.from_euler("xyz", rpy).as_matrix()
 
+    @classmethod
     def X_revolute_joint(cls, xyz, rpy, axis, q):
         T = cls.H_revolute_joint(xyz, rpy, axis, q)
         R = T[:3, :3].T
         p = -T[:3, :3].T @ T[:3, 3]
         return cls.spatial_transform(R, p)
 
+    @classmethod
     def X_fixed_joint(cls, xyz, rpy):
         T = cls.H_from_Pos_RPY(xyz, rpy)
         R = T[:3, :3].T
         p = -T[:3, :3].T @ T[:3, 3]
         return cls.spatial_transform(R, p)
 
+    @classmethod
     def spatial_transform(cls, R, p):
         X = cls.zeros(6, 6)
         X[:3, :3] = R
@@ -63,6 +74,7 @@ class SpatialMathNumpy(SpatialMathAbstract):
         X[:3, 3:] = cls.skew(p) @ R
         return X
 
+    @classmethod
     def spatial_inertia(cls, I, mass, c, rpy):
         # Returns the 6x6 inertia matrix expressed at the origin of the link (with rotation)"""
         IO = cls.zeros(6, 6)
@@ -78,6 +90,7 @@ class SpatialMathNumpy(SpatialMathAbstract):
         IO[:3, :3] = np.eye(3) * mass
         return IO
 
+    @classmethod
     def spatial_skew(cls, v):
         X = cls.zeros(6, 6)
         X[:3, :3] = cls.skew(v[3:])
@@ -85,6 +98,7 @@ class SpatialMathNumpy(SpatialMathAbstract):
         X[3:, 3:] = cls.skew(v[3:])
         return X
 
+    @classmethod
     def spatial_skew_star(cls, v):
         return -cls.spatial_skew(v).T
 
