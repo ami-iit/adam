@@ -100,9 +100,6 @@ def test_mass_matrix():
     kinDyn.getFreeFloatingMassMatrix(mass_mx)
     mass_mxNumpy = mass_mx.toNumPy()
     mass_test = comp.mass_matrix(H_b, s_)
-    print(mass_mxNumpy[:2, :])
-    print(np.asarray(mass_test[:2, :]))
-    print(np.asarray(mass_test)[:2, :] - mass_mxNumpy[:2, :])
     assert np.asarray(mass_test) - mass_mxNumpy == pytest.approx(0.0, abs=1e-5)
 
 
