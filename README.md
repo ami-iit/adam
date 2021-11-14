@@ -2,9 +2,14 @@
 
 **Automatic Differentiation for rigid-body-dynamics AlgorithMs**
 
-This library implements kinematics and dynamics algorithms for **floating-base** robots, in _mixed representation_ (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)).
+ADAM implements a collection of algorithms for calculating rigid-body dynamics for **floating-base** robots, in _mixed representation_ (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)) using:
 
-ADAM employs [CasADi](https://web.casadi.org/), which embeds the computed kinematics and dynamics quantities in expression graphs and provides if needed, gradients, Jacobians, and Hessians. This approach enables the design of optimal control strategies in robotics. Using its `CodeGenerator`, CasADi enables also the generation of C-code - usable also in `Matlab` or `C++`.
+- [Jax](https://github.com/google/jax)
+- [CasADi](https://web.casadi.org/)
+- [PyTorch](https://github.com/pytorch/pytorch)
+- [NumPy](https://numpy.org/)
+
+ADAM employs the **automatic differentiation** capabilities of these framework to compute, if needed, gradients, Jacobian, Hessians of rigid-body dynamics quantities. This approach enable the design of optimal control and reinforcement learning strategies in robotics.
 
 Adam is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
 
@@ -18,7 +23,10 @@ PRs are welcome! :rocket:
 Other requisites are:
 
 - `urdf_parser_py`
+- `jax`
 - `casadi`
+- `pytorch`
+- `numpy`
 
 They will be installed in the installation step!
 
@@ -48,8 +56,39 @@ source your_virtual_env/bin/activate
 
 ## :rocket: Usage
 
+The following are small snippets of the use of ADAM. More examples are arriving!
+Have also a look at te `tests` folder.
+
+### Jax
+
 ```python
-from adam.core.computations import KinDynComputations
+from adam.jax.computations import KinDynComputations
+import gym_ignition_models
+import numpy as np
+
+# if you want to use gym-ignition https://github.com/robotology/gym-ignition to retrieve the urdf
+model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
+# The joint list
+joints_name_list = [
+    'torso_pitch', 'torso_roll', 'torso_yaw', 'l_shoulder_pitch',
+    'l_shoulder_roll', 'l_shoulder_yaw', 'l_elbow', 'r_shoulder_pitch',
+    'r_shoulder_roll', 'r_shoulder_yaw', 'r_elbow', 'l_hip_pitch', 'l_hip_roll',
+    'l_hip_yaw', 'l_knee', 'l_ankle_pitch', 'l_ankle_roll', 'r_hip_pitch',
+    'r_hip_roll', 'r_hip_yaw', 'r_knee', 'r_ankle_pitch', 'r_ankle_roll'
+]
+# Specify the root link
+root_link = 'root_link'
+kinDyn = KinDynComputations(urdf_path, joints_name_list, root_link)
+w_H_b = np.eye(4)
+joints = np.ones(len(joints_name_list))
+M = kinDyn.mass_matrix(w_H_b, joints)
+print(M)
+```
+
+### CasADi
+
+```python
+from adam.casadi.computations import KinDynComputations
 import gym_ignition_models
 import numpy as np
 
@@ -72,6 +111,32 @@ M = kinDyn.mass_matrix_fun()
 print(M(w_H_b, joints))
 ```
 
+### PyTorch
+
+```python
+from adam.pytorch.computations import KinDynComputations
+import gym_ignition_models
+import numpy as np
+
+# if you want to use gym-ignition https://github.com/robotology/gym-ignition to retrieve the urdf
+model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
+# The joint list
+joints_name_list = [
+    'torso_pitch', 'torso_roll', 'torso_yaw', 'l_shoulder_pitch',
+    'l_shoulder_roll', 'l_shoulder_yaw', 'l_elbow', 'r_shoulder_pitch',
+    'r_shoulder_roll', 'r_shoulder_yaw', 'r_elbow', 'l_hip_pitch', 'l_hip_roll',
+    'l_hip_yaw', 'l_knee', 'l_ankle_pitch', 'l_ankle_roll', 'r_hip_pitch',
+    'r_hip_roll', 'r_hip_yaw', 'r_knee', 'r_ankle_pitch', 'r_ankle_roll'
+]
+# Specify the root link
+root_link = 'root_link'
+kinDyn = KinDynComputations(urdf_path, joints_name_list, root_link)
+w_H_b = np.eye(4)
+joints = np.ones(len(joints_name_list))
+M = kinDyn.mass_matrix(w_H_b, joints)
+print(M)
+```
+
 ## Todo
 
 - [x] Center of Mass position
@@ -81,7 +146,3 @@ print(M(w_H_b, joints))
 - [x] Centroidal Momentum Matrix via CRBA
 - [x] Recursive Newton-Euler algorithm (still no acceleration in the algorithm, since it is used only for the computation of the bias force)
 - [ ] Articulated Body algorithm
-
----
-
-The structure of the library is inspired by the module [urdf2casadi](https://github.com/mahaarbo/urdf2casadi/blob/master/README.md), which generates kinematic and dynamics quantities using CasADi, for Fixed-Base robots. Please check their interesting work!

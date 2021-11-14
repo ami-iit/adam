@@ -2,22 +2,23 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
+
 import casadi as cs
 import numpy as np
 
 
-def R_from_axisAngle(axis, q):
-    [cq, sq] = [cs.np.cos(q), cs.np.sin(q)]
+def R_from_axis_angle(axis, q):
+    [cq, sq] = [np.cos(q), np.sin(q)]
     return (
-        cq * (cs.np.eye(3) - cs.np.outer(axis, axis))
+        cq * (np.eye(3) - np.outer(axis, axis))
         + sq * cs.skew(axis)
-        + cs.np.outer(axis, axis)
+        + np.outer(axis, axis)
     )
 
 
 def Rx(q):
-    R = cs.np.eye(3)
-    [cq, sq] = [cs.np.cos(q), cs.np.sin(q)]
+    R = np.eye(3)
+    [cq, sq] = [np.cos(q), np.sin(q)]
     R[1, 1] = cq
     R[1, 2] = -sq
     R[2, 1] = sq
@@ -26,8 +27,8 @@ def Rx(q):
 
 
 def Ry(q):
-    R = cs.np.eye(3)
-    [cq, sq] = [cs.np.cos(q), cs.np.sin(q)]
+    R = np.eye(3)
+    [cq, sq] = [np.cos(q), np.sin(q)]
     R[0, 0] = cq
     R[0, 2] = sq
     R[2, 0] = -sq
@@ -36,8 +37,8 @@ def Ry(q):
 
 
 def Rz(q):
-    R = cs.np.eye(3)
-    [cq, sq] = [cs.np.cos(q), cs.np.sin(q)]
+    R = np.eye(3)
+    [cq, sq] = [np.cos(q), np.sin(q)]
     R[0, 0] = cq
     R[0, 1] = -sq
     R[1, 0] = sq
@@ -46,15 +47,15 @@ def Rz(q):
 
 
 def H_revolute_joint(xyz, rpy, axis, q):
-    T = cs.SX.eye(4)
-    R = R_from_RPY(rpy) @ R_from_axisAngle(axis, q)
+    T = np.eye(4)
+    R = R_from_RPY(rpy) @ R_from_axis_angle(axis, q)
     T[:3, :3] = R
     T[:3, 3] = xyz
     return T
 
 
-def H_from_PosRPY(xyz, rpy):
-    T = cs.SX.eye(4)
+def H_from_Pos_RPY(xyz, rpy):
+    T = np.eye(4)
     T[:3, :3] = R_from_RPY(rpy)
     T[:3, 3] = xyz
     return T
@@ -72,7 +73,7 @@ def X_revolute_joint(xyz, rpy, axis, q):
 
 
 def X_fixed_joint(xyz, rpy):
-    T = H_from_PosRPY(xyz, rpy)
+    T = H_from_Pos_RPY(xyz, rpy)
     R = T[:3, :3].T
     p = -T[:3, :3].T @ T[:3, 3]
     return spatial_transform(R, p)

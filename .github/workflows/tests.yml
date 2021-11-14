@@ -26,5 +26,4 @@ jobs:
           pytest
       - name: Run black --check
         run: |
-          pip install black
           black --check .
