@@ -1,5 +1,7 @@
 # ADAM
 
+[![Adam](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml)
+
 **Automatic Differentiation for rigid-body-dynamics AlgorithMs**
 
 ADAM implements a collection of algorithms for calculating rigid-body dynamics for **floating-base** robots, in _mixed representation_ (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)) using:
