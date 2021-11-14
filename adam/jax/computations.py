@@ -35,7 +35,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
             gravity=gravity,
         )
 
-    def mass_matrix(self, base_transform, joint_positions):
+    def mass_matrix(self, base_transform: jnp.array, joint_positions: jnp.array):
         """Returns the Mass Matrix functions computed the CRBA
 
         Args:
@@ -48,7 +48,9 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
         [M, _] = self.crba(base_transform, joint_positions)
         return M
 
-    def centroidal_momentum_matrix(self, base_transform, joint_positions):
+    def centroidal_momentum_matrix(
+        self, base_transform: jnp.array, joint_positions: jnp.array
+    ):
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
         Args:
@@ -61,7 +63,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
         [_, Jcm] = self.crba(base_transform, joint_positions)
         return Jcm
 
-    def relative_jacobian(self, frame, joint_positions):
+    def relative_jacobian(self, frame: str, joint_positions: jnp.array):
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
@@ -73,7 +75,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
         """
         return super().relative_jacobian(frame, joint_positions)
 
-    def CoM_position(self, base_transform, joint_positions):
+    def CoM_position(self, base_transform: jnp.array, joint_positions: jnp.array):
         """Returns the CoM positon
 
         Args:
@@ -85,7 +87,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
         """
         return super().CoM_position(base_transform, joint_positions)
 
-    def crba(self, base_transform, joint_positions):
+    def crba(self, base_transform: jnp.array, joint_positions: jnp.array):
         """This function computes the Composite Rigid body algorithm (Roy Featherstone) that computes the Mass Matrix.
          The algorithm is complemented with Orin's modifications computing the Centroidal Momentum Matrix
 
@@ -202,7 +204,9 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
         Jcc = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
         return M, Jcc
 
-    def forward_kinematics(self, frame, base_transform, joint_positions):
+    def forward_kinematics(
+        self, frame: str, base_transform: jnp.array, joint_positions: jnp.array
+    ):
         """Computes the forward kinematics relative to the specified frame
 
         Args:
@@ -289,7 +293,6 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
         (no acceleration and external forces). For now used to compute the bias force term
 
         Args:
-            frame (str): The frame to which the jacobian will be computed
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
             base_velocity (jnp.array): The base velocity in mixed representation
