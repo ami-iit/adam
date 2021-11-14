@@ -6,23 +6,24 @@ import numpy.typing as npt
 
 class SpatialMathAbstract(abc.ABC):
     @abc.abstractmethod
-    def R_from_axis_angle(axis: npt.NDArray, q: npt.NDArray):
+    def R_from_axis_angle(self, axis: npt.NDArray, q: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def Rx(q: npt.NDArray):
+    def Rx(self, q: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def Ry(q: npt.NDArray):
+    def Ry(self, q: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def Rz(q: npt.NDArray):
+    def Rz(self, q: npt.NDArray):
         pass
 
     @abc.abstractmethod
     def H_revolute_joint(
+        self,
         xyz: npt.NDArray,
         rpy: npt.NDArray,
         axis: npt.NDArray,
@@ -31,15 +32,16 @@ class SpatialMathAbstract(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def H_from_Pos_RPY(xyz: npt.NDArray, rpy: npt.NDArray):
+    def H_from_Pos_RPY(self, xyz: npt.NDArray, rpy: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def R_from_RPY(rpy: npt.NDArray):
+    def R_from_RPY(self, rpy: npt.NDArray):
         pass
 
     @abc.abstractmethod
     def X_revolute_joint(
+        self,
         xyz: npt.NDArray,
         rpy: npt.NDArray,
         axis: npt.NDArray,
@@ -48,43 +50,43 @@ class SpatialMathAbstract(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def X_fixed_joint(xyz: npt.NDArray, rpy: npt.NDArray):
+    def X_fixed_joint(self, xyz: npt.NDArray, rpy: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def spatial_transform(R: npt.NDArray, p: npt.NDArray):
+    def spatial_transform(self, R: npt.NDArray, p: npt.NDArray):
         pass
 
     @abc.abstractmethod
     def spatial_inertia(
-        I: npt.NDArray, mass: npt.NDArray, c: npt.NDArray, rpy: npt.NDArray
+        self, I: npt.NDArray, mass: npt.NDArray, c: npt.NDArray, rpy: npt.NDArray
     ):
         pass
 
     @abc.abstractmethod
-    def spatial_skew(v: npt.NDArray):
+    def spatial_skew(self, v: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def spatial_skew_star(v: npt.NDArray):
+    def spatial_skew_star(self, v: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def zeros(x: npt.NDArray):
+    def zeros(self, x: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def vertcat(x: npt.NDArray):
+    def vertcat(self, x: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def eye(x: npt.NDArray):
+    def eye(self, x: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def skew(x: npt.NDArray):
+    def skew(self, x: npt.NDArray):
         pass
 
     @abc.abstractmethod
-    def array(x: npt.NDArray):
+    def array(self, x: npt.NDArray):
         pass
