@@ -81,7 +81,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                 X_J = self.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
-            elif joint_i.type == "revolute":
+            elif joint_i.type == "revolute" or joint_i.type == "continuous":
                 if joint_i.idx is not None:
                     q_ = joint_positions[joint_i.idx]
                 else:
@@ -186,7 +186,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                     rpy = joint.origin.rpy
                     joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute":
+                if joint.type == "revolute" or joint.type == "continuous":
                     # if the joint is actuated set the value
                     if joint.idx is not None:
                         q_ = joint_positions[joint.idx]
@@ -226,7 +226,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                     rpy = joint.origin.rpy
                     joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute":
+                if joint.type == "revolute" or joint.type == "continuous":
                     if joint.idx is not None:
                         q_ = joint_positions[joint.idx]
                     else:
@@ -281,7 +281,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                     rpy = joint.origin.rpy
                     joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute":
+                if joint.type == "revolute" or joint.type == "continuous":
                     if joint.idx is not None:
                         q_ = joint_positions[joint.idx]
                     else:
@@ -407,7 +407,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
                 v_J = self.zeros(6, 1)
-            elif joint_i.type == "revolute":
+            elif joint_i.type == "revolute" or joint_i.type == "continuous":
                 if joint_i.idx is not None:
                     q_ = joint_positions[joint_i.idx]
                     joint_velocities_ = joint_velocities[joint_i.idx]
