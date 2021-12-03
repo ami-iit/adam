@@ -100,7 +100,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathPytorch):
                     rpy = joint.origin.rpy
                     joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute"or joint.type == "continuous":
+                if joint.type == "revolute" or joint.type == "continuous":
                     if joint.idx is not None:
                         q_ = joint_positions[joint.idx]
                     else:
