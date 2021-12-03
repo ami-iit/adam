@@ -24,6 +24,3 @@ jobs:
       - name: Test with pytest
         run: |
           pytest
-      - name: Run black --check
-        run: |
-          black --check .
