@@ -80,7 +80,7 @@ joints_name_list = [
 ]
 # Specify the root link
 root_link = 'root_link'
-kinDyn = KinDynComputations(urdf_path, joints_name_list, root_link)
+kinDyn = KinDynComputations(model_path, joints_name_list, root_link)
 w_H_b = np.eye(4)
 joints = np.ones(len(joints_name_list))
 M = kinDyn.mass_matrix(w_H_b, joints)
@@ -106,7 +106,7 @@ joints_name_list = [
 ]
 # Specify the root link
 root_link = 'root_link'
-kinDyn = KinDynComputations(urdf_path, joints_name_list, root_link)
+kinDyn = KinDynComputations(model_path, joints_name_list, root_link)
 w_H_b = np.eye(4)
 joints = np.ones(len(joints_name_list))
 M = kinDyn.mass_matrix_fun()
@@ -132,7 +132,7 @@ joints_name_list = [
 ]
 # Specify the root link
 root_link = 'root_link'
-kinDyn = KinDynComputations(urdf_path, joints_name_list, root_link)
+kinDyn = KinDynComputations(model_path, joints_name_list, root_link)
 w_H_b = np.eye(4)
 joints = np.ones(len(joints_name_list))
 M = kinDyn.mass_matrix(w_H_b, joints)
