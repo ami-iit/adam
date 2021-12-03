@@ -122,7 +122,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
                 X_J = self.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
                 Phi[i] = self.zeros(6, 1)  # cs.vertcat(0, 0, 0, 0, 0, 0)
-            elif joint_i.type == "revolute":
+            elif joint_i.type == "revolute" or joint_i.type == "continuous":
                 q_ = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
                 X_J = self.X_revolute_joint(
                     joint_i.origin.xyz,
@@ -251,7 +251,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathJax):
                     rpy = joint.origin.rpy
                     joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute":
+                if joint.type == "revolute" or joint.type == "continuous":
                     if joint.idx is not None:
                         q_ = joint_positions[joint.idx]
                     else:
