@@ -192,7 +192,5 @@ def test_gravity_term():
     G_iDyn_np = np.concatenate(
         (G_iDyn.baseWrench().toNumPy(), G_iDyn.jointTorques().toNumPy())
     )
-    print(G_iDyn_np)
     G_test = comp.gravity_term(H_b, s_)
-    print(G_test)
     assert G_iDyn_np - G_test == pytest.approx(0.0, abs=1e-4)
