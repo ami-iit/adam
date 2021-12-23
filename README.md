@@ -1,6 +1,7 @@
 # ADAM
 
 [![Adam](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml)
+[![](https://img.shields.io/badge/license-LGPL-19c2d8.svg)](https://github.com/ami-iit/ADAM/blob/main/LICENSE)
 
 **Automatic Differentiation for rigid-body-dynamics AlgorithMs**
 
@@ -13,10 +14,16 @@ ADAM implements a collection of algorithms for calculating rigid-body dynamics f
 
 ADAM employs the **automatic differentiation** capabilities of these framework to compute, if needed, gradients, Jacobian, Hessians of rigid-body dynamics quantities. This approach enable the design of optimal control and reinforcement learning strategies in robotics.
 
-Adam is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
+ADAM is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
 
-This work is still at an early stage and bugs could jump out!
-PRs are welcome! :rocket:
+---
+
+<p align="center">
+  <b>:warning: REPOSITORY UNDER DEVELOPMENT :warning:</b>
+  <br>We cannot guarantee stable API
+</p>
+
+---
 
 ## :hammer: Dependencies
 
@@ -76,7 +83,6 @@ git clone https://github.com/dic-iit/ADAM.git
 cd ADAM
 pip install .
 ```
-
 
 ## :rocket: Usage
 
@@ -160,6 +166,12 @@ joints = np.ones(len(joints_name_list))
 M = kinDyn.mass_matrix(w_H_b, joints)
 print(M)
 ```
+
+# :superhero_man: Contributing
+
+**ADAM** is an open-source project. Contributions are very welcome!
+
+Open an issue with your feature request or if you spot a bug. Then, you can also proceed with a Pull-requests! :rocket:
 
 ## Todo
 
