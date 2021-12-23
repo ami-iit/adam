@@ -14,7 +14,16 @@ ADAM implements a collection of algorithms for calculating rigid-body dynamics f
 
 ADAM employs the **automatic differentiation** capabilities of these framework to compute, if needed, gradients, Jacobian, Hessians of rigid-body dynamics quantities. This approach enable the design of optimal control and reinforcement learning strategies in robotics.
 
-Adam is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
+ADAM is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
+
+---
+
+<p align="center">
+  <b>:warning: REPOSITORY UNDER DEVELOPMENT :warning:</b>
+  <br>We cannot guarantee stable API
+</p>
+
+---
 
 ## :hammer: Dependencies
 
@@ -163,15 +172,6 @@ print(M)
 **ADAM** is an open-source project. Contributions are very welcome!
 
 Open an issue with your feature request or if you spot a bug. Then, you can also proceed with a Pull-requests! :rocket:
-
----
-
-<p align="center">
-  <b>:warning: REPOSITORY UNDER DEVELOPMENT :warning:</b>
-  <br>We cannot guarantee stable API
-</p>
-
----
 
 ## Todo
 
