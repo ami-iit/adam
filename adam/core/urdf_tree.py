@@ -9,7 +9,7 @@ from typing import List
 
 from prettytable import PrettyTable
 from urdf_parser_py.urdf import URDF
-
+import urdfpy
 
 @dataclass
 class Tree:
@@ -42,7 +42,7 @@ class URDFTree:
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
-        self.robot_desc = URDF.from_xml_file(urdfstring)
+        self.robot_desc = urdfpy.URDF.load(urdfstring) 
         self.joints_list = self.get_joints_info_from_reduced_model(joints_name_list)
         self.NDoF = len(self.joints_list)
         self.root_link = root_link
@@ -54,9 +54,6 @@ class URDFTree:
 
         for [idx, joint_str] in enumerate(joints_name_list):
             # adding the field idx to the reduced joint list
-            print("fino a qui tutto bene")
-            print("idx", idx)
-            print("joint str", joint_str)
             self.robot_desc.joint_map[joint_str].idx = idx
             joints_list += [self.robot_desc.joint_map[joint_str]]
         if len(joints_list) != len(joints_name_list):
@@ -126,7 +123,7 @@ class URDFTree:
                     [
                         i,
                         item,
-                        self.robot_desc.joint_map[item].type,
+                        self.robot_desc.joint_map[item].joint_type,
                         parent,
                         child,
                     ]
