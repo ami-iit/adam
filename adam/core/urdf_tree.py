@@ -54,6 +54,9 @@ class URDFTree:
 
         for [idx, joint_str] in enumerate(joints_name_list):
             # adding the field idx to the reduced joint list
+            print("fino a qui tutto bene")
+            print("idx", idx)
+            print("joint str", joint_str)
             self.robot_desc.joint_map[joint_str].idx = idx
             joints_list += [self.robot_desc.joint_map[joint_str]]
         if len(joints_list) != len(joints_name_list):

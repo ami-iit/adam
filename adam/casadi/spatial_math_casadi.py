@@ -102,6 +102,21 @@ class SpatialMathCasadi(SpatialMathAbstract):
         IO[:3, 3:] = mass * Sc.T
         IO[:3, :3] = cs.np.eye(3) * mass
         return IO
+    
+    @classmethod
+    def spatial_inertial_with_parameter(cls,I, mass,c,rpy):
+    # Returns the 6x6 inertia matrix expressed at the origin of the link (with rotation)"""
+        IO = cls.zeros(6,6)
+        Sc = cs.skew(c)
+        R = cls.zeros(3,3)
+        R_temp = cls.R_from_RPY(rpy)    
+        #TODOS
+        inertia_matrix =cs.vertcat(cs.horzcat(I.ixx,0.0, 0.0), cs.horzcat(0.0, I.iyy, 0.0), cs.horzcat(0.0, 0.0, I.izz))
+        IO[3:, 3:] = R_temp@inertia_matrix@R_temp.T + mass * cs.mtimes(Sc,Sc.T)
+        IO[3:, :3] = mass * Sc
+        IO[:3, 3:] = mass * Sc.T
+        IO[:3, :3] = cls.eye(3)* mass
+        return IO
 
     @classmethod
     def spatial_skew(cls, v):

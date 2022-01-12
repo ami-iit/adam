@@ -64,6 +64,10 @@ class SpatialMathAbstract(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def spatial_inertial_with_parameter(self, I, mass, c, rpy):
+        pass
+
+    @abc.abstractmethod
     def spatial_skew(self, v: npt.NDArray):
         pass
 

@@ -3,13 +3,16 @@
 # GNU Lesser General Public License v2.1 or any later version.
 
 
+from abc import abstractmethod
 from typing import TypeVar
 
 import numpy as np
+import urdfpy
+from adam.core import spatial_math
 
 from adam.core.spatial_math import SpatialMathAbstract
 from adam.core.urdf_tree import URDFTree
-
+from adam.core import link_parametric
 T = TypeVar("T")
 
 
@@ -24,6 +27,9 @@ class RBDAlgorithms(SpatialMathAbstract):
         joints_name_list: list,
         root_link: str,
         gravity: np.array,
+        link_name_list: list = [], 
+        link_characteristics:dict = None,
+        joint_characteristics:dict = None,
     ) -> None:
         """
         Args:
@@ -33,7 +39,8 @@ class RBDAlgorithms(SpatialMathAbstract):
         """
 
         urdf_tree = URDFTree(urdfstring, joints_name_list, root_link)
-        self.robot_desc = urdf_tree.robot_desc
+        self.robot_desc = urdfpy.URDF.load(urdfstring)
+        self.robot_with_chain = urdf_tree.robot_desc
         self.joints_list = urdf_tree.get_joints_info_from_reduced_model(
             joints_name_list
         )
@@ -46,8 +53,36 @@ class RBDAlgorithms(SpatialMathAbstract):
             self.connecting_joints,
             self.tree,
         ) = urdf_tree.load_model()
+        self.link_name_list = link_name_list
+        self.link_characteristics = link_characteristics
+        self.joint_characteristics = joint_characteristics
 
-    def crba(self, base_transform: T, joint_positions: T) -> T:
+    @staticmethod
+    def get_element_by_name(link_name, robot):
+        """Explores the robot looking for the link whose name matches the first argument"""
+        link_list = [corresponding_link for corresponding_link in robot.links if corresponding_link.name == link_name]
+        if len(link_list) != 0:
+            return link_list[0]
+        else:
+            return None
+    
+    def findLinkCharacteristic(self, name):
+        if(self.link_characteristic is None): 
+            return link_parametric.LinkCharacteristics()
+        for key, val in self.link_characteristic.items():
+            if(key == name):
+               return val
+        return link_parametric.LinkCharacteristics()
+
+    def findJointCharacteristic(self, name):
+        if(self.joint_characteristic is None): 
+            return link_parametric.JointCharacteristics()
+        for key, val in self.joint_characteristic.items():
+            if(key == name):
+               return val
+        return link_parametric.JointCharacteristics()
+    
+    def crba(self, base_transform: T, joint_positions: T,density:T = None, length_multiplier:T = None) -> T:
         """This function computes the Composite Rigid body algorithm (Roy Featherstone) that computes the Mass Matrix.
          The algorithm is complemented with Orin's modifications computing the Centroidal Momentum Matrix
 
@@ -64,21 +99,59 @@ class RBDAlgorithms(SpatialMathAbstract):
         M = self.zeros(self.NDoF + 6, self.NDoF + 6)
 
         for i in range(self.tree.N):
-            link_i = self.tree.links[i]
-            link_pi = self.tree.parents[i]
-            joint_i = self.tree.joints[i]
-            I = link_i.inertial.inertia
-            mass = link_i.inertial.mass
-            o = link_i.inertial.origin.xyz
-            rpy = link_i.inertial.origin.rpy
-            Ic[i] = self.spatial_inertia(I, mass, o, rpy)
+
+            if self.tree.links[i].name in self.link_name_list:
+                link_original = self.get_element_by_name(self.tree.links[i].name, self.robot)
+                j = self.link_name_list.index(self.tree.links[i].name)
+                #TODO it should be done only at initialization
+                link_char = self.findLinkCharacteristic(self.tree.links[i].name)
+                link_i = link_parametric.linkParametric(self.tree.links[i].name, length_multiplier[j], density[j], self.robot, link_original, link_char)
+                I = link_i.I
+                mass = link_i.mass 
+                origin = link_i.origin
+                o = self.zeros(3)
+                o[0] = origin[0]
+                o[1] = origin[1]
+                o[2] = origin[2]
+                rpy = [link_i.origin[3],link_i.origin[4],link_i.origin[5]]
+                Ic[i] = spatial_math.spatial_inertial_with_parameter(I,mass,o,rpy)
+            else:
+                link_i = self.tree.links[i]
+                link_pi = self.tree.parents[i]
+                # joint_i = self.tree.joints[i]
+                I = link_i.inertial.inertia
+                mass = link_i.inertial.mass
+                o = link_i.inertial.origin.xyz
+                rpy = link_i.inertial.origin.rpy
+                Ic[i] = self.spatial_inertia(I, mass, o, rpy)
+            
+            if self.tree.parents[i].name in self.link_name_list: 
+                link_original_parent = self.get_element_by_name(self.tree.parents[i].name, self.robot)  
+                # Joint Part 
+                joint_i = self.tree.joints[i]
+                j = self.link_name_list.index(self.tree.parents[i].name)
+                #TODO it should be done only at initialization
+                link_char = self.findLinkCharacteristic(self.tree.parents[i].name)
+                joint_char = self.findJointCharacteristic(self.tree.joints[i].name)
+                link_i_parametric = link_parametric.linkParametric(self.tree.parents[i].name, length_multiplier[j],density[j],self.robot,link_original_parent, link_char)
+                joint_i_param = link_parametric.jointParametric(joint_i.name,link_i_parametric, joint_i, joint_char)
+                o_joint = [joint_i_param.origin[0],joint_i_param.origin[1],joint_i_param.origin[2]]
+                rpy_joint = [joint_i_param.origin[3],joint_i_param.origin[4], joint_i_param.origin[5]]
+            
+            else:
+                joint_i = self.tree.joints[i]
+                print("joint i ",joint_i)
+                print("name joint", joint_i.name)
+                origin_joint_temp = urdfpy.matrix_to_xyz_rpy(joint_i.origin)
+                o_joint = [origin_joint_temp[0], origin_joint_temp[1], origin_joint_temp[2]]
+                rpy_joint = [origin_joint_temp[3], origin_joint_temp[4], origin_joint_temp[5]]
 
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
                 Phi[i] = self.eye(6)
             elif joint_i.type == "fixed":
-                X_J = self.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
+                X_J = self.X_fixed_joint(o_joint, rpy_joint)
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
             elif joint_i.type == "revolute" or joint_i.type == "continuous":
@@ -87,8 +160,8 @@ class RBDAlgorithms(SpatialMathAbstract):
                 else:
                     q_ = 0.0
                 X_J = self.X_revolute_joint(
-                    joint_i.origin.xyz,
-                    joint_i.origin.rpy,
+                    o_joint,
+                    rpy_joint,
                     joint_i.axis,
                     q_,
                 )
@@ -115,9 +188,9 @@ class RBDAlgorithms(SpatialMathAbstract):
             if link_i.name == self.root_link:
                 M[:6, :6] = Phi[i].T @ F
             j = i
-            link_j = self.tree.links[j]
-            link_pj = self.tree.parents[j]
-            joint_j = self.tree.joints[j]
+            # link_j = self.tree.links[j]
+            # link_pj = self.tree.parents[j]
+            # joint_j = self.tree.joints[j]
             while self.tree.parents[j].name != self.tree.parents[0].name:
                 F = X_p[j].T @ F
                 j = self.tree.links.index(self.tree.parents[j])
@@ -155,7 +228,7 @@ class RBDAlgorithms(SpatialMathAbstract):
             elif joint_i.idx is not None:
                 Jcm[:, [joint_i.idx + 6]] = X_G[i].T @ Ic[i] @ Phi[i]
 
-        # Until now the algorithm returns the joint_positionsuantities in Body Fixed representation
+        # Until now the algorithm returns the joint_positions quantities in Body Fixed representation
         # Moving to mixed representation...
         X_to_mixed = self.eye(self.NDoF + 6)
         X_to_mixed[:3, :3] = base_transform[:3, :3].T
@@ -164,7 +237,8 @@ class RBDAlgorithms(SpatialMathAbstract):
         Jcm = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
         return M, Jcm
 
-    def forward_kinematics(self, frame, base_transform: T, joint_positions: T) -> T:
+    def forward_kinematics(self, frame, base_transform: T, joint_positions: T, density:T=None, length_multipliers:T=None) -> T:
+        
         """Computes the forward kinematics relative to the specified frame
 
         Args:
@@ -174,27 +248,43 @@ class RBDAlgorithms(SpatialMathAbstract):
         Returns:
             T_fk (T): The fk represented as Homogenous transformation matrix
         """
-        chain = self.robot_desc.get_chain(self.root_link, frame)
-
+        chain = self.robot_with_chain.get_chain(self.root_link, frame)
         T_fk = self.eye(4)
         T_fk = T_fk @ base_transform
         for item in chain:
             if item in self.robot_desc.joint_map:
-                joint = self.robot_desc.joint_map[item]
-                if joint.type == "fixed":
-                    xyz = joint.origin.xyz
-                    rpy = joint.origin.rpy
+                i = self.tree.joints.index(self.robot_with_chain.joint_map[item])
+                if(self.tree.parents[i].name in self.link_name_list):
+                    
+                    joint= self.robot_desc.joint_map[item]
+                    link_original = self.get_element_by_name(self.tree.parents[i].name, self.robot)
+                    j = self.link_name_list.index(self.tree.parents[i].name)
+                    link_char = self.findLinkCharacteristic(self.tree.parents[i].name)
+                    joint_char = self.findJointCharacteristic(item)
+                    link_i = link_parametric.linkParametric(self.tree.parents[i].name, length_multipliers[j],density[j],self.robot,link_original, link_char)
+                    joint_i_param = link_parametric.jointParametric(item,link_i, joint, joint_char)
+                    o_joint = [joint_i_param.origin[0],joint_i_param.origin[1],joint_i_param.origin[2]]
+                    rpy_joint = [joint_i_param.origin[3],joint_i_param.origin[4], joint_i_param.origin[5]]
+                else: 
+                    joint = self.robot_desc.joint_map[item]
+                    origin_joint = urdfpy.matrix_to_xyz_rpy(joint.origin)
+                    o_joint = [origin_joint[0], origin_joint[1], origin_joint[2]]
+                    rpy_joint = [origin_joint[3], origin_joint[4], origin_joint[5]]
+
+                if joint.joint_type == "fixed":
+                    xyz = o_joint
+                    rpy = rpy_joint
                     joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute" or joint.type == "continuous":
+                if joint.joint_type == "revolute" or joint.joint_type == "continuous":
                     # if the joint is actuated set the value
                     if joint.idx is not None:
                         q_ = joint_positions[joint.idx]
                     else:
                         q_ = 0.0
                     T_joint = self.H_revolute_joint(
-                        joint.origin.xyz,
-                        joint.origin.rpy,
+                        o_joint,
+                        rpy_joint,
                         joint.axis,
                         q_,
                     )
