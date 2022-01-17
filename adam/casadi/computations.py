@@ -173,12 +173,24 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         Returns:
             h (casADi function): the bias force
         """
-        T_b = cs.SX.sym("T_b", 4, 4)
-        s = cs.SX.sym("s", self.NDoF)
-        v_b = cs.SX.sym("v_b", 6)
-        s_dot = cs.SX.sym("s_dot", self.NDoF)
-        h = super().rnea(T_b, s, v_b, s_dot, self.g)
-        return cs.Function("h", [T_b, s, v_b, s_dot], [h], self.f_opts)
+        if(not(self.link_name_list)):
+            T_b = cs.SX.sym("T_b", 4, 4)
+            s = cs.SX.sym("s", self.NDoF)
+            v_b = cs.SX.sym("v_b", 6)
+            s_dot = cs.SX.sym("s_dot", self.NDoF)
+            h = super().rnea(T_b, s, v_b, s_dot, self.g)
+            return cs.Function("h", [T_b, s, v_b, s_dot], [h], self.f_opts)
+        else: 
+            T_b = cs.SX.sym("T_b", 4, 4)
+            s = cs.SX.sym("s", self.NDoF)
+            v_b = cs.SX.sym("v_b", 6)
+            s_dot = cs.SX.sym("s_dot", self.NDoF)
+            density = cs.SX.sym("density", len(self.link_name_list))
+            lenght_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list))
+
+            h = super().rnea(T_b, s, v_b, s_dot, self.g, density, lenght_multiplier)
+            return cs.Function("h", [T_b, s, v_b, s_dot, density, lenght_multiplier], [h], self.f_opts)
+
 
     def coriolis_term_fun(self) -> cs.Function:
         """Returns the coriolis term of the floating-base dynamics equation,
@@ -187,13 +199,25 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         Returns:
             C (casADi function): the Coriolis term
         """
-        T_b = cs.SX.sym("T_b", 4, 4)
-        q = cs.SX.sym("q", self.NDoF)
-        v_b = cs.SX.sym("v_b", 6)
-        q_dot = cs.SX.sym("q_dot", self.NDoF)
-        # set in the bias force computation the gravity term to zero
-        C = super().rnea(T_b, q, v_b, q_dot, np.zeros(6))
-        return cs.Function("C", [T_b, q, v_b, q_dot], [C], self.f_opts)
+        if(not(self.link_name_list)):
+            T_b = cs.SX.sym("T_b", 4, 4)
+            q = cs.SX.sym("q", self.NDoF)
+            v_b = cs.SX.sym("v_b", 6)
+            q_dot = cs.SX.sym("q_dot", self.NDoF)
+            # set in the bias force computation the gravity term to zero
+            C = super().rnea(T_b, q, v_b, q_dot, np.zeros(6))
+            return cs.Function("C", [T_b, q, v_b, q_dot], [C], self.f_opts)
+        else: 
+            T_b = cs.SX.sym("T_b", 4, 4)
+            q = cs.SX.sym("q", self.NDoF)
+            v_b = cs.SX.sym("v_b", 6)
+            q_dot = cs.SX.sym("q_dot", self.NDoF)
+            density = cs.SX.sym("density", len(self.link_name_list))
+            lenght_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list))
+            # set in the bias force computation the gravity term to zero
+            C = super().rnea(T_b, q, v_b, q_dot, np.zeros(6), density, lenght_multiplier)
+            return cs.Function("C", [T_b, q, v_b, q_dot, density, lenght_multiplier], [C], self.f_opts)
+        
 
     def gravity_term_fun(self) -> cs.Function:
         """Returns the gravity term of the floating-base dynamics equation,
@@ -202,8 +226,18 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         Returns:
             G (casADi function): the gravity term
         """
-        T_b = cs.SX.sym("T_b", 4, 4)
-        q = cs.SX.sym("q", self.NDoF)
-        # set in the bias force computation the velocity to zero
-        G = super().rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
-        return cs.Function("G", [T_b, q], [G], self.f_opts)
+
+        if(not(self.link_name_list)):
+            T_b = cs.SX.sym("T_b", 4, 4)
+            q = cs.SX.sym("q", self.NDoF)
+            # set in the bias force computation the velocity to zero
+            G = super().rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
+            return cs.Function("G", [T_b, q], [G], self.f_opts)
+        else: 
+            T_b = cs.SX.sym("T_b", 4, 4)
+            q = cs.SX.sym("q", self.NDoF)
+            density = cs.SX.sym("density", len(self.link_name_list))
+            lenght_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list))
+            # set in the bias force computation the velocity to zero
+            G = super().rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF, density, lenght_multiplier), self.g)
+            return cs.Function("G", [T_b, q, density, lenght_multiplier], [G], self.f_opts)

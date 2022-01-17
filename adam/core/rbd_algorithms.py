@@ -496,6 +496,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                     mass += link.inertial.mass
         return mass
 
+    # Done
     def rnea(
         self,
         base_transform: T,
@@ -503,6 +504,8 @@ class RBDAlgorithms(SpatialMathAbstract):
         base_velocity: T,
         joint_velocities: T,
         g: T,
+        density: T=None, 
+        lenght_multiplier: T = None 
     ) -> T:
         """Implementation of reduced Recursive Newton-Euler algorithm
         (no acceleration and external forces). For now used to compute the bias force term
@@ -543,26 +546,60 @@ class RBDAlgorithms(SpatialMathAbstract):
         a[0] = -X_to_mixed @ g.reshape(6, 1) + acc_to_mixed
 
         for i in range(self.tree.N):
-            link_i = self.tree.links[i]
             link_pi = self.tree.parents[i]
-            joint_i = self.tree.joints[i]
-            I = link_i.inertial.inertia
-            mass = link_i.inertial.mass
-            o = link_i.inertial.origin.xyz
-            rpy = link_i.inertial.origin.rpy
-            Ic[i] = self.spatial_inertia(I, mass, o, rpy)
-
+            if self.tree.links[i].name in self.link_name_list:
+                link_original = self.get_element_by_name(self.tree.links[i].name, self.robot)
+                j = self.link_name_list.index(self.tree.links[i].name)
+                #TODO it should be done only at initialization
+                link_char = self.findLinkCharacteristic(self.tree.links[i].name)
+                link_i = link_parametric.linkParametric(self.tree.links[i].name, lenght_multiplier[j], density[j], self.robot, link_original, link_char)
+                I = link_i.I
+                mass = link_i.mass 
+                origin = link_i.origin
+                o = self.zeros(3)
+                o[0] = origin[0]
+                o[1] = origin[1]
+                o[2] = origin[2]
+                rpy = [link_i.origin[3],link_i.origin[4],link_i.origin[5]]
+                Ic[i] = spatial_math.spatial_inertial_with_parameter(I,mass,o,rpy)
+            else:
+                link_i = self.tree.links[i]
+                I = link_i.inertial.inertia
+                mass = link_i.inertial.mass
+                origin = urdfpy.matrix_to_xyz_rpy(link_i.inertial.origin)
+                o = [origin[0],origin[1], origin[2]]
+                rpy = [origin[3], origin[4], origin[5]]
+                Ic[i] = self.spatial_inertia(I, mass, o, rpy)
+            
+            if self.tree.parents[i].name in self.link_name_list: 
+                link_original_parent = self.get_element_by_name(self.tree.parents[i].name, self.robot)  
+                # Joint Part 
+                joint_i = self.tree.joints[i]
+                j = self.link_name_list.index(self.tree.parents[i].name)
+                link_char = self.findLinkCharacteristic(self.tree.parents[i].name)
+                joint_char = self.findJointCharacteristic(self.tree.joints[i].name)
+                link_i_parametric = link_parametric.linkParametric(self.tree.parents[i].name, lenght_multiplier[j],density[j],self.robot,link_original_parent, link_char)
+                joint_i_param = link_parametric.jointParametric(joint_i.name,link_i_parametric, joint_i, joint_char)
+                o_joint = [joint_i_param.origin[0],joint_i_param.origin[1],joint_i_param.origin[2]]
+                rpy_joint = [joint_i_param.origin[3],joint_i_param.origin[4], joint_i_param.origin[5]]
+            else:   
+                joint_i = self.tree.joints[i] 
+                if(hasattr(joint_i, "origin")):
+                    origin_joint_temp = urdfpy.matrix_to_xyz_rpy(joint_i.origin)
+                    o_joint = [origin_joint_temp[0], origin_joint_temp[1], origin_joint_temp[2]]
+                    rpy_joint = [origin_joint_temp[3], origin_joint_temp[4], origin_joint_temp[5]]
+           
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
                 Phi[i] = self.eye(6)
                 v_J = Phi[i] @ X_to_mixed @ base_velocity
-            elif joint_i.type == "fixed":
-                X_J = self.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
+            elif joint_i.joint_type == "fixed":
+                X_J = self.X_fixed_joint(o_joint, rpy_joint)
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
                 v_J = self.zeros(6, 1)
-            elif joint_i.type == "revolute" or joint_i.type == "continuous":
+            elif joint_i.joint_type == "revolute" or joint_i.joint_type == "continuous":
                 if joint_i.idx is not None:
                     q_ = joint_positions[joint_i.idx]
                     joint_velocities_ = joint_velocities[joint_i.idx]
@@ -571,8 +608,8 @@ class RBDAlgorithms(SpatialMathAbstract):
                     joint_velocities_ = 0.0
 
                 X_J = self.X_revolute_joint(
-                    joint_i.origin.xyz,
-                    joint_i.origin.rpy,
+                    o_joint,
+                    rpy_joint,
                     joint_i.axis,
                     q_,
                 )
