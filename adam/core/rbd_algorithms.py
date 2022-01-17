@@ -83,6 +83,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                return val
         return link_parametric.JointCharacteristics()
     
+    # Done 
     def crba(self, base_transform: T, joint_positions: T,density: T = None, length_multiplier: T = None) -> T:
         """This function computes the Composite Rigid body algorithm (Roy Featherstone) that computes the Mass Matrix.
          The algorithm is complemented with Orin's modifications computing the Centroidal Momentum Matrix
@@ -100,7 +101,6 @@ class RBDAlgorithms(SpatialMathAbstract):
         M = self.zeros(self.NDoF + 6, self.NDoF + 6)
 
         for i in range(self.tree.N):
-
             if self.tree.links[i].name in self.link_name_list:
                 link_original = self.get_element_by_name(self.tree.links[i].name, self.robot)
                 j = self.link_name_list.index(self.tree.links[i].name)
@@ -118,12 +118,11 @@ class RBDAlgorithms(SpatialMathAbstract):
                 Ic[i] = spatial_math.spatial_inertial_with_parameter(I,mass,o,rpy)
             else:
                 link_i = self.tree.links[i]
-                link_pi = self.tree.parents[i]
-                # joint_i = self.tree.joints[i]
                 I = link_i.inertial.inertia
                 mass = link_i.inertial.mass
-                o = link_i.inertial.origin.xyz
-                rpy = link_i.inertial.origin.rpy
+                origin = urdfpy.matrix_to_xyz_rpy(link_i.inertial.origin)
+                o = [origin[0],origin[1], origin[2]]
+                rpy = [origin[3], origin[4], origin[5]]
                 Ic[i] = self.spatial_inertia(I, mass, o, rpy)
             
             if self.tree.parents[i].name in self.link_name_list: 
@@ -131,7 +130,6 @@ class RBDAlgorithms(SpatialMathAbstract):
                 # Joint Part 
                 joint_i = self.tree.joints[i]
                 j = self.link_name_list.index(self.tree.parents[i].name)
-                #TODO it should be done only at initialization
                 link_char = self.findLinkCharacteristic(self.tree.parents[i].name)
                 joint_char = self.findJointCharacteristic(self.tree.joints[i].name)
                 link_i_parametric = link_parametric.linkParametric(self.tree.parents[i].name, length_multiplier[j],density[j],self.robot,link_original_parent, link_char)
@@ -140,22 +138,22 @@ class RBDAlgorithms(SpatialMathAbstract):
                 rpy_joint = [joint_i_param.origin[3],joint_i_param.origin[4], joint_i_param.origin[5]]
             
             else:
-                joint_i = self.tree.joints[i]
-                print("joint i ",joint_i)
-                print("name joint", joint_i.name)
-                origin_joint_temp = urdfpy.matrix_to_xyz_rpy(joint_i.origin)
-                o_joint = [origin_joint_temp[0], origin_joint_temp[1], origin_joint_temp[2]]
-                rpy_joint = [origin_joint_temp[3], origin_joint_temp[4], origin_joint_temp[5]]
+                
+                joint_i = self.tree.joints[i] 
+                if(hasattr(joint_i, "origin")):
+                    origin_joint_temp = urdfpy.matrix_to_xyz_rpy(joint_i.origin)
+                    o_joint = [origin_joint_temp[0], origin_joint_temp[1], origin_joint_temp[2]]
+                    rpy_joint = [origin_joint_temp[3], origin_joint_temp[4], origin_joint_temp[5]]
 
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
                 Phi[i] = self.eye(6)
-            elif joint_i.type == "fixed":
+            elif joint_i.joint_type == "fixed":
                 X_J = self.X_fixed_joint(o_joint, rpy_joint)
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
-            elif joint_i.type == "revolute" or joint_i.type == "continuous":
+            elif joint_i.joint_type == "revolute" or joint_i.joint_type == "continuous":
                 if joint_i.idx is not None:
                     q_ = joint_positions[joint_i.idx]
                 else:
@@ -189,9 +187,6 @@ class RBDAlgorithms(SpatialMathAbstract):
             if link_i.name == self.root_link:
                 M[:6, :6] = Phi[i].T @ F
             j = i
-            # link_j = self.tree.links[j]
-            # link_pj = self.tree.parents[j]
-            # joint_j = self.tree.joints[j]
             while self.tree.parents[j].name != self.tree.parents[0].name:
                 F = X_p[j].T @ F
                 j = self.tree.links.index(self.tree.parents[j])

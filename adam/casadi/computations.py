@@ -42,10 +42,18 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         Returns:
             M (casADi function): Mass Matrix
         """
-        T_b = cs.SX.sym("T_b", 4, 4)
-        s = cs.SX.sym("s", self.NDoF)
-        [M, _] = super().crba(T_b, s)
-        return cs.Function("M", [T_b, s], [M], self.f_opts)
+        if(not(self.link_name_list)):
+            T_b = cs.SX.sym("T_b", 4, 4)
+            s = cs.SX.sym("s", self.NDoF)
+            [M, _] = super().crba(T_b, s)
+            return cs.Function("M", [T_b, s], [M], self.f_opts)
+        else:
+            T_b = cs.SX.sym("T_b", 4, 4)
+            s = cs.SX.sym("s", self.NDoF)
+            density = cs.SX.sym("density", len(self.link_name_list))
+            lenght_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list))
+            [M,_] = super.crba(T_b, s,density, lenght_multiplier)
+            return cs.Function("M", [T_b, s, density, lenght_multiplier], [M], self.f_opts)
 
     def centroidal_momentum_matrix_fun(self) -> cs.Function:
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
@@ -53,10 +61,18 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         Returns:
             Jcc (casADi function): Centroidal Momentum matrix
         """
-        T_b = cs.SX.sym("T_b", 4, 4)
-        s = cs.SX.sym("s", self.NDoF)
-        [_, Jcm] = super().crba(T_b, s)
-        return cs.Function("Jcm", [T_b, s], [Jcm], self.f_opts)
+        if(not(self.link_name_list)):
+            T_b = cs.SX.sym("T_b", 4, 4)
+            s = cs.SX.sym("s", self.NDoF)
+            [_, Jcm] = super().crba(T_b, s)
+            return cs.Function("Jcm", [T_b, s], [Jcm], self.f_opts)
+        else: 
+            T_b = cs.SX.sym("T_b", 4, 4)
+            s = cs.SX.sym("s", self.NDoF)
+            density = cs.SX.sym("density", len(self.link_name_list))
+            lenght_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list))
+            [_,Jcm] = super.crba(T_b, s,density, lenght_multiplier)
+            return cs.Function("Jcm", [T_b, s, density, lenght_multiplier], [Jcm], self.f_opts)            
 
     def forward_kinematics_fun(self, frame: str) -> cs.Function:
         """Computes the forward kinematics relative to the specified frame
