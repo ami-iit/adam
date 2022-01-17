@@ -17,12 +17,12 @@ from adam.core.spatial_math import SpatialMathAbstract
 
 class I_parametric(SpatialMathAbstract):
     def __init__(self) -> None:
-        self.ixx = self.zeros(1)
+        self.ixx = cs.SX.zeros(1)
         self.ixy = 0
         self.ixz = 0
-        self.iyy = self.zeros(1)
+        self.iyy = cs.SX.zeros(1)
         self.iyz = 0
-        self.izz = self.zeros(1)
+        self.izz = cs.SX.zeros(1)
 
 class LinkCharacteristics: 
     def __init__(self, offset =0.0, dimension = None, flip_direction = False, calculate_origin_from_dimension = True) -> None:
@@ -53,7 +53,7 @@ class Side(Enum):
     HEIGHT = 2
     DEPTH = 3
 
-class linkParametric(SpatialMathAbstract):
+class linkParametric():
     def __init__(self, link_name: str, length_multiplier, density, robot, link, link_characteristics = LinkCharacteristics()) -> None:
         self.name = link_name
         self.density = density
@@ -90,7 +90,7 @@ class linkParametric(SpatialMathAbstract):
         volume = cs.SX.zeros(1)
         """Modifies a link's volume by a given multiplier, in a manner that is logical with the link's geometry"""
         if self.geometry_type == Geometry.BOX:
-            visual_data_new = self.zeros(3)
+            visual_data_new = cs.SX.zeros(3)
             for i in range(2):
                 visual_data_new[i] = self.visual_data.size[i]
             # if self.link_characteristic.dimension == Side.WIDTH:
@@ -101,12 +101,12 @@ class linkParametric(SpatialMathAbstract):
                 visual_data_new[2] = self.visual_data.size[2] * self.length_multiplier
             volume = visual_data_new[0] * visual_data_new[1] * visual_data_new[2]
         elif self.geometry_type == Geometry.CYLINDER:
-            visual_data_new = self.zeros(2)
+            visual_data_new = cs.SX.zeros(2)
             visual_data_new[0] = self.visual_data.length * self.length_multiplier
             visual_data_new[1] = self.visual_data.radius
             volume = math.pi * visual_data_new[1] ** 2 * visual_data_new[0]
         elif self.geometry_type == Geometry.SPHERE:
-            visual_data_new = self.zeros(1)
+            visual_data_new = cs.SX.zeros(1)
             visual_data_new = self.visual_data.radius * self.length_multiplier
             volume = 4 * math.pi * visual_data_new ** 3 / 3
         return volume, visual_data_new
@@ -115,12 +115,12 @@ class linkParametric(SpatialMathAbstract):
 
     def compute_mass(self):
         """Changes the mass of a link by preserving a given density."""
-        mass = self.zeros(1)
+        mass = cs.SX.zeros(1)
         mass = self.volume * self.density
         return mass
 
     def modify_origin(self):
-        origin = self.zeros(6)
+        origin = cs.SX.zeros(6)
         visual = self.get_visual()
         """Modifies the position of the origin by a given amount"""
         xyz_rpy = matrix_to_xyz_rpy(visual.origin) 

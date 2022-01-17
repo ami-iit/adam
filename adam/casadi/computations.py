@@ -19,6 +19,9 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         urdfstring: str,
         joints_name_list: list,
         root_link: str = "root_link",
+        link_name_list: list = [], 
+        link_characteristics:dict = None,
+        joint_characteristics:dict = None,
         gravity: np.array = np.array([0, 0, -9.80665, 0, 0, 0], dtype=object),
         f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast")),
     ) -> None:
@@ -33,6 +36,9 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
             joints_name_list=joints_name_list,
             root_link=root_link,
             gravity=gravity,
+            link_name_list=link_name_list,
+            link_characteristics= link_characteristics, 
+            joint_characteristics= joint_characteristics
         )
         self.f_opts = f_opts
 
@@ -52,7 +58,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
             s = cs.SX.sym("s", self.NDoF)
             density = cs.SX.sym("density", len(self.link_name_list))
             lenght_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list))
-            [M,_] = super.crba(T_b, s,density, lenght_multiplier)
+            [M,_] = super().crba(T_b, s,density, lenght_multiplier)
             return cs.Function("M", [T_b, s, density, lenght_multiplier], [M], self.f_opts)
 
     def centroidal_momentum_matrix_fun(self) -> cs.Function:
@@ -71,7 +77,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
             s = cs.SX.sym("s", self.NDoF)
             density = cs.SX.sym("density", len(self.link_name_list))
             lenght_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list))
-            [_,Jcm] = super.crba(T_b, s,density, lenght_multiplier)
+            [_,Jcm] = super().crba(T_b, s,density, lenght_multiplier)
             return cs.Function("Jcm", [T_b, s, density, lenght_multiplier], [Jcm], self.f_opts)            
 
     def forward_kinematics_fun(self, frame: str) -> cs.Function:
@@ -239,5 +245,5 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
             density = cs.SX.sym("density", len(self.link_name_list))
             lenght_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list))
             # set in the bias force computation the velocity to zero
-            G = super().rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF, density, lenght_multiplier), self.g)
+            G = super().rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF),self.g, density, lenght_multiplier)
             return cs.Function("G", [T_b, q, density, lenght_multiplier], [G], self.f_opts)

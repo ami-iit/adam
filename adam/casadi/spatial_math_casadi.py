@@ -51,7 +51,9 @@ class SpatialMathCasadi(SpatialMathAbstract):
         T = cls.eye(4)
         R = cls.R_from_RPY(rpy) @ cls.R_from_axis_angle(axis, q)
         T[:3, :3] = R
-        T[:3, 3] = xyz
+        T[0,3] = xyz[0]
+        T[1,3] = xyz[1]
+        T[2,3] = xyz[2]  
         return T
 
     @classmethod
@@ -101,7 +103,7 @@ class SpatialMathCasadi(SpatialMathAbstract):
         return IO
     
     @classmethod
-    def spatial_inertial_with_parameter(cls,I, mass,c,rpy):
+    def spatial_inertial_with_parameter(cls, I, mass, c , rpy):
     # Returns the 6x6 inertia matrix expressed at the origin of the link (with rotation)"""
         IO = cls.zeros(6,6)
         Sc = cs.skew(c)
