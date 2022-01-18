@@ -1,28 +1,15 @@
-import logging
-from dataclasses import dataclass, field
-from os import error
-
-import casadi as cs
-import numpy as np
-from prettytable import PrettyTable
-from urdf_parser_py.urdf import URDF
-from urdfpy import xyz_rpy_to_matrix, matrix_to_xyz_rpy
+from urdfpy import matrix_to_xyz_rpy
+from enum import Enum
 import math
-from adam.geometry import utils
-from enum import Enum, EnumMeta
-from adam.core.spatial_math import SpatialMathAbstract
 
-"definition of I parametric. Note that the off diagonal element are considered to be zero"
-
-
-class I_parametric(SpatialMathAbstract):
+class I_parametric():
     def __init__(self) -> None:
-        self.ixx = cs.SX.zeros(1)
-        self.ixy = 0
-        self.ixz = 0
-        self.iyy = cs.SX.zeros(1)
-        self.iyz = 0
-        self.izz = cs.SX.zeros(1)
+        self.ixx = 0.0
+        self.ixy = 0.0
+        self.ixz = 0.0
+        self.iyy = 0.0
+        self.iyz = 0.0
+        self.izz = 0.0
 
 class LinkCharacteristics: 
     def __init__(self, offset =0.0, dimension = None, flip_direction = False, calculate_origin_from_dimension = True) -> None:
@@ -41,11 +28,9 @@ class JointCharacteristics:
 
 class Geometry(Enum):
     """The different types of geometries that constitute the URDF"""
-
     BOX = 1
     CYLINDER = 2
     SPHERE = 3
-
 
 class Side(Enum):
     """The possible sides of a box geometry"""
@@ -65,7 +50,6 @@ class linkParametric():
         self.mass = self.compute_mass()
         self.I = self.compute_inertia_parametric()
         self.origin = self.modify_origin()
-        # Find better way to deal with the inertial
         self.inertial = self.I
 
 
@@ -83,50 +67,46 @@ class linkParametric():
         if visual_obj.geometry.sphere is not None:
             return [Geometry.SPHERE, visual_obj.geometry.sphere]
 
-    """Function that starting from a multiplier (casadi variable) and link visual characteristics computes the link volume"""
-        
-
+    """Function that starting from a multiplier and link visual characteristics computes the link volume"""
     def compute_volume(self):
-        volume = cs.SX.zeros(1)
+        volume = 0.0
         """Modifies a link's volume by a given multiplier, in a manner that is logical with the link's geometry"""
         if self.geometry_type == Geometry.BOX:
-            visual_data_new = cs.SX.zeros(3)
+            visual_data_new =[0.0, 0.0, 0.0]
             for i in range(2):
                 visual_data_new[i] = self.visual_data.size[i]
-            # if self.link_characteristic.dimension == Side.WIDTH:
-            #     visual_data_new[0] = self.visual_data.size[0] * self.length_multiplier
-            # elif self.link_characteristic.dimension == Side.HEIGHT:
-            #     visual_data_new[1] = self.visual_data.size[1] * self.length_multiplier
-            # elif self.link_characteristic.dimension == Side.DEPTH:
+            if self.link_characteristic.dimension == Side.WIDTH:
+                visual_data_new[0] = self.visual_data.size[0] * self.length_multiplier
+            elif self.link_characteristic.dimension == Side.HEIGHT:
+                visual_data_new[1] = self.visual_data.size[1] * self.length_multiplier
+            elif self.link_characteristic.dimension == Side.DEPTH:
                 visual_data_new[2] = self.visual_data.size[2] * self.length_multiplier
             volume = visual_data_new[0] * visual_data_new[1] * visual_data_new[2]
         elif self.geometry_type == Geometry.CYLINDER:
-            visual_data_new = cs.SX.zeros(2)
+            visual_data_new = [0.0, 0.0]
             visual_data_new[0] = self.visual_data.length * self.length_multiplier
             visual_data_new[1] = self.visual_data.radius
             volume = math.pi * visual_data_new[1] ** 2 * visual_data_new[0]
         elif self.geometry_type == Geometry.SPHERE:
-            visual_data_new = cs.SX.zeros(1)
+            visual_data_new = 0.0
             visual_data_new = self.visual_data.radius * self.length_multiplier
             volume = 4 * math.pi * visual_data_new ** 3 / 3
         return volume, visual_data_new
 
     """Function that computes the mass starting from the density, the length multiplier and the link"""
-
     def compute_mass(self):
         """Changes the mass of a link by preserving a given density."""
-        mass = cs.SX.zeros(1)
+        mass = 0.0
         mass = self.volume * self.density
         return mass
 
     def modify_origin(self):
-        origin = cs.SX.zeros(6)
+        origin = [0.0,0.0,0.0,0.0,0.0,0.0]
         visual = self.get_visual()
         """Modifies the position of the origin by a given amount"""
         xyz_rpy = matrix_to_xyz_rpy(visual.origin) 
 
         if self.geometry_type == Geometry.BOX:
-            "For now hardcoded could be then changed Correspictive line in ergocub gazebo simulator --> check for modifyOrigin"
             index_to_change = 2 
             if (self.link_characteristic.dimension == Side.DEPTH):
                 index_to_change = 2
@@ -187,9 +167,7 @@ class linkParametric():
                 index = 1
             return self.visual_data_new[index]
         else:
-            "TODO understand why in case of sphere it is zero, most likely because things does not change"
             return 0
-
 
 class jointParametric:
     def __init__(self, joint_name, parent_link, joint, joint_characteristic) -> None:
@@ -200,10 +178,17 @@ class jointParametric:
         self.jointCharacteristic  = joint_characteristic
         self.origin = self.modify()
         
-
     def modify(self):
         length = self.parent_link.get_principal_length()
-        xyz_rpy = cs.SX(matrix_to_xyz_rpy(self.joint.origin))
+        # Ack for avoiding depending on casadi 
+        xyz_rpy = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        xyz_rpy[0] = self.joint.origin[0,3]
+        xyz_rpy[1] = self.joint.origin[1,3]
+        xyz_rpy[2] = self.joint.origin[2,3]
+        xyz_rpy_temp=  matrix_to_xyz_rpy(self.joint.origin)
+        xyz_rpy[3] = xyz_rpy_temp[3]
+        xyz_rpy[4] = xyz_rpy_temp[4]
+        xyz_rpy[5] = xyz_rpy_temp[5]
         if(self.jointCharacteristic.modify_origin):
             xyz_rpy[2] = length / (2 if self.jointCharacteristic.take_half_length else 1)
             if self.jointCharacteristic.flip_direction:
