@@ -5,7 +5,6 @@
 import logging
 
 import casadi as cs
-import gym_ignition_models
 import idyntree.swig as idyntree
 import numpy as np
 import pytest
