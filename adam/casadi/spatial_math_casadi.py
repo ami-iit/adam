@@ -109,7 +109,6 @@ class SpatialMathCasadi(SpatialMathAbstract):
         Sc = cs.skew(c)
         R = cls.zeros(3,3)
         R_temp = cls.R_from_RPY(rpy)    
-        #TODOS
         inertia_matrix =cs.vertcat(cs.horzcat(I.ixx,0.0, 0.0), cs.horzcat(0.0, I.iyy, 0.0), cs.horzcat(0.0, 0.0, I.izz))
         IO[3:, 3:] = R_temp@inertia_matrix@R_temp.T + mass * cs.mtimes(Sc,Sc.T)
         IO[3:, :3] = mass * Sc

@@ -29,7 +29,10 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         Args:
             urdfstring (str): path of the urdf
             joints_name_list (list): list of the actuated joints
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            root_link (str, optional): the first link. Defaults to 'root_link'
+            link_name_list (list, optional): list of the links to be parametrized 
+            link_characteristics(dict, optional): dict of the links characteristics
+            joint_characteristics(dict, optional): dict of the joint characteristics whose parent link is parametrized
         """
         super().__init__(
             urdfstring=urdfstring,
@@ -129,7 +132,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
             return super().get_total_mass()
         else: 
             density = cs.SX.sym("density", len(self.link_name_list))
-            lenght_multiplier = cs.SX.sym("length_multiplier", len(self.link_name_list))
+            lenght_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list))
             m = super().get_total_mass(density, lenght_multiplier)
             return cs.Function("m", [density, lenght_multiplier], [m], self.f_opts)
 
@@ -197,7 +200,6 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
             h = super().rnea(T_b, s, v_b, s_dot, self.g, density, lenght_multiplier)
             return cs.Function("h", [T_b, s, v_b, s_dot, density, lenght_multiplier], [h], self.f_opts)
 
-
     def coriolis_term_fun(self) -> cs.Function:
         """Returns the coriolis term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
@@ -224,7 +226,6 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
             C = super().rnea(T_b, q, v_b, q_dot, np.zeros(6), density, lenght_multiplier)
             return cs.Function("C", [T_b, q, v_b, q_dot, density, lenght_multiplier], [C], self.f_opts)
         
-
     def gravity_term_fun(self) -> cs.Function:
         """Returns the gravity term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)

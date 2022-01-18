@@ -8,12 +8,11 @@ from typing import TypeVar
 
 import numpy as np
 import urdfpy
-from adam.core import spatial_math
-
 from adam.core.spatial_math import SpatialMathAbstract
 from adam.core.urdf_tree import URDFTree
 from adam.core import link_parametric
 from urdf_parser_py.urdf import URDF
+
 T = TypeVar("T")
 
 
@@ -83,7 +82,6 @@ class RBDAlgorithms(SpatialMathAbstract):
                return val
         return link_parametric.JointCharacteristics()
     
-    # Done Done 
     def crba(self, base_transform: T, joint_positions: T,density: T = None, length_multiplier: T = None) -> T:
         """This function computes the Composite Rigid body algorithm (Roy Featherstone) that computes the Mass Matrix.
          The algorithm is complemented with Orin's modifications computing the Centroidal Momentum Matrix
@@ -191,9 +189,8 @@ class RBDAlgorithms(SpatialMathAbstract):
         M = X_to_mixed.T @ M @ X_to_mixed
         Jcm = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
         return M, Jcm
-
-   # Done Done 
-    def forward_kinematics(self, frame, base_transform: T, joint_positions: T, density: T=None, length_multipliers: T=None) -> T:
+ 
+    def forward_kinematics(self, frame, base_transform: T, joint_positions: T, density: T=None, length_multiplier: T=None) -> T:
         
         """Computes the forward kinematics relative to the specified frame
 
@@ -210,7 +207,7 @@ class RBDAlgorithms(SpatialMathAbstract):
         for item in chain:
             if item in self.robot_desc.joint_map:
                 i = self.tree.joints.index(self.robot_desc.joint_map[item])
-                [o_joint, rpy_joint,joint] = self.getJointAttributes(i, length_multipliers, density)
+                [o_joint, rpy_joint,joint] = self.getJointAttributes(i, length_multiplier, density)
                 if joint.joint_type == "fixed":
                     xyz = o_joint
                     rpy = rpy_joint
@@ -231,7 +228,6 @@ class RBDAlgorithms(SpatialMathAbstract):
                     T_fk = T_fk @ T_joint
         return T_fk
 
-    # Done Done 
     def jacobian(self, frame: str, base_transform: T, joint_positions: T, density: T=None, length_multiplier: T= None) -> T:
         """Returns the Jacobian relative to the specified frame
 
@@ -289,7 +285,6 @@ class RBDAlgorithms(SpatialMathAbstract):
         J_tot[3:, 6:] = J[3:, :]
         return J_tot
 
-    # Done Done  
     def relative_jacobian(self, frame: str, joint_positions: T, density: T= None, length_multiplier: T= None) -> T:
         """Returns the Jacobian between the root link and a specified frame frames
 
@@ -338,7 +333,6 @@ class RBDAlgorithms(SpatialMathAbstract):
                         )
         return J
 
-    # Done Done
     def CoM_position(self, base_transform: T, joint_positions: T, density: T=None, length_multiplier: T=None) -> T:
         """Returns the CoM positon
 
@@ -378,7 +372,6 @@ class RBDAlgorithms(SpatialMathAbstract):
             com_pos /= mass
         return com_pos
     
-    # Done Done
     def get_total_mass(self, density: T=None, length_multiplier: T= None):
         """Returns the total mass of the robot
 
@@ -399,7 +392,6 @@ class RBDAlgorithms(SpatialMathAbstract):
                     mass += link.inertial.mass
         return mass
 
-    # Done Done 
     def rnea(
         self,
         base_transform: T,
@@ -509,9 +501,6 @@ class RBDAlgorithms(SpatialMathAbstract):
         tau[:6] = X_to_mixed.T @ tau[:6]
         return tau
 
-    def aba(self):
-        raise NotImplementedError
-
     def getJointAttributes(self, index, lenght_multiplier, density): 
         joint_i = self.tree.joints[index] 
         
@@ -560,3 +549,6 @@ class RBDAlgorithms(SpatialMathAbstract):
             rpy = [origin[3], origin[4], origin[5]]
             Ic = self.spatial_inertia(I, mass, o, rpy)
         return Ic, o, rpy, mass, link_i
+
+    def aba(self):
+        raise NotImplementedError
