@@ -60,7 +60,9 @@ class SpatialMathCasadi(SpatialMathAbstract):
     def H_from_Pos_RPY(cls, xyz, rpy):
         T = cls.eye(4)
         T[:3, :3] = cls.R_from_RPY(rpy)
-        T[:3, 3] = xyz
+        T[0,3] = xyz[0]
+        T[1,3] = xyz[1]
+        T[2,3] = xyz[2] 
         return T
 
     @classmethod
