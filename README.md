@@ -81,7 +81,7 @@ Activate the environment, clone the repo and install the library:
 mamba activate adamenv
 git clone https://github.com/dic-iit/ADAM.git
 cd ADAM
-pip install .
+pip install --no-deps .
 ```
 
 ## :rocket: Usage
