@@ -5,11 +5,11 @@
 import casadi as cs
 import numpy as np
 
-from adam.casadi.spatial_math_casadi import SpatialMathCasadi
+from adam.casadi.casadi_like import CasadiLike
 from adam.core.rbd_algorithms import RBDAlgorithms
 
 
-class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
+class KinDynComputations(RBDAlgorithms, CasadiLike):
     """This is a small class that retrieves robot quantities represented in a symbolic fashion using CasADi
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -45,7 +45,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         T_b = cs.SX.sym("T_b", 4, 4)
         s = cs.SX.sym("s", self.NDoF)
         [M, _] = super().crba(T_b, s)
-        return cs.Function("M", [T_b, s], [M], self.f_opts)
+        return cs.Function("M", [T_b, s], [M.array], self.f_opts)
 
     def centroidal_momentum_matrix_fun(self) -> cs.Function:
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
@@ -56,7 +56,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         T_b = cs.SX.sym("T_b", 4, 4)
         s = cs.SX.sym("s", self.NDoF)
         [_, Jcm] = super().crba(T_b, s)
-        return cs.Function("Jcm", [T_b, s], [Jcm], self.f_opts)
+        return cs.Function("Jcm", [T_b, s], [Jcm.array], self.f_opts)
 
     def forward_kinematics_fun(self, frame: str) -> cs.Function:
         """Computes the forward kinematics relative to the specified frame
@@ -70,7 +70,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         s = cs.SX.sym("s", self.NDoF)
         T_b = cs.SX.sym("T_b", 4, 4)
         T_fk = super().forward_kinematics(frame, T_b, s)
-        return cs.Function("T_fk", [T_b, s], [T_fk], self.f_opts)
+        return cs.Function("T_fk", [T_b, s], [T_fk.array], self.f_opts)
 
     def jacobian_fun(self, frame: str) -> cs.Function:
         """Returns the Jacobian relative to the specified frame
@@ -84,7 +84,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         s = cs.SX.sym("s", self.NDoF)
         T_b = cs.SX.sym("T_b", 4, 4)
         J_tot = super().jacobian(frame, T_b, s)
-        return cs.Function("J_tot", [T_b, s], [J_tot], self.f_opts)
+        return cs.Function("J_tot", [T_b, s], [J_tot.array], self.f_opts)
 
     def relative_jacobian_fun(self, frame: str) -> cs.Function:
         """Returns the Jacobian between the root link and a specified frame frames
@@ -97,7 +97,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         """
         s = cs.SX.sym("s", self.NDoF)
         J = super().relative_jacobian(frame, s)
-        return cs.Function("J", [s], [J], self.f_opts)
+        return cs.Function("J", [s], [J.array], self.f_opts)
 
     def CoM_position_fun(self) -> cs.Function:
         """Returns the CoM positon
@@ -108,7 +108,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         s = cs.SX.sym("s", self.NDoF)
         T_b = cs.SX.sym("T_b", 4, 4)
         com_pos = super().CoM_position(T_b, s)
-        return cs.Function("CoM_pos", [T_b, s], [com_pos], self.f_opts)
+        return cs.Function("CoM_pos", [T_b, s], [com_pos.array], self.f_opts)
 
     def bias_force_fun(self) -> cs.Function:
         """Returns the bias force of the floating-base dynamics equation,
@@ -122,7 +122,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         v_b = cs.SX.sym("v_b", 6)
         s_dot = cs.SX.sym("s_dot", self.NDoF)
         h = super().rnea(T_b, s, v_b, s_dot, self.g)
-        return cs.Function("h", [T_b, s, v_b, s_dot], [h], self.f_opts)
+        return cs.Function("h", [T_b, s, v_b, s_dot], [h.array], self.f_opts)
 
     def coriolis_term_fun(self) -> cs.Function:
         """Returns the coriolis term of the floating-base dynamics equation,
@@ -137,7 +137,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         q_dot = cs.SX.sym("q_dot", self.NDoF)
         # set in the bias force computation the gravity term to zero
         C = super().rnea(T_b, q, v_b, q_dot, np.zeros(6))
-        return cs.Function("C", [T_b, q, v_b, q_dot], [C], self.f_opts)
+        return cs.Function("C", [T_b, q, v_b, q_dot], [C.array], self.f_opts)
 
     def gravity_term_fun(self) -> cs.Function:
         """Returns the gravity term of the floating-base dynamics equation,
@@ -150,4 +150,4 @@ class KinDynComputations(RBDAlgorithms, SpatialMathCasadi):
         q = cs.SX.sym("q", self.NDoF)
         # set in the bias force computation the velocity to zero
         G = super().rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
-        return cs.Function("G", [T_b, q], [G], self.f_opts)
+        return cs.Function("G", [T_b, q], [G.array], self.f_opts)
