@@ -5,10 +5,10 @@
 import numpy as np
 
 from adam.core.rbd_algorithms import RBDAlgorithms
-from adam.numpy.spatial_math_numpy import SpatialMathNumpy
+from adam.numpy.numpy_like import NumpyLike
 
 
-class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
+class KinDynComputations(RBDAlgorithms, NumpyLike):
     """This is a small class that retrieves robot quantities using NumPy
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -44,7 +44,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
             M (np.ndarray): Mass Matrix
         """
         [M, _] = super().crba(base_transform, joint_positions)
-        return M
+        return M.array
 
     def centroidal_momentum_matrix(self, base_transform, s):
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
@@ -57,7 +57,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
             Jcc (np.ndarray): Centroidal Momentum matrix
         """
         [_, Jcm] = super().crba(base_transform, s)
-        return Jcm
+        return Jcm.array
 
     def forward_kinematics(self, frame, base_transform, joint_positions):
         """Computes the forward kinematics relative to the specified frame
@@ -70,7 +70,11 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
         Returns:
             T_fk (np.ndarray): The fk represented as Homogenous transformation matrix
         """
-        return super().forward_kinematics(frame, base_transform, joint_positions)
+        return (
+            super()
+            .forward_kinematics(frame, base_transform, joint_positions)
+            .array.squeeze()
+        )
 
     def jacobian(self, frame, base_transform, joint_positions):
         """Returns the Jacobian relative to the specified frame
@@ -83,7 +87,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
         Returns:
             J_tot (np.ndarray): The Jacobian relative to the frame
         """
-        return super().jacobian(frame, base_transform, joint_positions)
+        return super().jacobian(frame, base_transform, joint_positions).array.squeeze()
 
     def relative_jacobian(self, frame, joint_positions):
         """Returns the Jacobian between the root link and a specified frame frames
@@ -95,7 +99,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
         Returns:
             J (np.ndarray): The Jacobian between the root and the frame
         """
-        return super().relative_jacobian(frame, joint_positions)
+        return super().relative_jacobian(frame, joint_positions).array
 
     def CoM_position(self, base_transform, joint_positions):
         """Returns the CoM positon
@@ -107,7 +111,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
         Returns:
             com (np.ndarray): The CoM position
         """
-        return super().CoM_position(base_transform, joint_positions)
+        return super().CoM_position(base_transform, joint_positions).array.squeeze()
 
     def bias_force(
         self, base_transform, joint_positions, base_velocity, joint_velocities
@@ -131,7 +135,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
             joint_velocities,
             self.g,
         )
-        return h[:, 0]
+        return h.array.squeeze()
 
     def coriolis_term(
         self, base_transform, joint_positions, base_velocity, joint_velocities
@@ -156,7 +160,7 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
             joint_velocities,
             np.zeros(6),
         )
-        return C[:, 0]
+        return C.array.squeeze()
 
     def gravity_term(self, base_transform, joint_positions):
         """Returns the gravity term of the floating-base dynamics equation,
@@ -176,4 +180,4 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
             np.zeros(self.NDoF),
             self.g,
         )
-        return G[:, 0]
+        return G.array.squeeze()
