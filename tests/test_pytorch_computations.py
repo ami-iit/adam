@@ -100,7 +100,7 @@ def test_mass_matrix():
     kinDyn.getFreeFloatingMassMatrix(mass_mx)
     mass_mxNumpy = mass_mx.toNumPy()
     mass_test = comp.mass_matrix(H_b, s_)
-    assert mass_test - mass_mxNumpy == pytest.approx(0.0, abs=1e-5)
+    assert mass_test - mass_mxNumpy == pytest.approx(0.0, abs=1e-4)
 
 
 def test_CMM():
@@ -108,18 +108,18 @@ def test_CMM():
     kinDyn.getCentroidalTotalMomentumJacobian(cmm_idyntree)
     cmm_idyntreeNumpy = cmm_idyntree.toNumPy()
     Jcm_test = comp.centroidal_momentum_matrix(H_b, s_)
-    assert Jcm_test - cmm_idyntreeNumpy == pytest.approx(0.0, abs=1e-5)
+    assert Jcm_test - cmm_idyntreeNumpy == pytest.approx(0.0, abs=1e-4)
 
 
 def test_CoM_pos():
     CoM_test = comp.CoM_position(H_b, s_)
     CoM_iDynTree = kinDyn.getCenterOfMassPosition().toNumPy()
-    assert CoM_test - CoM_iDynTree == pytest.approx(0.0, abs=1e-5)
+    assert CoM_test - CoM_iDynTree == pytest.approx(0.0, abs=1e-4)
 
 
 def test_total_mass():
     assert comp.get_total_mass() - robot_iDyn.model().getTotalMass() == pytest.approx(
-        0.0, abs=1e-5
+        0.0, abs=1e-4
     )
 
 
@@ -128,7 +128,7 @@ def test_jacobian():
     kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
     iDynNumpyJ_ = iDyntreeJ_.toNumPy()
     J_test = comp.jacobian("l_sole", H_b, s_)
-    assert iDynNumpyJ_ - np.array(J_test) == pytest.approx(0.0, abs=1e-5)
+    assert iDynNumpyJ_ - np.array(J_test) == pytest.approx(0.0, abs=1e-4)
 
 
 def test_jacobian_non_actuated():
@@ -136,7 +136,7 @@ def test_jacobian_non_actuated():
     kinDyn.getFrameFreeFloatingJacobian("head", iDyntreeJ_)
     iDynNumpyJ_ = iDyntreeJ_.toNumPy()
     J_test = comp.jacobian("head", H_b, s_)
-    assert iDynNumpyJ_ - np.array(J_test) == pytest.approx(0.0, abs=1e-5)
+    assert iDynNumpyJ_ - np.array(J_test) == pytest.approx(0.0, abs=1e-4)
 
 
 def test_fk():
@@ -144,8 +144,8 @@ def test_fk():
     p_idy2np = H_idyntree.getPosition().toNumPy()
     R_idy2np = H_idyntree.getRotation().toNumPy()
     H_test = comp.forward_kinematics("l_sole", H_b, s_)
-    assert (R_idy2np) - np.array(H_test[:3, :3]) == pytest.approx(0.0, abs=1e-5)
-    assert (p_idy2np) - np.array(H_test[:3, 3]) == pytest.approx(0.0, abs=1e-5)
+    assert (R_idy2np) - np.array(H_test[:3, :3]) == pytest.approx(0.0, abs=1e-4)
+    assert (p_idy2np) - np.array(H_test[:3, 3]) == pytest.approx(0.0, abs=1e-4)
 
 
 def test_fk_non_actuated():
@@ -153,8 +153,8 @@ def test_fk_non_actuated():
     p_idy2np = H_idyntree.getPosition().toNumPy()
     R_idy2np = H_idyntree.getRotation().toNumPy()
     H_test = comp.forward_kinematics("head", H_b, s_)
-    assert R_idy2np - np.array(H_test[:3, :3]) == pytest.approx(0.0, abs=1e-5)
-    assert p_idy2np - np.array(H_test[:3, 3]) == pytest.approx(0.0, abs=1e-5)
+    assert R_idy2np - np.array(H_test[:3, :3]) == pytest.approx(0.0, abs=1e-4)
+    assert p_idy2np - np.array(H_test[:3, 3]) == pytest.approx(0.0, abs=1e-4)
 
 
 def test_bias_force():
@@ -203,4 +203,4 @@ def test_relative_jacobian():
     kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
     iDynNumpyRelativeJ = (iDyntreeJ_.toNumPy())[:, 6:]
     J_test = comp.relative_jacobian("l_sole", s_)
-    assert iDynNumpyRelativeJ - np.array(J_test) == pytest.approx(0.0, abs=1e-5)
+    assert iDynNumpyRelativeJ - np.array(J_test) == pytest.approx(0.0, abs=1e-4)
