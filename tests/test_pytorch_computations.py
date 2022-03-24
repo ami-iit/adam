@@ -144,8 +144,8 @@ def test_fk():
     p_idy2np = H_idyntree.getPosition().toNumPy()
     R_idy2np = H_idyntree.getRotation().toNumPy()
     H_test = comp.forward_kinematics("l_sole", H_b, s_)
-    assert torch.tensor(R_idy2np) - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
-    assert torch.tensor(p_idy2np) - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
+    assert (R_idy2np) - np.array(H_test[:3, :3]) == pytest.approx(0.0, abs=1e-5)
+    assert (p_idy2np) - np.array(H_test[:3, 3]) == pytest.approx(0.0, abs=1e-5)
 
 
 def test_fk_non_actuated():
