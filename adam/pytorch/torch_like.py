@@ -3,15 +3,22 @@
 # GNU Lesser General Public License v2.1 or any later version.
 
 from dataclasses import dataclass
+from typing import Union
+
+import numpy.typing as ntp
 import torch
+
 from adam.core.spatial_math import ArrayLike
 
 
 @dataclass
 class TorchLike(ArrayLike):
+    """Class wrapping pyTorch types"""
+
     array: torch.Tensor
 
-    def __setitem__(self, idx, value):
+    def __setitem__(self, idx, value: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides set item operator"""
         if type(self) is type(value):
             value.array = torch.squeeze(value.array)
             try:
@@ -22,6 +29,7 @@ class TorchLike(ArrayLike):
             self.array[idx] = torch.FloatTensor(value)
 
     def __getitem__(self, idx):
+        """Overrides get item operator"""
         return TorchLike(self.array[idx])
 
     @property
@@ -32,73 +40,92 @@ class TorchLike(ArrayLike):
         return self.array.reshape(*args)
 
     @property
-    def T(self):
+    def T(self) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: transpose of array
+        """
         return TorchLike(self.array.T)
 
-    def __matmul__(self, other):
+    def __matmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides @ operator"""
         if type(self) is type(other):
             return TorchLike(self.array @ other.array)
         else:
             return TorchLike(self.array @ torch.FloatTensor(other))
 
-    def __rmatmul__(self, other):
+    def __rmatmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides @ operator"""
         if type(self) is type(other):
             return TorchLike(other.array @ self.array)
         else:
             return TorchLike(torch.FloatTensor(other) @ self.array)
 
-    def __mul__(self, other):
+    def __mul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides * operator"""
         if type(self) is type(other):
             return TorchLike(self.array * other.array)
         else:
             return TorchLike(self.array * other)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides * operator"""
         if type(self) is type(other):
             return TorchLike(other.array * self.array)
         else:
             return TorchLike(other * self.array)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides / operator"""
         if type(self) is type(other):
             return TorchLike(self.array / other.array)
         else:
             return TorchLike(self.array / other)
 
-    def __add__(self, other):
+    def __add__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides + operator"""
         if type(self) is not type(other):
             return TorchLike(self.array.squeeze() + other.squeeze())
         return TorchLike(self.array.squeeze() + other.array.squeeze())
 
-    def __radd__(self, other):
+    def __radd__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides + operator"""
         if type(self) is not type(other):
             return TorchLike(self.array.squeeze() + other.squeeze())
         return TorchLike(self.array.squeeze() + other.array.squeeze())
 
-    def __sub__(self, other):
+    def __sub__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides - operator"""
         if type(self) is type(other):
             return TorchLike(self.array.squeeze() - other.array.squeeze())
         else:
             return TorchLike(self.array.squeeze() - other.squeeze())
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides - operator"""
         if type(self) is type(other):
             return TorchLike(other.array.squeeze() - self.array.squeeze())
         else:
             return TorchLike(other.squeeze() - self.array.squeeze())
 
-    def __call__(self):
-        return self.array
-
-    def __neg__(self):
+    def __neg__(self) -> "TorchLike":
+        """Overrides - operator"""
         return TorchLike(-self.array)
 
     @staticmethod
-    def zeros(*x):
+    def zeros(*x: int) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: zero matrix of dimension *x
+        """
         return TorchLike(torch.zeros(x).float())
 
     @staticmethod
-    def vertcat(*x):
+    def vertcat(*x: ntp.ArrayLike) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: vertical concatenation of x
+        """
         if isinstance(x[0], TorchLike):
             v = torch.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
         else:
@@ -106,11 +133,25 @@ class TorchLike(ArrayLike):
         return TorchLike(v)
 
     @staticmethod
-    def eye(x):
+    def eye(x: int) -> "TorchLike":
+        """
+        Args:
+            x (int): dimension
+
+        Returns:
+            TorchLike: identity matrix of dimension x
+        """
         return TorchLike(torch.eye(x).float())
 
     @staticmethod
-    def skew(x):
+    def skew(x: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """
+        Args:
+            x (Union[TorchLike, ntp.ArrayLike]): vector
+
+        Returns:
+            TorchLike: skew matrix from x
+        """
         if not isinstance(x, TorchLike):
             return TorchLike(
                 torch.FloatTensor(
@@ -123,19 +164,45 @@ class TorchLike(ArrayLike):
         )
 
     @staticmethod
-    def array(*x):
+    def array(*x: ntp.ArrayLike) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: vector wrapping x
+        """
         return TorchLike(torch.FloatTensor(x))
 
     @staticmethod
-    def sin(x):
+    def sin(x: ntp.ArrayLike) -> "TorchLike":
+        """
+        Args:
+            x (ntp.ArrayLike): angle value
+
+        Returns:
+            TorchLike: sin value of x
+        """
         x = torch.tensor(x)
         return TorchLike(torch.sin(x))
 
     @staticmethod
-    def cos(x):
+    def cos(x: ntp.ArrayLike) -> "TorchLike":
+        """
+        Args:
+            x (ntp.ArrayLike): angle value
+
+        Returns:
+            TorchLike: cos value of x
+        """
         x = torch.tensor(x)
         return TorchLike(torch.cos(x))
 
     @staticmethod
-    def outer(x, y):
+    def outer(x: ntp.ArrayLike, y: ntp.ArrayLike) -> "TorchLike":
+        """
+        Args:
+            x (ntp.ArrayLike): vector
+            y (ntp.ArrayLike): vector
+
+        Returns:
+            TorchLike: outer product of x and y
+        """
         return TorchLike(torch.outer(torch.tensor(x), torch.tensor(y)))

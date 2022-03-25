@@ -3,14 +3,18 @@
 # GNU Lesser General Public License v2.1 or any later version.
 
 from dataclasses import dataclass
-import numpy as np
-from adam.core.spatial_math import ArrayLike
 from typing import Union
+
+import numpy as np
 import numpy.typing as npt
+
+from adam.core.spatial_math import ArrayLike
 
 
 @dataclass
 class NumpyLike(ArrayLike):
+    """Class wrapping NumPy types"""
+
     array: np.ndarray
 
     def __setitem__(self, idx, value: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
