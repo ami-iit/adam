@@ -78,15 +78,12 @@ class RBDAlgorithms(SpatialMath):
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
             elif joint_i.type in ["revolute", "continuous"]:
-                # if joint_i.idx is not None:
-                q_ = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
-                # else:
-                #     q_ = 0.0
+                q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
                 X_J = self.X_revolute_joint(
                     joint_i.origin.xyz,
                     joint_i.origin.rpy,
                     joint_i.axis,
-                    q_,
+                    q,
                 )
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(
@@ -279,12 +276,12 @@ class RBDAlgorithms(SpatialMath):
                     joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
                 if joint.type in ["revolute", "continuous"]:
-                    q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
+                    q = joint_positions[joint.idx] if joint.idx is not None else 0.0
                     T_joint = self.H_revolute_joint(
                         joint.origin.xyz,
                         joint.origin.rpy,
                         joint.axis,
-                        q_,
+                        q,
                     )
                     T_fk = T_fk @ T_joint
                     p_prev = P_ee - T_fk[:3, 3]
@@ -385,10 +382,7 @@ class RBDAlgorithms(SpatialMath):
             link_i = self.tree.links[i]
             link_pi = self.tree.parents[i]
             joint_i = self.tree.joints[i]
-            I = link_i.inertial.inertia
-            mass = link_i.inertial.mass
-            o = link_i.inertial.origin.xyz
-            rpy = link_i.inertial.origin.rpy
+            I, mass, o, rpy = self.extract_link_properties(link_i)
             Ic[i] = self.spatial_inertia(I, mass, o, rpy)
 
             if link_i.name == self.root_link:
@@ -402,24 +396,21 @@ class RBDAlgorithms(SpatialMath):
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
                 v_J = self.zeros(6, 1)
             elif joint_i.type in ["revolute", "continuous"]:
-                if joint_i.idx is not None:
-                    q_ = joint_positions[joint_i.idx]
-                    joint_velocities_ = joint_velocities[joint_i.idx]
-                else:
-                    q_ = 0.0
-                    joint_velocities_ = 0.0
-
+                q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
+                q_dot = (
+                    joint_velocities[joint_i.idx] if joint_i.idx is not None else 0.0
+                )
                 X_J = self.X_revolute_joint(
                     joint_i.origin.xyz,
                     joint_i.origin.rpy,
                     joint_i.axis,
-                    q_,
+                    q,
                 )
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(
                     0, 0, 0, joint_i.axis[0], joint_i.axis[1], joint_i.axis[2]
                 )
-                v_J = Phi[i] * joint_velocities_
+                v_J = Phi[i] * q_dot
 
             if link_i.name == self.root_link:
                 v[i] = v_J
