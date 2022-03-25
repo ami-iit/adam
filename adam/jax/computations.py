@@ -39,8 +39,8 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         """Returns the Mass Matrix functions computed the CRBA
 
         Args:
-            base_transform (jnp.ndarray): The homogenous transform from base to world frame
-            joint_positions (jnp.ndarray): The joints position
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            joint_positions (jnp.array): The joints position
 
         Returns:
             M (jax): Mass Matrix
@@ -54,11 +54,11 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
         Args:
-            base_transform (jnp.ndarray): The homogenous transform from base to world frame
-            joint_positions (jnp.ndarray): The joints position
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            joint_positions (jnp.array): The joints position
 
         Returns:
-            Jcc (jnp.ndarray): Centroidal Momentum matrix
+            Jcc (jnp.array): Centroidal Momentum matrix
         """
         [_, Jcm] = self.crba(base_transform, joint_positions)
         return Jcm.array
@@ -68,10 +68,10 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
 
         Args:
             frame (str): The tip of the chain
-            joint_positions (jnp.ndarray): The joints position
+            joint_positions (jnp.array): The joints position
 
         Returns:
-            J (jnp.ndarray): The Jacobian between the root and the frame
+            J (jnp.array): The Jacobian between the root and the frame
         """
         return super().relative_jacobian(frame, joint_positions).array
 
@@ -82,11 +82,11 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
 
         Args:
             frame (str): The frame to which the fk will be computed
-            base_transform (jnp.ndarray): The homogenous transform from base to world frame
-            joint_positions (jnp.ndarray): The joints position
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            joint_positions (jnp.array): The joints position
 
         Returns:
-            T_fk (jnp.ndarray): The fk represented as Homogenous transformation matrix
+            T_fk (jnp.array): The fk represented as Homogenous transformation matrix
         """
         return super().forward_kinematics(frame, base_transform, joint_positions).array
 
@@ -99,12 +99,12 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         """Returns the Jacobian relative to the specified frame
 
         Args:
-            base_transform (jnp.ndarray): The homogenous transform from base to world frame
-            s (jnp.ndarray): The joints position
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            s (jnp.array): The joints position
             frame (str): The frame to which the jacobian will be computed
 
         Returns:
-            J_tot (jnp.ndarray): The Jacobian relative to the frame
+            J_tot (jnp.array): The Jacobian relative to the frame
         """
         return super().jacobian(frame, base_transform, joint_positions).array
 
@@ -119,13 +119,13 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            base_transform (jnp.ndarray): The homogenous transform from base to world frame
-            joint_positions (jnp.ndarray): The joints position
-            base_velocity (jnp.ndarray): The base velocity in mixed representation
-            s_dot (jnp.ndarray): The joints velocity
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            joint_positions (jnp.array): The joints position
+            base_velocity (jnp.array): The base velocity in mixed representation
+            s_dot (jnp.array): The joints velocity
 
         Returns:
-            h (jnp.ndarray): the bias force
+            h (jnp.array): the bias force
         """
         return (
             super()
@@ -144,13 +144,13 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            base_transform (jnp.ndarray): The homogenous transform from base to world frame
-            joint_positions (jnp.ndarray): The joints position
-            base_velocity (jnp.ndarray): The base velocity in mixed representation
-            s_dot (jnp.ndarray): The joints velocity
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            joint_positions (jnp.array): The joints position
+            base_velocity (jnp.array): The base velocity in mixed representation
+            s_dot (jnp.array): The joints velocity
 
         Returns:
-            C (jnp.ndarray): the Coriolis term
+            C (jnp.array): the Coriolis term
         """
         return (
             super()
@@ -171,11 +171,11 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            base_transform (jnp.ndarray): The homogenous transform from base to world frame
-            joint_positions (jnp.ndarray): The joints position
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            joint_positions (jnp.array): The joints position
 
         Returns:
-            G (jnp.ndarray): the gravity term
+            G (jnp.array): the gravity term
         """
         return (
             super()
@@ -195,10 +195,10 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         """Returns the CoM positon
 
         Args:
-            base_transform (jnp.ndarray): The homogenous transform from base to world frame
-            joint_positions (jnp.ndarray): The joints position
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            joint_positions (jnp.array): The joints position
 
         Returns:
-            com (jnp.ndarray): The CoM position
+            com (jnp.array): The CoM position
         """
         return super().CoM_position(base_transform, joint_positions).array.squeeze()

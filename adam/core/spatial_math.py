@@ -5,6 +5,8 @@ import numpy.typing as npt
 
 
 class ArrayLike(abc.ABC):
+    """Abstract class for a generic Array wrapper. Every method should be implemented for every data type."""
+
     @abc.abstractmethod
     def zeros(x: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -62,6 +64,13 @@ class ArrayLike(abc.ABC):
 
 
 class SpatialMath(ArrayLike):
+    """Class implementing the main geometric functions used for computing rigid-body algorithm
+
+    Args:
+        ArrayLike: abstract class describing a generic Array wrapper. It needs to be implemented for every data type
+
+    """
+
     @classmethod
     def R_from_axis_angle(cls, axis: npt.ArrayLike, q: npt.ArrayLike) -> npt.ArrayLike:
         """
