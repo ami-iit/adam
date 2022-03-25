@@ -1,16 +1,11 @@
 # Copyright (C) 2021 Istituto Italiano di Tecnologia (IIT). All rights reserved.
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
-
-
-from typing import TypeVar
-
 import numpy as np
+import numpy.typing as npt
 
 from adam.core.spatial_math import SpatialMath
 from adam.core.urdf_tree import URDFTree
-
-T = TypeVar("T")
 
 
 class RBDAlgorithms(SpatialMath):
@@ -23,7 +18,7 @@ class RBDAlgorithms(SpatialMath):
         urdfstring: str,
         joints_name_list: list,
         root_link: str,
-        gravity: np.array,
+        gravity: npt.ArrayLike,
     ) -> None:
         """
         Args:
@@ -47,16 +42,18 @@ class RBDAlgorithms(SpatialMath):
             self.tree,
         ) = urdf_tree.load_model()
 
-    def crba(self, base_transform: T, joint_positions: T) -> T:
+    def crba(
+        self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
         """This function computes the Composite Rigid body algorithm (Roy Featherstone) that computes the Mass Matrix.
          The algorithm is complemented with Orin's modifications computing the Centroidal Momentum Matrix
 
         Args:
-            base_transform (T): The homogenous transform from base to world frame
-            joint_positions (T): The joints position
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
         Returns:
-            M (T): Mass Matrix
-            Jcm (T): Centroidal Momentum Matrix
+            M (npt.ArrayLike): Mass Matrix
+            Jcm (npt.ArrayLike): Centroidal Momentum Matrix
         """
         Ic = [None] * len(self.tree.links)
         X_p = [None] * len(self.tree.links)
@@ -148,7 +145,7 @@ class RBDAlgorithms(SpatialMath):
             elif joint_i.idx is not None:
                 Jcm[:, joint_i.idx + 6] = X_G[i].T @ Ic[i] @ Phi[i]
 
-        # Until now the algorithm returns the joint_positionsuantities in Body Fixed representation
+        # Until now the algorithm returns the joint_position quantities in Body Fixed representation
         # Moving to mixed representation...
         X_to_mixed = self.eye(self.NDoF + 6)
         X_to_mixed[:3, :3] = base_transform[:3, :3].T
@@ -164,15 +161,17 @@ class RBDAlgorithms(SpatialMath):
         rpy = link_i.inertial.origin.rpy
         return I, mass, o, rpy
 
-    def forward_kinematics(self, frame, base_transform: T, joint_positions: T) -> T:
+    def forward_kinematics(
+        self, frame, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
         """Computes the forward kinematics relative to the specified frame
 
         Args:
             frame (str): The frame to which the fk will be computed
-            base_transform (T): The homogenous transform from base to world frame
-            joint_positions (T): The joints position
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
         Returns:
-            T_fk (T): The fk represented as Homogenous transformation matrix
+            T_fk (npt.ArrayLike): The fk represented as Homogenous transformation matrix
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
 
@@ -198,16 +197,18 @@ class RBDAlgorithms(SpatialMath):
                     T_fk = T_fk @ T_joint
         return T_fk
 
-    def jacobian(self, frame: str, base_transform: T, joint_positions: T) -> T:
+    def jacobian(
+        self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
         """Returns the Jacobian relative to the specified frame
 
         Args:
             frame (str): The frame to which the jacobian will be computed
-            base_transform (T): The homogenous transform from base to world frame
-            joint_positions (T): The joints position
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
 
         Returns:
-            J_tot (T): The Jacobian relative to the frame
+            J_tot (npt.ArrayLike): The Jacobian relative to the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
         T_fk = self.eye(4)
@@ -250,15 +251,17 @@ class RBDAlgorithms(SpatialMath):
         J_tot[3:, 6:] = J[3:, :]
         return J_tot
 
-    def relative_jacobian(self, frame: str, joint_positions: T) -> T:
+    def relative_jacobian(
+        self, frame: str, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
             frame (str): The tip of the chain
-            joint_positions (T): The joints position
+            joint_positions (npt.ArrayLike): The joints position
 
         Returns:
-            J (T): The Jacobian between the root and the frame
+            J (npt.ArrayLike): The Jacobian between the root and the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
         base_transform = self.eye(4).array
@@ -294,7 +297,9 @@ class RBDAlgorithms(SpatialMath):
                         )
         return J
 
-    def CoM_position(self, base_transform: T, joint_positions: T) -> T:
+    def CoM_position(
+        self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
         """Returns the CoM positon
 
         Args:
@@ -334,12 +339,12 @@ class RBDAlgorithms(SpatialMath):
 
     def rnea(
         self,
-        base_transform: T,
-        joint_positions: T,
-        base_velocity: T,
-        joint_velocities: T,
-        g: T,
-    ) -> T:
+        base_transform: npt.ArrayLike,
+        joint_positions: npt.ArrayLike,
+        base_velocity: npt.ArrayLike,
+        joint_velocities: npt.ArrayLike,
+        g: npt.ArrayLike,
+    ) -> npt.ArrayLike:
         """Implementation of reduced Recursive Newton-Euler algorithm
         (no acceleration and external forces). For now used to compute the bias force term
 
