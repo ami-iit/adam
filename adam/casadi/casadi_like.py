@@ -102,7 +102,7 @@ class CasadiLike(ArrayLike):
     def zeros(*x: int) -> "CasadiLike":
         """
         Returns:
-            CasadiLike: Matrix of zeroz of din *x
+            CasadiLike: Matrix of zeros of dim *x
         """
         return CasadiLike(cs.SX.zeros(*x))
 
@@ -110,7 +110,7 @@ class CasadiLike(ArrayLike):
     def vertcat(*x) -> "CasadiLike":
         """
         Returns:
-            CasadiLike: returns the vertical concatenation of elements
+            CasadiLike:  vertical concatenation of elements
         """
         # here the logic is a bit convoluted: x is a tuple containing CasadiLike
         # cs.vertcat accepts *args. A list of cs types is created extracting the value
@@ -153,10 +153,10 @@ class CasadiLike(ArrayLike):
         return CasadiLike(cs.DM(*x))
 
     @staticmethod
-    def sin(x: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
+    def sin(x: npt.ArrayLike) -> "CasadiLike":
         """
         Args:
-            x (Union["CasadiLike", npt.ArrayLike]): angle value
+            x (npt.ArrayLike): angle value
 
         Returns:
             CasadiLike: the sin value of x
@@ -164,10 +164,10 @@ class CasadiLike(ArrayLike):
         return CasadiLike(cs.sin(x))
 
     @staticmethod
-    def cos(x: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
+    def cos(x: npt.ArrayLike) -> "CasadiLike":
         """
         Args:
-            x (Union[CasadiLike, npt.ArrayLike]): angle value
+            x (npt.ArrayLike): angle value
 
         Returns:
             CasadiLike: the cos value of x
@@ -175,13 +175,11 @@ class CasadiLike(ArrayLike):
         return CasadiLike(cs.cos(x))
 
     @staticmethod
-    def outer(
-        x: Union["CasadiLike", npt.ArrayLike], y: Union["CasadiLike", npt.ArrayLike]
-    ) -> "CasadiLike":
+    def outer(x: npt.ArrayLike, y: npt.ArrayLike) -> "CasadiLike":
         """
         Args:
-            x (Union[CasadiLike, npt.ArrayLike]): vector
-            y (Union[CasadiLike, npt.ArrayLike]): vector
+            x (npt.ArrayLike): vector
+            y (npt.ArrayLike): vector
 
         Returns:
             CasadiLike: outer product between x and y
