@@ -1,19 +1,13 @@
 # Copyright (C) 2021 Istituto Italiano di Tecnologia (IIT). All rights reserved.
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
+import numpy.typing as npt
 
-
-from typing import TypeVar
-
-import numpy as np
-
-from adam.core.spatial_math import SpatialMathAbstract
+from adam.core.spatial_math import SpatialMath
 from adam.core.urdf_tree import URDFTree
 
-T = TypeVar("T")
 
-
-class RBDAlgorithms(SpatialMathAbstract):
+class RBDAlgorithms(SpatialMath):
     """This is a small abstract class that implements Rigid body algorithms retrieving robot quantities represented
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -23,7 +17,7 @@ class RBDAlgorithms(SpatialMathAbstract):
         urdfstring: str,
         joints_name_list: list,
         root_link: str,
-        gravity: np.array,
+        gravity: npt.ArrayLike,
     ) -> None:
         """
         Args:
@@ -47,16 +41,18 @@ class RBDAlgorithms(SpatialMathAbstract):
             self.tree,
         ) = urdf_tree.load_model()
 
-    def crba(self, base_transform: T, joint_positions: T) -> T:
+    def crba(
+        self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
         """This function computes the Composite Rigid body algorithm (Roy Featherstone) that computes the Mass Matrix.
          The algorithm is complemented with Orin's modifications computing the Centroidal Momentum Matrix
 
         Args:
-            base_transform (T): The homogenous transform from base to world frame
-            joint_positions (T): The joints position
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
         Returns:
-            M (T): Mass Matrix
-            Jcm (T): Centroidal Momentum Matrix
+            M (npt.ArrayLike): Mass Matrix
+            Jcm (npt.ArrayLike): Centroidal Momentum Matrix
         """
         Ic = [None] * len(self.tree.links)
         X_p = [None] * len(self.tree.links)
@@ -67,12 +63,8 @@ class RBDAlgorithms(SpatialMathAbstract):
             link_i = self.tree.links[i]
             link_pi = self.tree.parents[i]
             joint_i = self.tree.joints[i]
-            I = link_i.inertial.inertia
-            mass = link_i.inertial.mass
-            o = link_i.inertial.origin.xyz
-            rpy = link_i.inertial.origin.rpy
+            I, mass, o, rpy = self.extract_link_properties(link_i)
             Ic[i] = self.spatial_inertia(I, mass, o, rpy)
-
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
@@ -81,16 +73,13 @@ class RBDAlgorithms(SpatialMathAbstract):
                 X_J = self.X_fixed_joint(joint_i.origin.xyz, joint_i.origin.rpy)
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
-            elif joint_i.type == "revolute" or joint_i.type == "continuous":
-                if joint_i.idx is not None:
-                    q_ = joint_positions[joint_i.idx]
-                else:
-                    q_ = 0.0
+            elif joint_i.type in ["revolute", "continuous"]:
+                q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
                 X_J = self.X_revolute_joint(
                     joint_i.origin.xyz,
                     joint_i.origin.rpy,
                     joint_i.axis,
-                    q_,
+                    q,
                 )
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(
@@ -153,9 +142,9 @@ class RBDAlgorithms(SpatialMathAbstract):
             if link_i.name == self.tree.links[0].name:
                 Jcm[:, :6] = X_G[i].T @ Ic[i] @ Phi[i]
             elif joint_i.idx is not None:
-                Jcm[:, [joint_i.idx + 6]] = X_G[i].T @ Ic[i] @ Phi[i]
+                Jcm[:, joint_i.idx + 6] = X_G[i].T @ Ic[i] @ Phi[i]
 
-        # Until now the algorithm returns the joint_positionsuantities in Body Fixed representation
+        # Until now the algorithm returns the joint_position quantities in Body Fixed representation
         # Moving to mixed representation...
         X_to_mixed = self.eye(self.NDoF + 6)
         X_to_mixed[:3, :3] = base_transform[:3, :3].T
@@ -164,15 +153,24 @@ class RBDAlgorithms(SpatialMathAbstract):
         Jcm = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
         return M, Jcm
 
-    def forward_kinematics(self, frame, base_transform: T, joint_positions: T) -> T:
+    def extract_link_properties(self, link_i):
+        I = link_i.inertial.inertia
+        mass = link_i.inertial.mass
+        o = link_i.inertial.origin.xyz
+        rpy = link_i.inertial.origin.rpy
+        return I, mass, o, rpy
+
+    def forward_kinematics(
+        self, frame, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
         """Computes the forward kinematics relative to the specified frame
 
         Args:
             frame (str): The frame to which the fk will be computed
-            base_transform (T): The homogenous transform from base to world frame
-            joint_positions (T): The joints position
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
         Returns:
-            T_fk (T): The fk represented as Homogenous transformation matrix
+            T_fk (npt.ArrayLike): The fk represented as Homogenous transformation matrix
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
 
@@ -186,12 +184,9 @@ class RBDAlgorithms(SpatialMathAbstract):
                     rpy = joint.origin.rpy
                     joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute" or joint.type == "continuous":
+                if joint.type in ["revolute", "continuous"]:
                     # if the joint is actuated set the value
-                    if joint.idx is not None:
-                        q_ = joint_positions[joint.idx]
-                    else:
-                        q_ = 0.0
+                    q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
                     T_joint = self.H_revolute_joint(
                         joint.origin.xyz,
                         joint.origin.rpy,
@@ -201,16 +196,18 @@ class RBDAlgorithms(SpatialMathAbstract):
                     T_fk = T_fk @ T_joint
         return T_fk
 
-    def jacobian(self, frame: str, base_transform: T, joint_positions: T) -> T:
+    def jacobian(
+        self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
         """Returns the Jacobian relative to the specified frame
 
         Args:
             frame (str): The frame to which the jacobian will be computed
-            base_transform (T): The homogenous transform from base to world frame
-            joint_positions (T): The joints position
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
 
         Returns:
-            J_tot (T): The Jacobian relative to the frame
+            J_tot (npt.ArrayLike): The Jacobian relative to the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
         T_fk = self.eye(4)
@@ -226,11 +223,8 @@ class RBDAlgorithms(SpatialMathAbstract):
                     rpy = joint.origin.rpy
                     joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute" or joint.type == "continuous":
-                    if joint.idx is not None:
-                        q_ = joint_positions[joint.idx]
-                    else:
-                        q_ = 0.0
+                if joint.type in ["revolute", "continuous"]:
+                    q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
                     T_joint = self.H_revolute_joint(
                         joint.origin.xyz,
                         joint.origin.rpy,
@@ -238,7 +232,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                         q_,
                     )
                     T_fk = T_fk @ T_joint
-                    p_prev = P_ee - T_fk[:3, 3]
+                    p_prev = P_ee - T_fk[:3, 3].array
                     z_prev = T_fk[:3, :3] @ joint.axis
                     # J[:, joint.idx] = self.vertcat(
                     #     cs.jacobian(P_ee, joint_positions[joint.idx]), z_prev) # using casadi jacobian
@@ -256,18 +250,20 @@ class RBDAlgorithms(SpatialMathAbstract):
         J_tot[3:, 6:] = J[3:, :]
         return J_tot
 
-    def relative_jacobian(self, frame: str, joint_positions: T) -> T:
+    def relative_jacobian(
+        self, frame: str, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
             frame (str): The tip of the chain
-            joint_positions (T): The joints position
+            joint_positions (npt.ArrayLike): The joints position
 
         Returns:
-            J (T): The Jacobian between the root and the frame
+            J (npt.ArrayLike): The Jacobian between the root and the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
-        base_transform = self.eye(4)
+        base_transform = self.eye(4).array
         T_fk = self.eye(4)
         T_fk = T_fk @ base_transform
         J = self.zeros(6, self.NDoF)
@@ -281,16 +277,13 @@ class RBDAlgorithms(SpatialMathAbstract):
                     rpy = joint.origin.rpy
                     joint_frame = self.H_from_Pos_RPY(xyz, rpy)
                     T_fk = T_fk @ joint_frame
-                if joint.type == "revolute" or joint.type == "continuous":
-                    if joint.idx is not None:
-                        q_ = joint_positions[joint.idx]
-                    else:
-                        q_ = 0.0
+                if joint.type in ["revolute", "continuous"]:
+                    q = joint_positions[joint.idx] if joint.idx is not None else 0.0
                     T_joint = self.H_revolute_joint(
                         joint.origin.xyz,
                         joint.origin.rpy,
                         joint.axis,
-                        q_,
+                        q,
                     )
                     T_fk = T_fk @ T_joint
                     p_prev = P_ee - T_fk[:3, 3]
@@ -303,7 +296,9 @@ class RBDAlgorithms(SpatialMathAbstract):
                         )
         return J
 
-    def CoM_position(self, base_transform: T, joint_positions: T) -> T:
+    def CoM_position(
+        self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
         """Returns the CoM positon
 
         Args:
@@ -313,7 +308,7 @@ class RBDAlgorithms(SpatialMathAbstract):
         Returns:
             com (T): The CoM position
         """
-        com_pos = self.zeros(3)
+        com_pos = self.zeros(3, 1)
         for item in self.robot_desc.link_map:
             link = self.robot_desc.link_map[item]
             if link.inertial is not None:
@@ -323,7 +318,7 @@ class RBDAlgorithms(SpatialMathAbstract):
                     link.inertial.origin.rpy,
                 )
                 # Adding the link transform
-                T_fk = T_fk @ T_link
+                T_fk = T_fk @ T_link.array
                 com_pos += T_fk[:3, 3] * link.inertial.mass
         com_pos /= self.get_total_mass()
         return com_pos
@@ -343,12 +338,12 @@ class RBDAlgorithms(SpatialMathAbstract):
 
     def rnea(
         self,
-        base_transform: T,
-        joint_positions: T,
-        base_velocity: T,
-        joint_velocities: T,
-        g: T,
-    ) -> T:
+        base_transform: npt.ArrayLike,
+        joint_positions: npt.ArrayLike,
+        base_velocity: npt.ArrayLike,
+        joint_velocities: npt.ArrayLike,
+        g: npt.ArrayLike,
+    ) -> npt.ArrayLike:
         """Implementation of reduced Recursive Newton-Euler algorithm
         (no acceleration and external forces). For now used to compute the bias force term
 
@@ -378,10 +373,10 @@ class RBDAlgorithms(SpatialMathAbstract):
 
         acc_to_mixed = self.zeros(6, 1)
         acc_to_mixed[:3] = (
-            -base_transform[:3, :3].T @ self.skew(base_velocity[3:]) @ base_velocity[:3]
+            -X_to_mixed[:3, :3] @ self.skew(base_velocity[3:]) @ base_velocity[:3]
         )
         acc_to_mixed[3:] = (
-            -base_transform[:3, :3].T @ self.skew(base_velocity[3:]) @ base_velocity[3:]
+            -X_to_mixed[:3, :3] @ self.skew(base_velocity[3:]) @ base_velocity[3:]
         )
         # set initial acceleration (rotated gravity + apparent acceleration)
         # reshape g as a vertical vector
@@ -391,10 +386,7 @@ class RBDAlgorithms(SpatialMathAbstract):
             link_i = self.tree.links[i]
             link_pi = self.tree.parents[i]
             joint_i = self.tree.joints[i]
-            I = link_i.inertial.inertia
-            mass = link_i.inertial.mass
-            o = link_i.inertial.origin.xyz
-            rpy = link_i.inertial.origin.rpy
+            I, mass, o, rpy = self.extract_link_properties(link_i)
             Ic[i] = self.spatial_inertia(I, mass, o, rpy)
 
             if link_i.name == self.root_link:
@@ -407,25 +399,22 @@ class RBDAlgorithms(SpatialMathAbstract):
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(0, 0, 0, 0, 0, 0)
                 v_J = self.zeros(6, 1)
-            elif joint_i.type == "revolute" or joint_i.type == "continuous":
-                if joint_i.idx is not None:
-                    q_ = joint_positions[joint_i.idx]
-                    joint_velocities_ = joint_velocities[joint_i.idx]
-                else:
-                    q_ = 0.0
-                    joint_velocities_ = 0.0
-
+            elif joint_i.type in ["revolute", "continuous"]:
+                q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
+                q_dot = (
+                    joint_velocities[joint_i.idx] if joint_i.idx is not None else 0.0
+                )
                 X_J = self.X_revolute_joint(
                     joint_i.origin.xyz,
                     joint_i.origin.rpy,
                     joint_i.axis,
-                    q_,
+                    q,
                 )
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(
                     0, 0, 0, joint_i.axis[0], joint_i.axis[1], joint_i.axis[2]
                 )
-                v_J = Phi[i] * joint_velocities_
+                v_J = Phi[i] * q_dot
 
             if link_i.name == self.root_link:
                 v[i] = v_J

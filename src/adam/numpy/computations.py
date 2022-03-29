@@ -5,10 +5,10 @@
 import numpy as np
 
 from adam.core.rbd_algorithms import RBDAlgorithms
-from adam.numpy.spatial_math_numpy import SpatialMathNumpy
+from adam.numpy.numpy_like import NumpyLike
 
 
-class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
+class KinDynComputations(RBDAlgorithms, NumpyLike):
     """This is a small class that retrieves robot quantities using NumPy
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -33,7 +33,9 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
             gravity=gravity,
         )
 
-    def mass_matrix(self, base_transform, joint_positions):
+    def mass_matrix(
+        self, base_transform: np.ndarray, joint_positions: np.ndarray
+    ) -> np.ndarray:
         """Returns the Mass Matrix functions computed the CRBA
 
         Args:
@@ -44,9 +46,11 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
             M (np.ndarray): Mass Matrix
         """
         [M, _] = super().crba(base_transform, joint_positions)
-        return M
+        return M.array
 
-    def centroidal_momentum_matrix(self, base_transform, s):
+    def centroidal_momentum_matrix(
+        self, base_transform: np.ndarray, s: np.ndarray
+    ) -> np.ndarray:
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
         Args:
@@ -57,9 +61,11 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
             Jcc (np.ndarray): Centroidal Momentum matrix
         """
         [_, Jcm] = super().crba(base_transform, s)
-        return Jcm
+        return Jcm.array
 
-    def forward_kinematics(self, frame, base_transform, joint_positions):
+    def forward_kinematics(
+        self, frame: str, base_transform: np.ndarray, joint_positions: np.ndarray
+    ) -> np.ndarray:
         """Computes the forward kinematics relative to the specified frame
 
         Args:
@@ -70,9 +76,15 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
         Returns:
             T_fk (np.ndarray): The fk represented as Homogenous transformation matrix
         """
-        return super().forward_kinematics(frame, base_transform, joint_positions)
+        return (
+            super()
+            .forward_kinematics(frame, base_transform, joint_positions)
+            .array.squeeze()
+        )
 
-    def jacobian(self, frame, base_transform, joint_positions):
+    def jacobian(
+        self, frame: str, base_transform: np.ndarray, joint_positions: np.ndarray
+    ) -> np.ndarray:
         """Returns the Jacobian relative to the specified frame
 
         Args:
@@ -83,9 +95,9 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
         Returns:
             J_tot (np.ndarray): The Jacobian relative to the frame
         """
-        return super().jacobian(frame, base_transform, joint_positions)
+        return super().jacobian(frame, base_transform, joint_positions).array.squeeze()
 
-    def relative_jacobian(self, frame, joint_positions):
+    def relative_jacobian(self, frame: str, joint_positions: np.ndarray) -> np.ndarray:
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
@@ -95,9 +107,11 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
         Returns:
             J (np.ndarray): The Jacobian between the root and the frame
         """
-        return super().relative_jacobian(frame, joint_positions)
+        return super().relative_jacobian(frame, joint_positions).array
 
-    def CoM_position(self, base_transform, joint_positions):
+    def CoM_position(
+        self, base_transform: np.ndarray, joint_positions: np.ndarray
+    ) -> np.ndarray:
         """Returns the CoM positon
 
         Args:
@@ -105,13 +119,17 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
             joint_positions (np.ndarray): The joints position
 
         Returns:
-            com (np.ndarray): The CoM position
+            CoM (np.ndarray): The CoM position
         """
-        return super().CoM_position(base_transform, joint_positions)
+        return super().CoM_position(base_transform, joint_positions).array.squeeze()
 
     def bias_force(
-        self, base_transform, joint_positions, base_velocity, joint_velocities
-    ):
+        self,
+        base_transform: np.ndarray,
+        joint_positions: np.ndarray,
+        base_velocity: np.ndarray,
+        joint_velocities: np.ndarray,
+    ) -> np.ndarray:
         """Returns the bias force of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
@@ -124,18 +142,25 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
         Returns:
             h (np.ndarray): the bias force
         """
-        h = super().rnea(
-            base_transform,
-            joint_positions,
-            base_velocity.reshape(6, 1),
-            joint_velocities,
-            self.g,
+        return (
+            super()
+            .rnea(
+                base_transform,
+                joint_positions,
+                base_velocity.reshape(6, 1),
+                joint_velocities,
+                self.g,
+            )
+            .array.squeeze()
         )
-        return h[:, 0]
 
     def coriolis_term(
-        self, base_transform, joint_positions, base_velocity, joint_velocities
-    ):
+        self,
+        base_transform: np.ndarray,
+        joint_positions: np.ndarray,
+        base_velocity: np.ndarray,
+        joint_velocities: np.ndarray,
+    ) -> np.ndarray:
         """Returns the coriolis term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
@@ -149,16 +174,21 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
             C (np.ndarray): the Coriolis term
         """
         # set in the bias force computation the gravity term to zero
-        C = super().rnea(
-            base_transform,
-            joint_positions,
-            base_velocity.reshape(6, 1),
-            joint_velocities,
-            np.zeros(6),
+        return (
+            super()
+            .rnea(
+                base_transform,
+                joint_positions,
+                base_velocity.reshape(6, 1),
+                joint_velocities,
+                np.zeros(6),
+            )
+            .array.squeeze()
         )
-        return C[:, 0]
 
-    def gravity_term(self, base_transform, joint_positions):
+    def gravity_term(
+        self, base_transform: np.ndarray, joint_positions: np.ndarray
+    ) -> np.ndarray:
         """Returns the gravity term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
@@ -169,11 +199,14 @@ class KinDynComputations(RBDAlgorithms, SpatialMathNumpy):
         Returns:
             G (np.ndarray): the gravity term
         """
-        G = super().rnea(
-            base_transform,
-            joint_positions,
-            np.zeros(6).reshape(6, 1),
-            np.zeros(self.NDoF),
-            self.g,
+        return (
+            super()
+            .rnea(
+                base_transform,
+                joint_positions,
+                np.zeros(6).reshape(6, 1),
+                np.zeros(self.NDoF),
+                self.g,
+            )
+            .array.squeeze()
         )
-        return G[:, 0]
