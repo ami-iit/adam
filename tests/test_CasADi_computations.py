@@ -42,10 +42,6 @@ joints_name_list = [
 ]
 
 
-def SX2DM(x):
-    return cs.DM(x)
-
-
 def H_from_Pos_RPY_idyn(xyz, rpy):
     T = idyntree.Transform.Identity()
     R = idyntree.Rotation.RPY(rpy[0], rpy[1], rpy[2])
@@ -104,7 +100,7 @@ def test_mass_matrix():
     mass_mx = idyntree.MatrixDynSize()
     kinDyn.getFreeFloatingMassMatrix(mass_mx)
     mass_mxNumpy = mass_mx.toNumPy()
-    mass_test = SX2DM(M(H_b, s_))
+    mass_test = cs.DM(M(H_b, s_))
     assert mass_test - mass_mxNumpy == pytest.approx(0.0, abs=1e-5)
 
 
@@ -113,13 +109,13 @@ def test_CMM():
     cmm_idyntree = idyntree.MatrixDynSize()
     kinDyn.getCentroidalTotalMomentumJacobian(cmm_idyntree)
     cmm_idyntreeNumpy = cmm_idyntree.toNumPy()
-    Jcm_test = SX2DM(Jcm(H_b, s_))
+    Jcm_test = cs.DM(Jcm(H_b, s_))
     assert Jcm_test - cmm_idyntreeNumpy == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CoM_pos():
     com_f = comp.CoM_position_fun()
-    CoM_cs = SX2DM(com_f(H_b, s_))
+    CoM_cs = cs.DM(com_f(H_b, s_))
     CoM_iDynTree = kinDyn.getCenterOfMassPosition().toNumPy()
     assert CoM_cs - CoM_iDynTree == pytest.approx(0.0, abs=1e-5)
 
@@ -135,7 +131,7 @@ def test_jacobian():
     iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
     kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
     iDynNumpyJ_ = iDyntreeJ_.toNumPy()
-    J_test = SX2DM(J_tot(H_b, s_))
+    J_test = cs.DM(J_tot(H_b, s_))
     assert iDynNumpyJ_ - J_test == pytest.approx(0.0, abs=1e-5)
 
 
@@ -144,7 +140,7 @@ def test_jacobian_non_actuated():
     iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
     kinDyn.getFrameFreeFloatingJacobian("head", iDyntreeJ_)
     iDynNumpyJ_ = iDyntreeJ_.toNumPy()
-    J_test = SX2DM(J_tot(H_b, s_))
+    J_test = cs.DM(J_tot(H_b, s_))
     assert iDynNumpyJ_ - J_test == pytest.approx(0.0, abs=1e-5)
 
 
@@ -153,7 +149,7 @@ def test_fk():
     p_idy2np = H_idyntree.getPosition().toNumPy()
     R_idy2np = H_idyntree.getRotation().toNumPy()
     T = comp.forward_kinematics_fun("l_sole")
-    H_test = SX2DM(T(H_b, s_))
+    H_test = cs.DM(T(H_b, s_))
     assert R_idy2np - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert p_idy2np - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
 
@@ -163,7 +159,7 @@ def test_fk_non_actuated():
     p_idy2np = H_idyntree.getPosition().toNumPy()
     R_idy2np = H_idyntree.getRotation().toNumPy()
     T = comp.forward_kinematics_fun("head")
-    H_test = SX2DM(T(H_b, s_))
+    H_test = cs.DM(T(H_b, s_))
     assert R_idy2np - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert p_idy2np - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
 
@@ -175,7 +171,7 @@ def test_bias_force():
         (h_iDyn.baseWrench().toNumPy(), h_iDyn.jointTorques().toNumPy())
     )
     h = comp.bias_force_fun()
-    h_test = SX2DM(h(H_b, s_, vb_, s_dot_))
+    h_test = cs.DM(h(H_b, s_, vb_, s_dot_))
     assert h_iDyn_np - h_test == pytest.approx(0.0, abs=1e-4)
 
 
@@ -189,7 +185,7 @@ def test_coriolis_term():
         (C_iDyn.baseWrench().toNumPy(), C_iDyn.jointTorques().toNumPy())
     )
     C = comp.coriolis_term_fun()
-    C_test = SX2DM(C(H_b, s_, vb_, s_dot_))
+    C_test = cs.DM(C(H_b, s_, vb_, s_dot_))
     assert C_iDyn_np - C_test == pytest.approx(0.0, abs=1e-4)
 
 
@@ -203,5 +199,5 @@ def test_gravity_term():
         (G_iDyn.baseWrench().toNumPy(), G_iDyn.jointTorques().toNumPy())
     )
     G = comp.gravity_term_fun()
-    G_test = SX2DM(G(H_b, s_))
+    G_test = cs.DM(G(H_b, s_))
     assert G_iDyn_np - G_test == pytest.approx(0.0, abs=1e-4)
