@@ -10,7 +10,7 @@ import idyntree.swig as idyntree
 import numpy as np
 import pytest
 
-from adam.casadi.computations import KinDynComputations
+from adam.casadi import KinDynComputations
 from adam.geometry import utils
 
 model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")

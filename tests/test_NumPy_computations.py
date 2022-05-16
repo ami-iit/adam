@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from adam.geometry import utils
-from adam.numpy.computations import KinDynComputations
+from adam.numpy import KinDynComputations
 
 model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
 

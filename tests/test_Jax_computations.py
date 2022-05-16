@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from adam.geometry import utils
-from adam.jax.computations import KinDynComputations
+from adam.jax import KinDynComputations
 
 model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
 
