@@ -45,7 +45,7 @@ jobs:
     name: 📦 Deploy to TestPyPI
     runs-on: ubuntu-20.04
     needs: [build_wheels]
-    # if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v2
