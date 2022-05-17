@@ -94,7 +94,7 @@ pip install adam-robotics[selected-interface]@git+https://github.com/ami-iit/ADA
 or clone the repo and install:
 
 ```bash
-git clone https://github.com/dic-iit/ADAM.git
+git clone https://github.com/ami-iit/ADAM.git
 cd ADAM
 pip install .[selected-interface]
 ```
