@@ -41,9 +41,9 @@ They will be installed in the installation step!
 
 ## :floppy_disk: Installation
 
-### Installation with pip
-
 The installation can be done either using the Python provided by apt (on Linux) or via conda (on Linux and macOS).
+
+### Installation with pip
 
 Install `python3`, if not installed (in **Ubuntu 20.04**):
 
