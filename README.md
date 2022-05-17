@@ -90,6 +90,12 @@ cd ADAM
   pip install .[all]
   ```
 
+If you don't want to clone the repo you can install ADAM with:
+
+```bash
+pip install adam[selected-interface]@git+https://github.com/ami-iit/ADAM
+```
+
 ## Installation with conda
 
 Install in a conda environment the required dependencies:
