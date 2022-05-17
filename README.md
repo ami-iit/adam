@@ -25,7 +25,7 @@ ADAM is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
 
 ---
 
-## :hammer: Dependencies
+## 🐍 Dependencies
 
 - [`python3`](https://wiki.python.org/moin/BeginnersGuide)
 
@@ -39,7 +39,7 @@ Other requisites are:
 
 They will be installed in the installation step!
 
-## :floppy_disk: Installation
+## 💾 Installation
 
 The installation can be done either using the Python provided by apt (on Linux) or via conda (on Linux and macOS).
 
@@ -59,44 +59,47 @@ python3 -m venv your_virtual_env
 source your_virtual_env/bin/activate
 ```
 
-Clone the repo:
-
-```bash
-git clone https://github.com/dic-iit/ADAM.git
-cd ADAM
-```
+Inside the virtual environment, install the library from pip:
 
 - Install **Jax** interface:
 
   ```bash
-  pip install .[jax]
+  pip install adam-robotics[jax]
   ```
 
 - Install **CasAdi** interface:
 
   ```bash
-  pip install .[casadi]
+  pip install adam-robotics[casadi]
   ```
 
 - Install **PyTorch** interface:
 
   ```bash
-  pip install .[pytorch]
+  pip install adam-robotics[pytorch]
   ```
 
 - Install **ALL** the interfaces:
 
   ```bash
-  pip install .[all]
+  pip install adam-robotics[all]
   ```
 
-If you don't want to clone the repo you can install ADAM with:
+If you want the last version:
 
 ```bash
-pip install adam[selected-interface]@git+https://github.com/ami-iit/ADAM
+pip install adam-robotics[selected-interface]@git+https://github.com/ami-iit/ADAM
 ```
 
-## Installation with conda
+or clone the repo and install:
+
+```bash
+git clone https://github.com/dic-iit/ADAM.git
+cd ADAM
+pip install .[selected-interface]
+```
+
+### Installation with conda
 
 Install in a conda environment the required dependencies:
 
@@ -133,7 +136,7 @@ cd ADAM
 pip install --no-deps .
 ```
 
-## :rocket: Usage
+## 🚀 Usage
 
 The following are small snippets of the use of ADAM. More examples are arriving!
 Have also a look at te `tests` folder.
@@ -216,7 +219,7 @@ M = kinDyn.mass_matrix(w_H_b, joints)
 print(M)
 ```
 
-# :superhero_man: Contributing
+## 🦸‍♂️ Contributing
 
 **ADAM** is an open-source project. Contributions are very welcome!
 
