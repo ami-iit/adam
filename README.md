@@ -43,7 +43,7 @@ They will be installed in the installation step!
 
 The installation can be done either using the Python provided by apt (on Linux) or via conda (on Linux and macOS).
 
-### Installation with apt
+### Installation with pip
 
 Install `python3`, if not installed (in **Ubuntu 20.04**):
 
@@ -51,15 +51,7 @@ Install `python3`, if not installed (in **Ubuntu 20.04**):
 sudo apt install python3.8
 ```
 
-Clone the repo and install the library:
-
-```bash
-git clone https://github.com/dic-iit/ADAM.git
-cd ADAM
-pip install .
-```
-
-preferably in a [virtual environment](https://docs.python.org/3/library/venv.html#venv-def). For example:
+Create a [virtual environment](https://docs.python.org/3/library/venv.html#venv-def), if you prefer. For example:
 
 ```bash
 pip install virtualenv
@@ -67,13 +59,70 @@ python3 -m venv your_virtual_env
 source your_virtual_env/bin/activate
 ```
 
+Clone the repo:
+
+```bash
+git clone https://github.com/dic-iit/ADAM.git
+cd ADAM
+```
+
+- Install **Jax** interface:
+
+  ```bash
+  pip install .[jax]
+  ```
+
+- Install **CasAdi** interface:
+
+  ```bash
+  pip install .[casadi]
+  ```
+
+- Install **PyTorch** interface:
+
+  ```bash
+  pip install .[pytorch]
+  ```
+
+- Install **ALL** the interfaces:
+
+  ```bash
+  pip install .[all]
+  ```
+
+If you don't want to clone the repo you can install ADAM with:
+
+```bash
+pip install adam[selected-interface]@git+https://github.com/ami-iit/ADAM
+```
+
 ## Installation with conda
 
 Install in a conda environment the required dependencies:
 
-```bash
-mamba create -n adamenv -c conda-forge -c robostack jax casadi pytorch numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
-```
+- **Jax** interface dependencies:
+
+  ```bash
+  mamba create -n adamenv -c conda-forge -c robostack casadi numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
+  ```
+
+- **CasAdi** interface dependencies:
+
+  ```bash
+  mamba create -n adamenv -c conda-forge -c robostack jax numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
+  ```
+
+- **PyTorch** interface dependencies:
+
+  ```bash
+  mamba create -n adamenv -c conda-forge -c robostack pytorch numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
+  ```
+
+- **ALL** interface dependencies:
+
+  ```bash
+  mamba create -n adamenv -c conda-forge -c robostack jax casadi pytorch numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
+  ```
 
 Activate the environment, clone the repo and install the library:
 
@@ -89,10 +138,10 @@ pip install --no-deps .
 The following are small snippets of the use of ADAM. More examples are arriving!
 Have also a look at te `tests` folder.
 
-### Jax
+### Jax interface
 
 ```python
-from adam.jax.computations import KinDynComputations
+from adam.jax import KinDynComputations
 import gym_ignition_models
 import numpy as np
 
@@ -115,10 +164,10 @@ M = kinDyn.mass_matrix(w_H_b, joints)
 print(M)
 ```
 
-### CasADi
+### CasADi interface
 
 ```python
-from adam.casadi.computations import KinDynComputations
+from adam.casadi import KinDynComputations
 import gym_ignition_models
 import numpy as np
 
@@ -141,10 +190,10 @@ M = kinDyn.mass_matrix_fun()
 print(M(w_H_b, joints))
 ```
 
-### PyTorch
+### PyTorch interface
 
 ```python
-from adam.pytorch.computations import KinDynComputations
+from adam.pytorch import KinDynComputations
 import gym_ignition_models
 import numpy as np
 
