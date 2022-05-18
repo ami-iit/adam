@@ -1,0 +1,77 @@
+name: Publish Python 🐍 distributions 📦 to PyPI and TestPyPI
+
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["**"]
+  pull_request:
+  release:
+    types:
+      - published
+jobs:
+  build_wheels:
+    name: Build wheels [${{ matrix.os }}]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - 3.8
+        os:
+          - ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@master
+      - run: git fetch --prune --unshallow
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install pypa/build
+        run: pip install build
+
+      - name: Build wheel and a source tarball
+        run: python -m build --sdist --wheel --outdir dist/ .
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: dist
+
+  deploy_test_PyPI:
+    name: 📦 Deploy to TestPyPI
+    runs-on: ubuntu-20.04
+    needs: [build_wheels]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish distribution 📦 to Test PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
+
+  deploy_PyPI:
+    name: 📦 Deploy to PyPI
+    runs-on: ubuntu-20.04
+    needs: [build_wheels]
+    if: startsWith(github.ref, 'refs/tags')
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}

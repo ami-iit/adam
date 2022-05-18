@@ -12,20 +12,20 @@ ADAM implements a collection of algorithms for calculating rigid-body dynamics f
 - [PyTorch](https://github.com/pytorch/pytorch)
 - [NumPy](https://numpy.org/)
 
-ADAM employs the **automatic differentiation** capabilities of these framework to compute, if needed, gradients, Jacobian, Hessians of rigid-body dynamics quantities. This approach enable the design of optimal control and reinforcement learning strategies in robotics.
+ADAM employs the **automatic differentiation** capabilities of these frameworks to compute, if needed, gradients, Jacobian, Hessians of rigid-body dynamics quantities. This approach enables the design of optimal control and reinforcement learning strategies in robotics.
 
 ADAM is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
 
 ---
 
 <p align="center">
-  <b>:warning: REPOSITORY UNDER DEVELOPMENT :warning:</b>
+  <b>⚠️ REPOSITORY UNDER DEVELOPMENT ⚠️</b>
   <br>We cannot guarantee stable API
 </p>
 
 ---
 
-## :hammer: Dependencies
+## 🐍 Dependencies
 
 - [`python3`](https://wiki.python.org/moin/BeginnersGuide)
 
@@ -39,9 +39,9 @@ Other requisites are:
 
 They will be installed in the installation step!
 
-## :floppy_disk: Installation
+## 💾 Installation
 
-The installation can be done either using the Python provided by apt (on Linux) or via conda (on Linux and macOS).
+The installation can be done either using the Python provided by apt (on Debian-based distros) or via conda (on Linux and macOS).
 
 ### Installation with pip
 
@@ -59,44 +59,47 @@ python3 -m venv your_virtual_env
 source your_virtual_env/bin/activate
 ```
 
-Clone the repo:
-
-```bash
-git clone https://github.com/dic-iit/ADAM.git
-cd ADAM
-```
+Inside the virtual environment, install the library from pip:
 
 - Install **Jax** interface:
 
   ```bash
-  pip install .[jax]
+  pip install adam-robotics[jax]
   ```
 
-- Install **CasAdi** interface:
+- Install **CasADi** interface:
 
   ```bash
-  pip install .[casadi]
+  pip install adam-robotics[casadi]
   ```
 
 - Install **PyTorch** interface:
 
   ```bash
-  pip install .[pytorch]
+  pip install adam-robotics[pytorch]
   ```
 
-- Install **ALL** the interfaces:
+- Install **ALL** interfaces:
 
   ```bash
-  pip install .[all]
+  pip install adam-robotics[all]
   ```
 
-If you don't want to clone the repo you can install ADAM with:
+If you want the last version:
 
 ```bash
-pip install adam[selected-interface]@git+https://github.com/ami-iit/ADAM
+pip install adam-robotics[selected-interface]@git+https://github.com/ami-iit/ADAM
 ```
 
-## Installation with conda
+or clone the repo and install:
+
+```bash
+git clone https://github.com/ami-iit/ADAM.git
+cd ADAM
+pip install .[selected-interface]
+```
+
+### Installation with conda
 
 Install in a conda environment the required dependencies:
 
@@ -106,7 +109,7 @@ Install in a conda environment the required dependencies:
   mamba create -n adamenv -c conda-forge -c robostack casadi numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
   ```
 
-- **CasAdi** interface dependencies:
+- **CasADi** interface dependencies:
 
   ```bash
   mamba create -n adamenv -c conda-forge -c robostack jax numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
@@ -118,7 +121,7 @@ Install in a conda environment the required dependencies:
   mamba create -n adamenv -c conda-forge -c robostack pytorch numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
   ```
 
-- **ALL** interface dependencies:
+- **ALL** interfaces dependencies:
 
   ```bash
   mamba create -n adamenv -c conda-forge -c robostack jax casadi pytorch numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
@@ -133,7 +136,7 @@ cd ADAM
 pip install --no-deps .
 ```
 
-## :rocket: Usage
+## 🚀 Usage
 
 The following are small snippets of the use of ADAM. More examples are arriving!
 Have also a look at te `tests` folder.
@@ -216,7 +219,7 @@ M = kinDyn.mass_matrix(w_H_b, joints)
 print(M)
 ```
 
-# :superhero_man: Contributing
+## 🦸‍♂️ Contributing
 
 **ADAM** is an open-source project. Contributions are very welcome!
 
