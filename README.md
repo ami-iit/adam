@@ -12,14 +12,14 @@ ADAM implements a collection of algorithms for calculating rigid-body dynamics f
 - [PyTorch](https://github.com/pytorch/pytorch)
 - [NumPy](https://numpy.org/)
 
-ADAM employs the **automatic differentiation** capabilities of these framework to compute, if needed, gradients, Jacobian, Hessians of rigid-body dynamics quantities. This approach enable the design of optimal control and reinforcement learning strategies in robotics.
+ADAM employs the **automatic differentiation** capabilities of these frameworks to compute, if needed, gradients, Jacobian, Hessians of rigid-body dynamics quantities. This approach enables the design of optimal control and reinforcement learning strategies in robotics.
 
 ADAM is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
 
 ---
 
 <p align="center">
-  <b>:warning: REPOSITORY UNDER DEVELOPMENT :warning:</b>
+  <b>⚠️ REPOSITORY UNDER DEVELOPMENT ⚠️</b>
   <br>We cannot guarantee stable API
 </p>
 
@@ -41,7 +41,7 @@ They will be installed in the installation step!
 
 ## 💾 Installation
 
-The installation can be done either using the Python provided by apt (on Linux) or via conda (on Linux and macOS).
+The installation can be done either using the Python provided by apt (on Debian-based distros) or via conda (on Linux and macOS).
 
 ### Installation with pip
 
@@ -67,7 +67,7 @@ Inside the virtual environment, install the library from pip:
   pip install adam-robotics[jax]
   ```
 
-- Install **CasAdi** interface:
+- Install **CasADi** interface:
 
   ```bash
   pip install adam-robotics[casadi]
@@ -79,7 +79,7 @@ Inside the virtual environment, install the library from pip:
   pip install adam-robotics[pytorch]
   ```
 
-- Install **ALL** the interfaces:
+- Install **ALL** interfaces:
 
   ```bash
   pip install adam-robotics[all]
@@ -109,7 +109,7 @@ Install in a conda environment the required dependencies:
   mamba create -n adamenv -c conda-forge -c robostack casadi numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
   ```
 
-- **CasAdi** interface dependencies:
+- **CasADi** interface dependencies:
 
   ```bash
   mamba create -n adamenv -c conda-forge -c robostack jax numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
@@ -121,7 +121,7 @@ Install in a conda environment the required dependencies:
   mamba create -n adamenv -c conda-forge -c robostack pytorch numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
   ```
 
-- **ALL** interface dependencies:
+- **ALL** interfaces dependencies:
 
   ```bash
   mamba create -n adamenv -c conda-forge -c robostack jax casadi pytorch numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
