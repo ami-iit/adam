@@ -106,13 +106,13 @@ Install in a conda environment the required dependencies:
 - **Jax** interface dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge -c robostack casadi numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
+  mamba create -n adamenv -c conda-forge -c robostack jax numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
   ```
 
 - **CasADi** interface dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge -c robostack jax numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
+  mamba create -n adamenv -c conda-forge -c robostack casadi numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
   ```
 
 - **PyTorch** interface dependencies:
