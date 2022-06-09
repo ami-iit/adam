@@ -94,7 +94,7 @@ class URDFTree:
                         self.robot_desc.parent_map[item][1],
                     ]
                 )
-            except:
+            except Exception:
                 pass
         logging.debug(table_frames)
         """The node 0 contains the 1st link, the fictitious joint that connects the root the the world
@@ -114,10 +114,7 @@ class URDFTree:
             # I'm assuming that the only possible active joint is revolute (not prismatic)
             parent = self.robot_desc.joint_map[item].parent
             child = self.robot_desc.joint_map[item].child
-            if (
-                self.robot_desc.link_map[child].inertial is not None
-                and self.robot_desc.link_map[parent].inertial is not None
-            ):
+            if self.robot_desc.link_map[child].name != self.root_link:
                 joints += [item]
                 table_joints.add_row(
                     [
