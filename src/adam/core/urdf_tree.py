@@ -105,34 +105,40 @@ class URDFTree:
         parent_0 = Element("world_link")
         tree.parents.append(parent_0)
 
-        i = 1
-
         table_joints = PrettyTable(["Idx", "Joint name", "Type", "Parent", "Child"])
         table_joints.title = "Joints"
-        # Building the tree. Links (with inertia) are connected with joints
-        for item in self.robot_desc.joint_map:
-            # I'm assuming that the only possible active joint is revolute (not prismatic)
-            parent = self.robot_desc.joint_map[item].parent
-            child = self.robot_desc.joint_map[item].child
-            if self.robot_desc.link_map[child].name != self.root_link:
-                joints += [item]
-                table_joints.add_row(
-                    [
-                        i,
-                        item,
-                        self.robot_desc.joint_map[item].type,
-                        parent,
-                        child,
-                    ]
-                )
-                i += 1
-                tree.joints.append(self.robot_desc.joint_map[item])
-                tree.links.append(
-                    self.robot_desc.link_map[self.robot_desc.joint_map[item].child]
-                )
-                tree.parents.append(
+
+        # Cicling on the joints. I need to check that the tree order is correct.
+        # An element in the parent list should be already present in the link list. If not, no element is added to the tree.
+        # If a joint is already in the list of joints, no element is added to the tree.
+        i = 1
+        for _ in self.robot_desc.joint_map:
+            for item in self.robot_desc.joint_map:
+                parent = self.robot_desc.joint_map[item].parent
+                child = self.robot_desc.joint_map[item].child
+                if (
                     self.robot_desc.link_map[self.robot_desc.joint_map[item].parent]
-                )
+                    in tree.links
+                    and self.robot_desc.joint_map[item] not in tree.joints
+                ):
+                    joints += [item]
+                    table_joints.add_row(
+                        [
+                            i,
+                            item,
+                            self.robot_desc.joint_map[item].type,
+                            parent,
+                            child,
+                        ]
+                    )
+                    i += 1
+                    tree.joints.append(self.robot_desc.joint_map[item])
+                    tree.links.append(
+                        self.robot_desc.link_map[self.robot_desc.joint_map[item].child]
+                    )
+                    tree.parents.append(
+                        self.robot_desc.link_map[self.robot_desc.joint_map[item].parent]
+                    )
         tree.N = len(tree.links)
         logging.debug(table_joints)
         return links, frames, joints, tree
