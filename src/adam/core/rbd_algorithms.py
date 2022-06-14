@@ -5,6 +5,17 @@ import numpy.typing as npt
 
 from adam.core.spatial_math import SpatialMath
 from adam.core.urdf_tree import URDFTree
+import dataclasses
+
+
+@dataclasses.dataclass
+class CustomInertia:
+    ixx: float
+    ixy: float
+    ixz: float
+    iyy: float
+    iyz: float
+    izz: float
 
 
 class RBDAlgorithms(SpatialMath):
@@ -154,10 +165,16 @@ class RBDAlgorithms(SpatialMath):
         return M, Jcm
 
     def extract_link_properties(self, link_i):
-        I = link_i.inertial.inertia
-        mass = link_i.inertial.mass
-        o = link_i.inertial.origin.xyz
-        rpy = link_i.inertial.origin.rpy
+        if link_i.inertial is not None:
+            I = link_i.inertial.inertia
+            mass = link_i.inertial.mass
+            o = link_i.inertial.origin.xyz
+            rpy = link_i.inertial.origin.rpy
+        else:
+            I = CustomInertia(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+            mass = 0.0
+            o = [0.0, 0.0, 0.0]
+            rpy = [0.0, 0.0, 0.0]
         return I, mass, o, rpy
 
     def forward_kinematics(
@@ -173,7 +190,6 @@ class RBDAlgorithms(SpatialMath):
             T_fk (npt.ArrayLike): The fk represented as Homogenous transformation matrix
         """
         chain = self.robot_desc.get_chain(self.root_link, frame)
-
         T_fk = self.eye(4)
         T_fk = T_fk @ base_transform
         for item in chain:
