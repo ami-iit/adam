@@ -189,7 +189,7 @@ class RBDAlgorithms(SpatialMath):
         Returns:
             T_fk (npt.ArrayLike): The fk represented as Homogenous transformation matrix
         """
-        chain = self.robot_desc.get_chain(self.root_link, frame)
+        chain = self.robot_desc.get_chain(self.root_link, frame, links=False)
         T_fk = self.eye(4)
         T_fk = T_fk @ base_transform
         for item in chain:
@@ -225,7 +225,7 @@ class RBDAlgorithms(SpatialMath):
         Returns:
             J_tot (npt.ArrayLike): The Jacobian relative to the frame
         """
-        chain = self.robot_desc.get_chain(self.root_link, frame)
+        chain = self.robot_desc.get_chain(self.root_link, frame, links=False)
         T_fk = self.eye(4)
         T_fk = T_fk @ base_transform
         J = self.zeros(6, self.NDoF)
@@ -278,7 +278,7 @@ class RBDAlgorithms(SpatialMath):
         Returns:
             J (npt.ArrayLike): The Jacobian between the root and the frame
         """
-        chain = self.robot_desc.get_chain(self.root_link, frame)
+        chain = self.robot_desc.get_chain(self.root_link, frame, links=False)
         base_transform = self.eye(4).array
         T_fk = self.eye(4)
         T_fk = T_fk @ base_transform
