@@ -8,16 +8,6 @@ from adam.core.urdf_tree import URDFTree
 import dataclasses
 
 
-@dataclasses.dataclass
-class CustomInertia:
-    ixx: float
-    ixy: float
-    ixz: float
-    iyy: float
-    iyz: float
-    izz: float
-
-
 class RBDAlgorithms(SpatialMath):
     """This is a small abstract class that implements Rigid body algorithms retrieving robot quantities represented
     in mixed representation, for Floating Base systems - as humanoid robots.
@@ -165,16 +155,10 @@ class RBDAlgorithms(SpatialMath):
         return M, Jcm
 
     def extract_link_properties(self, link_i):
-        if link_i.inertial is not None:
-            I = link_i.inertial.inertia
-            mass = link_i.inertial.mass
-            o = link_i.inertial.origin.xyz
-            rpy = link_i.inertial.origin.rpy
-        else:
-            I = CustomInertia(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-            mass = 0.0
-            o = [0.0, 0.0, 0.0]
-            rpy = [0.0, 0.0, 0.0]
+        I = link_i.inertial.inertia
+        mass = link_i.inertial.mass
+        o = link_i.inertial.origin.xyz
+        rpy = link_i.inertial.origin.rpy
         return I, mass, o, rpy
 
     def forward_kinematics(
