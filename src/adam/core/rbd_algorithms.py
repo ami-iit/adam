@@ -8,16 +8,6 @@ from adam.core.urdf_tree import URDFTree
 import dataclasses
 
 
-@dataclasses.dataclass
-class CustomInertia:
-    ixx: float
-    ixy: float
-    ixz: float
-    iyy: float
-    iyz: float
-    izz: float
-
-
 class RBDAlgorithms(SpatialMath):
     """This is a small abstract class that implements Rigid body algorithms retrieving robot quantities represented
     in mixed representation, for Floating Base systems - as humanoid robots.
@@ -165,16 +155,10 @@ class RBDAlgorithms(SpatialMath):
         return M, Jcm
 
     def extract_link_properties(self, link_i):
-        if link_i.inertial is not None:
-            I = link_i.inertial.inertia
-            mass = link_i.inertial.mass
-            o = link_i.inertial.origin.xyz
-            rpy = link_i.inertial.origin.rpy
-        else:
-            I = CustomInertia(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-            mass = 0.0
-            o = [0.0, 0.0, 0.0]
-            rpy = [0.0, 0.0, 0.0]
+        I = link_i.inertial.inertia
+        mass = link_i.inertial.mass
+        o = link_i.inertial.origin.xyz
+        rpy = link_i.inertial.origin.rpy
         return I, mass, o, rpy
 
     def forward_kinematics(
@@ -189,27 +173,26 @@ class RBDAlgorithms(SpatialMath):
         Returns:
             T_fk (npt.ArrayLike): The fk represented as Homogenous transformation matrix
         """
-        chain = self.robot_desc.get_chain(self.root_link, frame)
+        chain = self.robot_desc.get_chain(self.root_link, frame, links=False)
         T_fk = self.eye(4)
         T_fk = T_fk @ base_transform
         for item in chain:
-            if item in self.robot_desc.joint_map:
-                joint = self.robot_desc.joint_map[item]
-                if joint.type == "fixed":
-                    xyz = joint.origin.xyz
-                    rpy = joint.origin.rpy
-                    joint_frame = self.H_from_Pos_RPY(xyz, rpy)
-                    T_fk = T_fk @ joint_frame
-                if joint.type in ["revolute", "continuous"]:
-                    # if the joint is actuated set the value
-                    q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
-                    T_joint = self.H_revolute_joint(
-                        joint.origin.xyz,
-                        joint.origin.rpy,
-                        joint.axis,
-                        q_,
-                    )
-                    T_fk = T_fk @ T_joint
+            joint = self.robot_desc.joint_map[item]
+            if joint.type == "fixed":
+                xyz = joint.origin.xyz
+                rpy = joint.origin.rpy
+                joint_frame = self.H_from_Pos_RPY(xyz, rpy)
+                T_fk = T_fk @ joint_frame
+            if joint.type in ["revolute", "continuous"]:
+                # if the joint is actuated set the value
+                q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
+                T_joint = self.H_revolute_joint(
+                    joint.origin.xyz,
+                    joint.origin.rpy,
+                    joint.axis,
+                    q_,
+                )
+                T_fk = T_fk @ T_joint
         return T_fk
 
     def jacobian(
@@ -225,37 +208,34 @@ class RBDAlgorithms(SpatialMath):
         Returns:
             J_tot (npt.ArrayLike): The Jacobian relative to the frame
         """
-        chain = self.robot_desc.get_chain(self.root_link, frame)
+        chain = self.robot_desc.get_chain(self.root_link, frame, links=False)
         T_fk = self.eye(4)
         T_fk = T_fk @ base_transform
         J = self.zeros(6, self.NDoF)
         T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
         for item in chain:
-            if item in self.robot_desc.joint_map:
-                joint = self.robot_desc.joint_map[item]
-                if joint.type == "fixed":
-                    xyz = joint.origin.xyz
-                    rpy = joint.origin.rpy
-                    joint_frame = self.H_from_Pos_RPY(xyz, rpy)
-                    T_fk = T_fk @ joint_frame
-                if joint.type in ["revolute", "continuous"]:
-                    q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
-                    T_joint = self.H_revolute_joint(
-                        joint.origin.xyz,
-                        joint.origin.rpy,
-                        joint.axis,
-                        q_,
-                    )
-                    T_fk = T_fk @ T_joint
-                    p_prev = P_ee - T_fk[:3, 3].array
-                    z_prev = T_fk[:3, :3] @ joint.axis
-                    # J[:, joint.idx] = self.vertcat(
-                    #     cs.jacobian(P_ee, joint_positions[joint.idx]), z_prev) # using casadi jacobian
-                    if joint.idx is not None:
-                        J[:, joint.idx] = self.vertcat(
-                            self.skew(z_prev) @ p_prev, z_prev
-                        )
+            joint = self.robot_desc.joint_map[item]
+            if joint.type == "fixed":
+                xyz = joint.origin.xyz
+                rpy = joint.origin.rpy
+                joint_frame = self.H_from_Pos_RPY(xyz, rpy)
+                T_fk = T_fk @ joint_frame
+            if joint.type in ["revolute", "continuous"]:
+                q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
+                T_joint = self.H_revolute_joint(
+                    joint.origin.xyz,
+                    joint.origin.rpy,
+                    joint.axis,
+                    q_,
+                )
+                T_fk = T_fk @ T_joint
+                p_prev = P_ee - T_fk[:3, 3].array
+                z_prev = T_fk[:3, :3] @ joint.axis
+                # J[:, joint.idx] = self.vertcat(
+                #     cs.jacobian(P_ee, joint_positions[joint.idx]), z_prev) # using casadi jacobian
+                if joint.idx is not None:
+                    J[:, joint.idx] = self.vertcat(self.skew(z_prev) @ p_prev, z_prev)
 
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.zeros(6, self.NDoF + 6)
@@ -278,7 +258,7 @@ class RBDAlgorithms(SpatialMath):
         Returns:
             J (npt.ArrayLike): The Jacobian between the root and the frame
         """
-        chain = self.robot_desc.get_chain(self.root_link, frame)
+        chain = self.robot_desc.get_chain(self.root_link, frame, links=False)
         base_transform = self.eye(4).array
         T_fk = self.eye(4)
         T_fk = T_fk @ base_transform
@@ -286,30 +266,27 @@ class RBDAlgorithms(SpatialMath):
         T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
         for item in chain:
-            if item in self.robot_desc.joint_map:
-                joint = self.robot_desc.joint_map[item]
-                if joint.type == "fixed":
-                    xyz = joint.origin.xyz
-                    rpy = joint.origin.rpy
-                    joint_frame = self.H_from_Pos_RPY(xyz, rpy)
-                    T_fk = T_fk @ joint_frame
-                if joint.type in ["revolute", "continuous"]:
-                    q = joint_positions[joint.idx] if joint.idx is not None else 0.0
-                    T_joint = self.H_revolute_joint(
-                        joint.origin.xyz,
-                        joint.origin.rpy,
-                        joint.axis,
-                        q,
-                    )
-                    T_fk = T_fk @ T_joint
-                    p_prev = P_ee - T_fk[:3, 3]
-                    z_prev = T_fk[:3, :3] @ joint.axis
-                    # J[:, joint.idx] = self.vertcat(
-                    #     cs.jacobian(P_ee, joint_positions[joint.idx]), z_prev) # using casadi jacobian
-                    if joint.idx is not None:
-                        J[:, joint.idx] = self.vertcat(
-                            self.skew(z_prev) @ p_prev, z_prev
-                        )
+            joint = self.robot_desc.joint_map[item]
+            if joint.type == "fixed":
+                xyz = joint.origin.xyz
+                rpy = joint.origin.rpy
+                joint_frame = self.H_from_Pos_RPY(xyz, rpy)
+                T_fk = T_fk @ joint_frame
+            if joint.type in ["revolute", "continuous"]:
+                q = joint_positions[joint.idx] if joint.idx is not None else 0.0
+                T_joint = self.H_revolute_joint(
+                    joint.origin.xyz,
+                    joint.origin.rpy,
+                    joint.axis,
+                    q,
+                )
+                T_fk = T_fk @ T_joint
+                p_prev = P_ee - T_fk[:3, 3]
+                z_prev = T_fk[:3, :3] @ joint.axis
+                # J[:, joint.idx] = self.vertcat(
+                #     cs.jacobian(P_ee, joint_positions[joint.idx]), z_prev) # using casadi jacobian
+                if joint.idx is not None:
+                    J[:, joint.idx] = self.vertcat(self.skew(z_prev) @ p_prev, z_prev)
         return J
 
     def CoM_position(

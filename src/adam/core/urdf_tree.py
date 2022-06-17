@@ -2,6 +2,7 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
+import contextlib
 import logging
 from dataclasses import dataclass, field
 from os import error
@@ -86,7 +87,7 @@ class URDFTree:
         table_frames = PrettyTable(["Idx", "Frame name", "Parent"])
         table_frames.title = "Frames"
         for [i, item] in enumerate(frames):
-            try:
+            with contextlib.suppress(Exception):
                 table_frames.add_row(
                     [
                         i,
@@ -94,8 +95,6 @@ class URDFTree:
                         self.robot_desc.parent_map[item][1],
                     ]
                 )
-            except Exception:
-                pass
         logging.debug(table_frames)
         """The node 0 contains the 1st link, the fictitious joint that connects the root the the world
         and the world"""
@@ -117,9 +116,12 @@ class URDFTree:
                 parent = self.robot_desc.joint_map[item].parent
                 child = self.robot_desc.joint_map[item].child
                 if (
-                    self.robot_desc.link_map[self.robot_desc.joint_map[item].parent]
-                    in tree.links
-                    and self.robot_desc.joint_map[item] not in tree.joints
+                    self.robot_desc.link_map[parent]
+                    in tree.links  # this line preserves the order in the tree
+                    and self.robot_desc.joint_map[item]
+                    not in tree.joints  # if the joint is present in the list of joints, no element is added
+                    and self.robot_desc.link_map[child].inertial
+                    is not None  # if the child is a frame (massless link), no element is added
                 ):
                     joints += [item]
                     table_joints.add_row(
