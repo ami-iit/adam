@@ -145,11 +145,11 @@ Have also a look at te `tests` folder.
 
 ```python
 from adam.jax import KinDynComputations
-import gym_ignition_models
+import icub_models
 import numpy as np
 
-# if you want to use gym-ignition https://github.com/robotology/gym-ignition to retrieve the urdf
-model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
+# if you want to icub-models https://github.com/robotology/icub-models to retrieve the urdf
+model_path = icub_models.get_model_file("iCubGazeboV2_5")
 # The joint list
 joints_name_list = [
     'torso_pitch', 'torso_roll', 'torso_yaw', 'l_shoulder_pitch',
@@ -171,11 +171,11 @@ print(M)
 
 ```python
 from adam.casadi import KinDynComputations
-import gym_ignition_models
+import icub_models
 import numpy as np
 
-# if you want to use gym-ignition https://github.com/robotology/gym-ignition to retrieve the urdf
-model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
+# if you want to icub-models https://github.com/robotology/icub-models to retrieve the urdf
+model_path = icub_models.get_model_file("iCubGazeboV2_5")
 # The joint list
 joints_name_list = [
     'torso_pitch', 'torso_roll', 'torso_yaw', 'l_shoulder_pitch',
@@ -197,11 +197,11 @@ print(M(w_H_b, joints))
 
 ```python
 from adam.pytorch import KinDynComputations
-import gym_ignition_models
+import icub_models
 import numpy as np
 
-# if you want to use gym-ignition https://github.com/robotology/gym-ignition to retrieve the urdf
-model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
+# if you want to icub-models https://github.com/robotology/icub-models to retrieve the urdf
+model_path = icub_models.get_model_file("iCubGazeboV2_5")
 # The joint list
 joints_name_list = [
     'torso_pitch', 'torso_roll', 'torso_yaw', 'l_shoulder_pitch',
