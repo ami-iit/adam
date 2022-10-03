@@ -278,9 +278,6 @@ class RBDAlgorithms(SpatialMath):
             if joint.idx is not None:
                 J[:, joint.idx] = self.vertcat(J_lin, J_ang)
 
-                # J[:, joint.idx] = self.vertcat(
-                #     cs.jacobian(P_ee, joint_positions[joint.idx]), z_prev) # using casadi jacobian
-
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.zeros(6, self.NDoF + 6)
         J_tot[:3, :3] = self.eye(3)
