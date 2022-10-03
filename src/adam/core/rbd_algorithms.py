@@ -257,6 +257,11 @@ class RBDAlgorithms(SpatialMath):
                     q_,
                 )
                 T_fk = T_fk @ T_joint
+                p_prev = P_ee - T_fk[:3, 3].array
+                z_prev = T_fk[:3, :3] @ joint.axis
+                J_lin = self.skew(z_prev) @ p_prev
+                J_ang = z_prev
+
             if joint.type in ["prismatic"]:
                 q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
                 T_joint = self.H_prismatic_joint(
@@ -266,13 +271,15 @@ class RBDAlgorithms(SpatialMath):
                     q_,
                 )
                 T_fk = T_fk @ T_joint
+                z_prev = T_fk[:3, :3] @ joint.axis
+                J_lin = z_prev
+                J_ang = self.zeros(3)
+
+            if joint.idx is not None:
+                J[:, joint.idx] = self.vertcat(J_lin, J_ang)
 
                 # J[:, joint.idx] = self.vertcat(
                 #     cs.jacobian(P_ee, joint_positions[joint.idx]), z_prev) # using casadi jacobian
-            if joint.idx is not None:
-                p_prev = P_ee - T_fk[:3, 3].array
-                z_prev = T_fk[:3, :3] @ joint.axis
-                J[:, joint.idx] = self.vertcat(self.skew(z_prev) @ p_prev, z_prev)
 
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.zeros(6, self.NDoF + 6)
