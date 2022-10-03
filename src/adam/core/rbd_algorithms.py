@@ -91,6 +91,23 @@ class RBDAlgorithms(SpatialMath):
                     joint_i.axis[1],
                     joint_i.axis[2],
                 )
+            elif joint_i.type in ["prismatic"]:
+                q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
+                X_J = self.X_prismatic_joint(
+                    joint_i.origin.xyz,
+                    joint_i.origin.rpy,
+                    joint_i.axis,
+                    q,
+                )
+                X_p[i] = X_J
+                Phi[i] = self.vertcat(
+                    joint_i.axis[0],
+                    joint_i.axis[1],
+                    joint_i.axis[2],
+                    0,
+                    0,
+                    0,
+                )
 
         for i in range(self.tree.N - 1, -1, -1):
             link_i = self.tree.links[i]
@@ -193,6 +210,16 @@ class RBDAlgorithms(SpatialMath):
                     q_,
                 )
                 T_fk = T_fk @ T_joint
+            elif joint.type in ["prismatic"]:
+                # if the joint is actuated set the value
+                q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
+                T_joint = self.H_prismatic_joint(
+                    joint.origin.xyz,
+                    joint.origin.rpy,
+                    joint.axis,
+                    q_,
+                )
+                T_fk = T_fk @ T_joint
         return T_fk
 
     def jacobian(
@@ -230,12 +257,22 @@ class RBDAlgorithms(SpatialMath):
                     q_,
                 )
                 T_fk = T_fk @ T_joint
-                p_prev = P_ee - T_fk[:3, 3].array
-                z_prev = T_fk[:3, :3] @ joint.axis
+            if joint.type in ["prismatic"]:
+                q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
+                T_joint = self.H_prismatic_joint(
+                    joint.origin.xyz,
+                    joint.origin.rpy,
+                    joint.axis,
+                    q_,
+                )
+                T_fk = T_fk @ T_joint
+
                 # J[:, joint.idx] = self.vertcat(
                 #     cs.jacobian(P_ee, joint_positions[joint.idx]), z_prev) # using casadi jacobian
-                if joint.idx is not None:
-                    J[:, joint.idx] = self.vertcat(self.skew(z_prev) @ p_prev, z_prev)
+            if joint.idx is not None:
+                p_prev = P_ee - T_fk[:3, 3].array
+                z_prev = T_fk[:3, :3] @ joint.axis
+                J[:, joint.idx] = self.vertcat(self.skew(z_prev) @ p_prev, z_prev)
 
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.zeros(6, self.NDoF + 6)
@@ -281,12 +318,21 @@ class RBDAlgorithms(SpatialMath):
                     q,
                 )
                 T_fk = T_fk @ T_joint
+            if joint.type in ["prismatic"]:
+                q = joint_positions[joint.idx] if joint.idx is not None else 0.0
+                T_joint = self.H_prismatic_joint(
+                    joint.origin.xyz,
+                    joint.origin.rpy,
+                    joint.axis,
+                    q,
+                )
+                T_fk = T_fk @ T_joint
+
+            if joint.idx is not None:
                 p_prev = P_ee - T_fk[:3, 3]
                 z_prev = T_fk[:3, :3] @ joint.axis
-                # J[:, joint.idx] = self.vertcat(
-                #     cs.jacobian(P_ee, joint_positions[joint.idx]), z_prev) # using casadi jacobian
-                if joint.idx is not None:
-                    J[:, joint.idx] = self.vertcat(self.skew(z_prev) @ p_prev, z_prev)
+                J[:, joint.idx] = self.vertcat(self.skew(z_prev) @ p_prev, z_prev)
+
         return J
 
     def CoM_position(
@@ -406,6 +452,22 @@ class RBDAlgorithms(SpatialMath):
                 X_p[i] = X_J
                 Phi[i] = self.vertcat(
                     0, 0, 0, joint_i.axis[0], joint_i.axis[1], joint_i.axis[2]
+                )
+                v_J = Phi[i] * q_dot
+            elif joint_i.type in ["prismatic"]:
+                q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
+                q_dot = (
+                    joint_velocities[joint_i.idx] if joint_i.idx is not None else 0.0
+                )
+                X_J = self.X_prismatic_joint(
+                    joint_i.origin.xyz,
+                    joint_i.origin.rpy,
+                    joint_i.axis,
+                    q,
+                )
+                X_p[i] = X_J
+                Phi[i] = self.vertcat(
+                    joint_i.axis[0], joint_i.axis[1], joint_i.axis[2], 0, 0, 0
                 )
                 v_J = Phi[i] * q_dot
 
