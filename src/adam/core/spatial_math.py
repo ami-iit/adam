@@ -164,6 +164,30 @@ class SpatialMath(ArrayLike):
         return T
 
     @classmethod
+    def H_prismatic_joint(
+        cls,
+        xyz: npt.ArrayLike,
+        rpy: npt.ArrayLike,
+        axis: npt.ArrayLike,
+        q: npt.ArrayLike,
+    ) -> npt.ArrayLike:
+        """
+        Args:
+            xyz (npt.ArrayLike): joint origin in the urdf
+            rpy (npt.ArrayLike): joint orientation in the urdf
+            axis (npt.ArrayLike): joint axis in the urdf
+            q (npt.ArrayLike): joint angle value
+
+        Returns:
+            npt.ArrayLike: Homogeneous transform
+        """
+        T = cls.eye(4)
+        R = cls.R_from_RPY(rpy)
+        T[:3, :3] = R
+        T[:3, 3] = xyz + q * axis
+        return T
+
+    @classmethod
     def H_from_Pos_RPY(cls, xyz: npt.ArrayLike, rpy: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
@@ -209,6 +233,29 @@ class SpatialMath(ArrayLike):
         """
         # TODO: give Featherstone reference
         T = cls.H_revolute_joint(xyz, rpy, axis, q)
+        R = T[:3, :3].T
+        p = -T[:3, :3].T @ T[:3, 3]
+        return cls.spatial_transform(R, p)
+
+    @classmethod
+    def X_prismatic_joint(
+        cls,
+        xyz: npt.ArrayLike,
+        rpy: npt.ArrayLike,
+        axis: npt.ArrayLike,
+        q: npt.ArrayLike,
+    ) -> npt.ArrayLike:
+        """
+        Args:
+            xyz (npt.ArrayLike): joint origin in the urdf
+            rpy (npt.ArrayLike): joint orientation in the urdf
+            axis (npt.ArrayLike): joint axis in the urdf
+            q (npt.ArrayLike): joint angle value
+
+        Returns:
+            npt.ArrayLike: Spatial transform of a prismatic joint given its increment
+        """
+        T = cls.H_prismatic_joint(xyz, rpy, axis, q)
         R = T[:3, :3].T
         p = -T[:3, :3].T @ T[:3, 3]
         return cls.spatial_transform(R, p)
