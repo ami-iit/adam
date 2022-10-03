@@ -222,7 +222,7 @@ class RBDAlgorithms(SpatialMath):
                 T_fk = T_fk @ T_joint
         return T_fk
 
-    def jacobian(
+    def joints_jacobian(
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
         """Returns the Jacobian relative to the specified frame
@@ -233,11 +233,10 @@ class RBDAlgorithms(SpatialMath):
             joint_positions (npt.ArrayLike): The joints position
 
         Returns:
-            J_tot (npt.ArrayLike): The Jacobian relative to the frame
+            J (npt.ArrayLike): The Joints Jacobian relative to the frame
         """
         chain = self.robot_desc.get_chain(self.root_link, frame, links=False)
-        T_fk = self.eye(4)
-        T_fk = T_fk @ base_transform
+        T_fk = self.eye(4) @ base_transform
         J = self.zeros(6, self.NDoF)
         T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
@@ -278,10 +277,18 @@ class RBDAlgorithms(SpatialMath):
             if joint.idx is not None:
                 J[:, joint.idx] = self.vertcat(J_lin, J_ang)
 
+        return J
+
+    def jacobian(
+        self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
+
+        J = self.joints_jacobian(frame, base_transform, joint_positions)
+        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.zeros(6, self.NDoF + 6)
         J_tot[:3, :3] = self.eye(3)
-        J_tot[:3, 3:6] = -self.skew((P_ee - base_transform[:3, 3]))
+        J_tot[:3, 3:6] = -self.skew((T_ee[:3, 3] - base_transform[:3, 3]))
         J_tot[:3, 6:] = J[:3, :]
         J_tot[3:, 3:6] = self.eye(3)
         J_tot[3:, 6:] = J[3:, :]
@@ -299,45 +306,8 @@ class RBDAlgorithms(SpatialMath):
         Returns:
             J (npt.ArrayLike): The Jacobian between the root and the frame
         """
-        chain = self.robot_desc.get_chain(self.root_link, frame, links=False)
         base_transform = self.eye(4).array
-        T_fk = self.eye(4)
-        T_fk = T_fk @ base_transform
-        J = self.zeros(6, self.NDoF)
-        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
-        P_ee = T_ee[:3, 3]
-        for item in chain:
-            joint = self.robot_desc.joint_map[item]
-            if joint.type == "fixed":
-                xyz = joint.origin.xyz
-                rpy = joint.origin.rpy
-                joint_frame = self.H_from_Pos_RPY(xyz, rpy)
-                T_fk = T_fk @ joint_frame
-            if joint.type in ["revolute", "continuous"]:
-                q = joint_positions[joint.idx] if joint.idx is not None else 0.0
-                T_joint = self.H_revolute_joint(
-                    joint.origin.xyz,
-                    joint.origin.rpy,
-                    joint.axis,
-                    q,
-                )
-                T_fk = T_fk @ T_joint
-            if joint.type in ["prismatic"]:
-                q = joint_positions[joint.idx] if joint.idx is not None else 0.0
-                T_joint = self.H_prismatic_joint(
-                    joint.origin.xyz,
-                    joint.origin.rpy,
-                    joint.axis,
-                    q,
-                )
-                T_fk = T_fk @ T_joint
-
-            if joint.idx is not None:
-                p_prev = P_ee - T_fk[:3, 3]
-                z_prev = T_fk[:3, :3] @ joint.axis
-                J[:, joint.idx] = self.vertcat(self.skew(z_prev) @ p_prev, z_prev)
-
-        return J
+        return self.joints_jacobian(frame, base_transform, joint_positions)
 
     def CoM_position(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
