@@ -184,7 +184,7 @@ class SpatialMath(ArrayLike):
         T = cls.eye(4)
         R = cls.R_from_RPY(rpy)
         T[:3, :3] = R
-        T[:3, 3] = xyz + q * axis
+        T[:3, 3] = xyz + q * cls.array(axis)
         return T
 
     @classmethod
