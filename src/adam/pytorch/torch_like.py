@@ -133,6 +133,17 @@ class TorchLike(ArrayLike):
         return TorchLike(v)
 
     @staticmethod
+    def horzcat(*x: ntp.ArrayLike) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: vertical concatenation of x
+        """
+        if isinstance(x[0], TorchLike):
+            v = torch.hstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+        else:
+            v = torch.FloatTensor(x).heshape(-1, 1)
+        return TorchLike(v)
+    @staticmethod
     def eye(x: int) -> "TorchLike":
         """
         Args:

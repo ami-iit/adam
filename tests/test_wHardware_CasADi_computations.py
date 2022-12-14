@@ -77,7 +77,7 @@ root_link = "root_link"
 comp = KinDynComputations(model_path, joints_name_list, root_link)
 
 # link_name_list = ['r_hip_1', 'r_hip_2', 'r_ankle_1', 'r_ankle_2','l_upper_leg','l_lower_leg', 'l_hip_1', 'l_hip_2', 'l_ankle_1', 'l_ankle_2', 'l_shoulder_1', 'l_shoulder_2', 'l_shoulder_3', 'l_elbow_1','r_shoulder_1', 'r_shoulder_2', 'r_shoulder_3', 'r_elbow_1']
-link_name_list = ['r_hip_3','l_hip_3', 'chest']
+link_name_list = ['chest']
 comp_w_hardware = KinDynComputations(model_path, joints_name_list, root_link,link_name_list)
 original_density = []
 for item in link_name_list: 

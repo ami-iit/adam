@@ -126,6 +126,18 @@ class JaxLike(ArrayLike):
         return JaxLike(v)
 
     @staticmethod
+    def horzcat(*x) -> "JaxLike":
+        """
+        Returns:
+            JaxLike: Horrizontal concatenation of elements
+        """
+        if isinstance(x[0], JaxLike):
+            v = jnp.hstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+        else:
+            v = jnp.hstack([x[i] for i in range(len(x))]).reshape(-1, 1)
+        return JaxLike(v)
+
+    @staticmethod
     def eye(x) -> "JaxLike":
         """
         Returns:
