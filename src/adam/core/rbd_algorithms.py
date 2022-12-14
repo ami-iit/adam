@@ -7,8 +7,6 @@ from adam.core.spatial_math import SpatialMath
 from adam.core.urdf_tree import URDFTree
 import dataclasses
 from adam.core import link_parametric
-from urdf_parser_py.urdf import URDF # Needed for having kinematic chain 
-import urdfpy
 
 class RBDAlgorithms(SpatialMath):
     """This is a small abstract class that implements Rigid body algorithms retrieving robot quantities represented
@@ -32,7 +30,7 @@ class RBDAlgorithms(SpatialMath):
 
         urdf_tree = URDFTree(urdfstring, joints_name_list, root_link)
         self.robot_desc = urdf_tree.robot_desc
-        self.robot_with_chain = URDF.from_xml_file(urdfstring)
+        # self.robot_with_chain = URDF.from_xml_file(urdfstring)
         self.joints_list = urdf_tree.get_joints_info_from_reduced_model(
             joints_name_list
         )
@@ -69,10 +67,9 @@ class RBDAlgorithms(SpatialMath):
             link_i = self.tree.links[i]
             link_pi = self.tree.parents[i]
             joint_i = self.tree.joints[i]
-            # I, mass, o, rpy = self.extract_link_properties(link_i)
-            I, mass, o, rpy, Ic, link_i_out = self.extract_link_properties(link_i, density, length_multiplier)
-            Ic[i] = Ic
-            [o_joint, rpy_joint,joint_i, axis] = self.extract_joint_properties(i, length_multiplier, density)
+            I, mass, o, rpy = self.extract_link_properties(link_i, density, length_multiplier)
+            Ic[i] = self.spatial_inertia(I, mass, o, rpy)
+            [o_joint, rpy_joint, axis] = self.extract_joint_properties(joint_i, density,length_multiplier)
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
@@ -181,48 +178,48 @@ class RBDAlgorithms(SpatialMath):
     def extract_link_properties(self, link_i, density, length_multiplier):
         if link_i.name in self.link_name_list:
             j = self.link_name_list.index(link_i.name)
-            link_i_out = link_parametric.linkParametric(link_i.name, length_multiplier[j,:], density[j], link_i)
-            I = link_i_out.I
-            mass = link_i_out.mass 
-            origin = link_i_out.origin
+            link_i_param = link_parametric.linkParametric(link_i.name, length_multiplier[j,:], density[j], link_i)
+            I = link_i_param.I
+            mass = link_i_param.mass 
+            origin = link_i_param.origin
             o = self.zeros(3)
             o[0] = origin[0]
             o[1] = origin[1]
             o[2] = origin[2]
             rpy = [origin[3],origin[4],origin[5]]
-            Ic = self.spatial_inertial_with_parameter(I, mass, o, rpy)
         else:
             I = link_i.inertial.inertia
             mass = link_i.inertial.mass
             o = link_i.inertial.origin.xyz
-            rpy = link_i.inertial.origin.rpy
-            Ic = self.spatial_inertia(I, mass, o, rpy)
-            link_i_out = link_i           
-        return I, mass, o, rpy, Ic, link_i_out  
+            rpy = link_i.inertial.origin.rpy           
+        return I, mass, o, rpy  
 
-    def extract_joint_properties(self, index, density, length_multiplier): 
-        joint_i = self.tree.joints[index] 
-        if self.tree.parents[index].name in self.link_name_list: 
-            link_original_parent = self.get_element_by_name(self.tree.parents[index].name, self.robot_desc)  
-            j = self.link_name_list.index(self.tree.parents[index].name)
-            link_i_parametric = link_parametric.linkParametric(self.tree.parents[index].name, length_multiplier[j,:],density[j],link_original_parent)
-            joint_i_param = link_parametric.jointParametric(joint_i.name,link_i_parametric, joint_i)
-            o_joint = [joint_i_param.origin[0],joint_i_param.origin[1],joint_i_param.origin[2]]
-            rpy_joint = [joint_i_param.origin[3],joint_i_param.origin[4], joint_i_param.origin[5]]
-            axis = joint_i.axis
-        else:   
-            if(hasattr(joint_i, "origin")):
-                origin_joint_temp = urdfpy.matrix_to_xyz_rpy(joint_i.origin)
-                o_joint = [origin_joint_temp[0], origin_joint_temp[1], origin_joint_temp[2]]
-                rpy_joint = [origin_joint_temp[3], origin_joint_temp[4], origin_joint_temp[5]]
+    def extract_joint_properties(self, joint_i, density, length_multiplier): 
+        
+        if(joint_i in self.tree.joints):
+            index = self.tree.joints.index(joint_i)
+            if self.tree.parents[index].name in self.link_name_list: 
+                link_original_parent = self.tree.parents[index]   
+                j = self.link_name_list.index(self.tree.parents[index].name)
+                link_i_parametric = link_parametric.linkParametric(self.tree.parents[index].name, length_multiplier[j,:],density[j],link_original_parent)
+                joint_i_param = link_parametric.jointParametric(joint_i.name,link_i_parametric, joint_i)
+                o_joint = [joint_i_param.origin[0],joint_i_param.origin[1],joint_i_param.origin[2]]
+                rpy_joint = [joint_i_param.origin[3],joint_i_param.origin[4], joint_i_param.origin[5]]
                 axis = joint_i.axis
-            else: 
-                # fake output 
-                o_joint = []
-                rpy_joint = []        
-                axis = [0.0,0.0,0.0]
-        return o_joint, rpy_joint, joint_i, axis
+                return o_joint, rpy_joint, axis
+              
+        if(hasattr(joint_i, "origin")):
+            o_joint =joint_i.origin.xyz
+            rpy_joint =joint_i.origin.rpy
+            axis = joint_i.axis
+        else: 
+            # fake output 
+            o_joint = []
+            rpy_joint = []        
+            axis = [0.0,0.0,0.0]
 
+        return o_joint, rpy_joint, axis
+    
     def forward_kinematics(
         self, frame, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike, density:npt.ArrayLike = None, length_multiplier: npt.ArrayLike = None
     ) -> npt.ArrayLike:
@@ -239,32 +236,31 @@ class RBDAlgorithms(SpatialMath):
         T_fk = self.eye(4)
         T_fk = T_fk @ base_transform
         for item in chain:
-            #  if item in self.robot_desc.joint_map
-            i = self.tree.joints.index(self.robot_desc.joint_map[item])
-            [o_joint, rpy_joint,joint_i, axis] = self.extract_joint_properties(i, length_multiplier, density)
-            if joint_i.type == "fixed":
-                joint_frame = self.H_from_Pos_RPY(o_joint, rpy_joint)
-                T_fk = T_fk @ joint_frame
-            if joint_i.type in ["revolute", "continuous"]:
-                # if the joint is actuated set the value
-                q_ = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
-                T_joint = self.H_revolute_joint(
-                    o_joint,
-                    rpy_joint,
-                    axis,
-                    q_,
-                )
-                T_fk = T_fk @ T_joint
-            elif joint_i.type in ["prismatic"]:
-                # if the joint is actuated set the value
-                q_ = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
-                T_joint = self.H_prismatic_joint(
-                    o_joint,
-                    rpy_joint,
-                    axis,
-                    q_,
-                )
-                T_fk = T_fk @ T_joint
+                joint_i = self.robot_desc.joint_map[item]
+                [o_joint, rpy_joint, axis] = self.extract_joint_properties(joint_i, density, length_multiplier)
+                if joint_i.type == "fixed":
+                    joint_frame = self.H_from_Pos_RPY(o_joint, rpy_joint)
+                    T_fk = T_fk @ joint_frame
+                if joint_i.type in ["revolute", "continuous"]:
+                    # if the joint is actuated set the value
+                    q_ = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
+                    T_joint = self.H_revolute_joint(
+                        o_joint,
+                        rpy_joint,
+                        axis,
+                        q_,
+                    )
+                    T_fk = T_fk @ T_joint
+                elif joint_i.type in ["prismatic"]:
+                    # if the joint is actuated set the value
+                    q_ = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
+                    T_joint = self.H_prismatic_joint(
+                        o_joint,
+                        rpy_joint,
+                        axis,
+                        q_,
+                    )
+                    T_fk = T_fk @ T_joint
         return T_fk
 
     def joints_jacobian(
@@ -286,10 +282,8 @@ class RBDAlgorithms(SpatialMath):
         T_ee = self.forward_kinematics(frame, base_transform, joint_positions, density, length_multiplier)
         P_ee = T_ee[:3, 3]
         for item in chain:
-            # if item in self.robot_desc.joint_map
-            # joint = self.robot_desc.joint_map[item]
-            i = self.tree.joints.index(self.robot_desc.joint_map[item])
-            [o_joint, rpy_joint,joint_i, axis] = self.extract_joint_properties(i, length_multiplier, density)
+            joint_i = self.robot_desc.joint_map[item]
+            [o_joint, rpy_joint, axis] = self.extract_joint_properties(joint_i, density, length_multiplier)
             if joint_i.type == "fixed":
                 joint_frame = self.H_from_Pos_RPY(o_joint, rpy_joint)
                 T_fk = T_fk @ joint_frame
@@ -329,8 +323,8 @@ class RBDAlgorithms(SpatialMath):
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike, density:npt.ArrayLike = None, length_multiplier: npt.ArrayLike = None
     ) -> npt.ArrayLike:
 
-        J = self.joints_jacobian(frame, base_transform, joint_positions, length_multiplier, density)
-        T_ee = self.forward_kinematics(frame, base_transform, joint_positions, length_multiplier, density)
+        J = self.joints_jacobian(frame, base_transform, joint_positions, density, length_multiplier,)
+        T_ee = self.forward_kinematics(frame, base_transform, joint_positions, density, length_multiplier)
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.zeros(6, self.NDoF + 6)
         J_tot[:3, :3] = self.eye(3)
@@ -371,8 +365,8 @@ class RBDAlgorithms(SpatialMath):
         for item in self.robot_desc.link_map:
             link = self.robot_desc.link_map[item]
             if link.inertial is not None:
-                I, mass, o, rpy, Ic, link_i_out = self.extract_link_properties(link, density, length_multiplier)
-                T_fk = self.forward_kinematics(item, base_transform, joint_positions,length_multiplier, density)
+                I, mass, o, rpy = self.extract_link_properties(link, density, length_multiplier)
+                T_fk = self.forward_kinematics(item, base_transform, joint_positions, density, length_multiplier)
                 T_link = self.H_from_Pos_RPY(
                     o,
                     rpy,
@@ -380,7 +374,13 @@ class RBDAlgorithms(SpatialMath):
                 # Adding the link transform
                 T_fk = T_fk @ T_link
                 com_pos += T_fk[:3, 3] * mass
-        com_pos /= self.get_total_mass(density, length_multiplier)
+        mass = 0.0
+        for item in self.robot_desc.link_map:
+            link = self.robot_desc.link_map[item]
+            if link.inertial is not None:
+                I, mass_i, o, rpy = self.extract_link_properties(link, density, length_multiplier)
+                mass += mass_i
+        com_pos /= mass
         return com_pos
 
     def get_total_mass(self, density:npt.ArrayLike = None, length_multiplier: npt.ArrayLike = None):
@@ -393,9 +393,8 @@ class RBDAlgorithms(SpatialMath):
         for item in self.robot_desc.link_map:
             link = self.robot_desc.link_map[item]
             if link.inertial is not None:
-                I, mass_i, o, rpy, Ic, link_i_out = self.extract_link_properties(link, density, length_multiplier)
+                _, mass_i, _, _ = self.extract_link_properties(link, density, length_multiplier)
                 mass += mass_i
-
         return mass
 
     def rnea(
@@ -449,12 +448,10 @@ class RBDAlgorithms(SpatialMath):
         for i in range(self.tree.N):
             link_i = self.tree.links[i]
             link_pi = self.tree.parents[i]
-            # joint_i = self.tree.joints[i]
-            # I, mass, o, rpy = self.extract_link_properties(link_i)
-            # Ic[i] = self.spatial_inertia(I, mass, o, rpy)
-            I, mass, o, rpy, Ic, link_i_out = self.extract_link_properties(link_i, density, length_multiplier)
-            Ic[i] = Ic
-            [o_joint, rpy_joint,joint_i, axis] = self.extract_joint_properties(i, length_multiplier, density)
+            joint_i = self.tree.joints[i]
+            I, mass, o, rpy = self.extract_link_properties(link_i, density, length_multiplier)
+            Ic[i] = self.spatial_inertia(I, mass, o, rpy)
+            o_joint, rpy_joint, axis = self.extract_joint_properties(joint_i, density, length_multiplier)
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
@@ -525,11 +522,3 @@ class RBDAlgorithms(SpatialMath):
 
     def aba(self):
         raise NotImplementedError
-
-    def get_element_by_name(link_name, robot):
-        """Explores the robot looking for the link whose name matches the first argument"""
-        link_list = [corresponding_link for corresponding_link in robot.links if corresponding_link.name == link_name]
-        if len(link_list) != 0:
-            return link_list[0]
-        else:
-            return None
