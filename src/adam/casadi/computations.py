@@ -55,7 +55,7 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
             s = cs.SX.sym("s", self.NDoF)
             density = cs.SX.sym("density", len(self.link_name_list))
             length_multiplier = cs.SX.sym("length_multiplier",len(self.link_name_list), 3 )
-            [M,_] = super().crba(T_b, s,density, length_multiplier)
+            [M,_] = super().crba(T_b, s, density, length_multiplier)
             return cs.Function("M", [T_b, s, density, length_multiplier], [M.array], self.f_opts)
         
     def centroidal_momentum_matrix_fun(self) -> cs.Function:

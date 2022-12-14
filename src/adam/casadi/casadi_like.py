@@ -118,6 +118,18 @@ class CasadiLike(ArrayLike):
         # Then the list is unpacked with the * operator.
         y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
         return CasadiLike(cs.vertcat(*y))
+    @staticmethod
+    def horzcat(*x) -> "CasadiLike":
+        """
+        Returns:
+            CasadiLike:  horrizontal concatanation concatenation of elements
+        """
+        # here the logic is a bit convoluted: x is a tuple containing CasadiLike
+        # cs.vertcat accepts *args. A list of cs types is created extracting the value
+        # from the CasadiLike stored in the tuple x.
+        # Then the list is unpacked with the * operator.
+        y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
+        return CasadiLike(cs.horzcat(*y))
 
     @staticmethod
     def eye(x: int) -> "CasadiLike":

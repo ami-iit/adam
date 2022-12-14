@@ -101,7 +101,7 @@ def test_mass_matrix():
     kinDyn.getFreeFloatingMassMatrix(mass_mx)
     mass_mxNumpy = mass_mx.toNumPy()
     mass_test = cs.DM(M(H_b, s_))
-    # assert mass_test - mass_mxNumpy == pytest.approx(0.0, abs=1e-5)
+    assert mass_test - mass_mxNumpy == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CMM():

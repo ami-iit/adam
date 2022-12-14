@@ -43,9 +43,9 @@ class linkParametric():
        
     def get_principal_lenght(self): 
         visual = self.get_visual()
-        xyz_rpy = matrix_to_xyz_rpy(visual.origin) 
+        # xyz_rpy = [visual.origin.xyz[:], visual.origin.rpy[:]] 
         if self.geometry_type == Geometry.CYLINDER:
-            if(xyz_rpy[3] < 0.0 or xyz_rpy[4] > 0.0):
+            if(visual.origin.rpy[0] < 0.0 or visual.origin.rpy[1] > 0.0):
                 v_l = 2*self.visual_data.radius # returning the diameter, since the orientation of the shape is such that the radius is the principal lenght 
             else: 
                 v_l=self.visual_data.length # returning the lenght, since the orientation of the shape is such that the radius is the principal lenght 
@@ -59,9 +59,9 @@ class linkParametric():
 
     def get_principal_lenght_parametric(self): 
         visual = self.get_visual()
-        xyz_rpy = matrix_to_xyz_rpy(visual.origin) 
+        # xyz_rpy = [visual.origin.xyz[:], visual.origin.rpy[:]]
         if self.geometry_type == Geometry.CYLINDER:
-            if(xyz_rpy[3] < 0.0 or xyz_rpy[4] > 0.0):
+            if(visual.origin.rpy[0] < 0.0 or visual.origin.rpy[1] > 0.0):
                 v_l = 2*self.visual_data_new[1] # returning the diameter, since the orientation of the shape is such that the radius is the principal lenght 
             else: 
                 v_l=self.visual_data_new[0] # returning the lenght, since the orientation of the shape is such that the radius is the principal lenght 
@@ -75,9 +75,9 @@ class linkParametric():
    
     def compute_offset(self): 
         visual = self.get_visual()
-        xyz_rpy = matrix_to_xyz_rpy(visual.origin) 
+        # xyz_rpy = [visual.origin.xyz[:], visual.origin.rpy[:]] 
         v_l=  self.get_principal_lenght()
-        v_o = xyz_rpy[2]
+        v_o = visual.origin.xyz[2]
         if(v_o<0):
             link_offset = v_l/2 + v_o
         else:
@@ -87,10 +87,10 @@ class linkParametric():
     def compute_joint_offset(self,joint_i, parent_offset): 
          # Taking the principal direction i.e. the length 
         visual = self.get_visual()
-        xyz_rpy = matrix_to_xyz_rpy(visual.origin) 
+        # xyz_rpy = [visual.origin.xyz[:], visual.origin.rpy[:]] 
         v_l= self.get_principal_lenght()
-        j_0 = matrix_to_xyz_rpy(joint_i.origin)[2]
-        v_o = xyz_rpy[2]
+        j_0 = joint_i.origin.xyz[2]
+        v_o = visual.origin.xyz[2]
         if(j_0<0):
             joint_offset_temp = -(v_l + j_0-parent_offset)
             joint_offset = joint_offset_temp
@@ -105,13 +105,19 @@ class linkParametric():
 
     @staticmethod
     def get_geometry(visual_obj):
-        """Returns the geometry type and the corresponding geometry object for a given visual"""
-        if visual_obj.geometry.box is not None:
-            return [Geometry.BOX, visual_obj.geometry.box]
-        if visual_obj.geometry.cylinder is not None:
-            return [Geometry.CYLINDER, visual_obj.geometry.cylinder]
-        if visual_obj.geometry.sphere is not None:
-            return [Geometry.SPHERE, visual_obj.geometry.sphere]
+        if hasattr(visual_obj.geometry, "size"):
+            return [Geometry.BOX, visual_obj.geometry]
+        elif hasattr(visual_obj.geometry, "length"):
+            return [Geometry.CYLINDER, visual_obj.geometry]
+        elif hasattr(visual_obj.geometry,"radius"):
+            return [Geometry.SPHERE, visual_obj.geometry]
+
+        # if visual_obj.geometry.box is not None:
+        #     return [Geometry.BOX, visual_obj.geometry.box]
+        # if visual_obj.geometry.cylinder is not None:
+        #     return [Geometry.CYLINDER, visual_obj.geometry.cylinder]
+        # if visual_obj.geometry.sphere is not None:
+        #     return [Geometry.SPHERE, visual_obj.geometry.sphere]
 
     """Function that starting from a multiplier and link visual characteristics computes the link volume"""
     def compute_volume(self):
@@ -145,32 +151,36 @@ class linkParametric():
         origin = [0.0,0.0,0.0,0.0,0.0,0.0]
         visual = self.get_visual()
         """Modifies the position of the origin by a given amount"""
-        xyz_rpy = matrix_to_xyz_rpy(visual.origin)
-        v_o = xyz_rpy[2] 
+        # xyz_rpy = [visual.origin.xyz[:], visual.origin.rpy[:]]#matrix_to_xyz_rpy(visual.origin)
+        v_o = visual.origin.xyz[2] 
         length = self.get_principal_lenght_parametric()
         if(v_o<0):
             origin[2] = self.offset-length/2
-            origin[0] = xyz_rpy[0]
-            origin[1] = xyz_rpy[1]
-            origin[3] = xyz_rpy[3]
-            origin[4] = xyz_rpy[4]
-            origin[5] = xyz_rpy[5]
+            origin[0] = visual.origin.xyz[0]
+            origin[1] = visual.origin.xyz[1]
+            origin[3] = visual.origin.rpy[0]
+            origin[4] = visual.origin.rpy[1]
+            origin[5] = visual.origin.rpy[2]
         else:
             origin[2] = length/2 +self.offset
-            origin[0] = xyz_rpy[0]
-            origin[1] = xyz_rpy[1]
-            origin[3] = xyz_rpy[3]
-            origin[4] = xyz_rpy[4]
-            origin[5] = xyz_rpy[5]
+            origin[0] = visual.origin.xyz[0]
+            origin[1] = visual.origin.xyz[1]
+            origin[3] = visual.origin.rpy[0]
+            origin[4] = visual.origin.rpy[1]
+            origin[5] = visual.origin.rpy[2]
         if self.geometry_type == Geometry.SPHERE:
             "in case of a sphere the origin of the framjoint_name_list[0]:link_parametric.JointCharacteristics(0.0295),e does not change"
-            origin = xyz_rpy 
+            origin[0] = visual.origin.xyz[0]
+            origin[1] = visual.origin.xyz[1]
+            origin[2] = visual.origin.xyz[2]
+            origin[3] = visual.origin.rpy[0]
+            origin[4] = visual.origin.rpy[1]
+            origin[5] = visual.origin.rpy[2]
         return origin
 
     def compute_inertia_parametric(self):
         I = I_parametric
-        visual = self.get_visual()
-        xyz_rpy = matrix_to_xyz_rpy(visual.origin) 
+        visual = self.get_visual() 
         """Calculates inertia (ixx, iyy and izz) with the formula that corresponds to the geometry
         Formulas retrieved from https://en.wikipedia.org/wiki/List_of_moments_of_inertia"""
         if self.geometry_type == Geometry.BOX:
@@ -185,11 +195,11 @@ class linkParametric():
             I.iyy = self.mass * i_xy_incomplete
             I.izz = self.mass * self.visual_data_new[1] ** 2 / 2
 
-            if(xyz_rpy[3]>0 and xyz_rpy[4] == 0.0 and xyz_rpy[5] == 0.0):
+            if(visual.origin.rpy[0]>0 and visual.origin.rpy[1] == 0.0 and visual.origin.rpy[2] == 0.0):
                 itemp = I.izz
                 I.iyy = itemp
                 I.izz = I.ixx
-            elif(xyz_rpy[4]>0.0):
+            elif(visual.origin.rpy[1]>0.0):
                 itemp = I.izz
                 I.ixx = itemp
                 I.izz = I.iyy
@@ -214,14 +224,8 @@ class jointParametric:
         length = self.parent_link.get_principal_lenght_parametric()
         # Ack for avoiding depending on casadi 
         vo = self.parent_link.origin[2]
-        xyz_rpy = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        xyz_rpy[0] = self.joint.origin[0,3]
-        xyz_rpy[1] = self.joint.origin[1,3]
-        xyz_rpy[2] = self.joint.origin[2,3]
-        xyz_rpy_temp=  matrix_to_xyz_rpy(self.joint.origin)
-        xyz_rpy[3] = xyz_rpy_temp[3]
-        xyz_rpy[4] = xyz_rpy_temp[4]
-        xyz_rpy[5] = xyz_rpy_temp[5]
+        xyz_rpy = [self.joint.origin.xyz[0], self.joint.origin.xyz[1], self.joint.origin.xyz[2], self.joint.origin.rpy[0], self.joint.origin.xyz[1], self.joint.origin.rpy[2]]
+        # xyz_rpy = [self.joint.origin.xyz[:], self.joint.origin.rpy[:]]
         if(xyz_rpy[2]<0): 
             xyz_rpy[2] = -length +parent_joint_offset - self.offset   
         else:
