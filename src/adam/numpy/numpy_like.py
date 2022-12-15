@@ -125,9 +125,9 @@ class NumpyLike(ArrayLike):
             NumpyLike: vertical concatenation of x
         """
         if isinstance(x[0], NumpyLike):
-            v = np.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+            v = np.vstack([x[i].array for i in range(len(x))])
         else:
-            v = np.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
+            v = np.vstack([x[i] for i in range(len(x))])
         return NumpyLike(v)
 
     @staticmethod
@@ -137,9 +137,9 @@ class NumpyLike(ArrayLike):
             NumpyLike: vertical concatenation of x
         """
         if isinstance(x[0], NumpyLike):
-            v = np.hstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+            v = np.hstack([x[i].array for i in range(len(x))])
         else:
-            v = np.hstack([x[i] for i in range(len(x))]).reshape(-1, 1)
+            v = np.hstack([x[i] for i in range(len(x))])
         return NumpyLike(v)
 
     @staticmethod

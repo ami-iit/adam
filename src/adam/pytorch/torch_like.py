@@ -26,7 +26,10 @@ class TorchLike(ArrayLike):
             except:
                 self.array[idx] = value.array.reshape(-1, 1)
         else:
-            self.array[idx] = torch.FloatTensor(value)
+            try:
+                self.array[idx] = torch.FloatTensor(value)
+            except:
+                self.array[idx] = value
 
     def __getitem__(self, idx):
         """Overrides get item operator"""
@@ -127,9 +130,9 @@ class TorchLike(ArrayLike):
             TorchLike: vertical concatenation of x
         """
         if isinstance(x[0], TorchLike):
-            v = torch.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+            v = torch.vstack([x[i].array for i in range(len(x))])
         else:
-            v = torch.FloatTensor(x).reshape(-1, 1)
+            v = torch.FloatTensor(x)
         return TorchLike(v)
 
     @staticmethod
@@ -139,9 +142,9 @@ class TorchLike(ArrayLike):
             TorchLike: vertical concatenation of x
         """
         if isinstance(x[0], TorchLike):
-            v = torch.hstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+            v = torch.hstack([x[i].array for i in range(len(x))])
         else:
-            v = torch.FloatTensor(x).heshape(-1, 1)
+            v = torch.FloatTensor(x)
         return TorchLike(v)
     @staticmethod
     def eye(x: int) -> "TorchLike":

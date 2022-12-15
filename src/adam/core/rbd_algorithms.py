@@ -315,8 +315,9 @@ class RBDAlgorithms(SpatialMath):
                 J_ang = self.zeros(3)
 
             if joint_i.idx is not None:
-                J[:, joint_i.idx] = self.vertcat(J_lin, J_ang)
-
+                J[:3, joint_i.idx] = J_lin
+                J[3:, joint_i.idx] = J_ang
+                
         return J
 
     def jacobian(
