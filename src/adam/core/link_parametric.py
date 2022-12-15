@@ -1,8 +1,6 @@
 from enum import Enum
 import math
 
-import urdfpy
-
 class I_parametric():
     def __init__(self) -> None:
         self.ixx = 0.0
@@ -199,7 +197,7 @@ class linkParametric():
         return I
 
 class jointParametric:
-    def __init__(self, joint_name:str, parent_link:linkParametric, joint:urdfpy.Joint) -> None:
+    def __init__(self, joint_name:str, parent_link:linkParametric, joint) -> None:
         self.jointName = joint_name
         self.parent_link_name = parent_link
         self.joint = joint
