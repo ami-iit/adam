@@ -324,9 +324,10 @@ class SpatialMath(ArrayLike):
         IO = cls.zeros(6, 6)
         Sc = cls.skew(c)
         R = cls.R_from_RPY(rpy)
-        inertia_matrix = cls.array(
-            [[I.ixx, I.ixy, I.ixz], [I.ixy, I.iyy, I.iyz], [I.ixz, I.iyz, I.izz]]
-        )
+        # inertia_matrix = cls.array(
+            # [[I.ixx, I.ixy, I.ixz], [I.ixy, I.iyy, I.iyz], [I.ixz, I.iyz, I.izz]]
+        # )
+        inertia_matrix = cls.vertcat(cls.horzcat(I.ixx, I.ixy, I.ixz), cls.horzcat(I.ixy, I.iyy, I.iyz), cls.horzcat(I.ixz, I.iyz, I.izz))
         IO[3:, 3:] = R @ inertia_matrix @ R.T + mass * Sc @ Sc.T
         IO[3:, :3] = mass * Sc
         IO[:3, 3:] = mass * Sc.T

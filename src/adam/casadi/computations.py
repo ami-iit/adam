@@ -141,7 +141,7 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
             density = cs.SX.sym("density", len(self.link_name_list))
             length_multiplier = cs.SX.sym("lenght_multiplier",len(self.link_name_list), 3)
             m = super().get_total_mass(density, length_multiplier)
-            return cs.Function("m", [density, length_multiplier], [m.array], self.f_opts)
+            return cs.Function("m", [density, length_multiplier], [m], self.f_opts)
    
     def CoM_position_fun(self) -> cs.Function:
         """Returns the CoM positon
