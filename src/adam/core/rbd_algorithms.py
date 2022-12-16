@@ -373,7 +373,7 @@ class RBDAlgorithms(SpatialMath):
                     rpy,
                 )
                 # Adding the link transform
-                T_fk = T_fk @ T_link
+                T_fk = T_fk @ T_link.array
                 com_pos += T_fk[:3, 3] * mass
         mass = 0.0
         for item in self.robot_desc.link_map:
