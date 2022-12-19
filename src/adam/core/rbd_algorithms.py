@@ -44,6 +44,8 @@ class RBDAlgorithms(SpatialMath):
             self.tree,
         ) = urdf_tree.load_model()
         self.link_name_list = link_name_list
+        self.define_link_parametrics()
+        self.define_joint_parametric()
 
     def crba(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike, density:npt.ArrayLike = None, length_multiplier: npt.ArrayLike = None
@@ -175,10 +177,40 @@ class RBDAlgorithms(SpatialMath):
         Jcm = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
         return M, Jcm
 
+    def define_link_parametrics(self): 
+        link_parametric_dict = {}
+        for idx in range(len(self.link_name_list)):
+            link_name = self.link_name_list[idx]
+            link_i = self.find_link_by_name(link_name)
+            R = self.R_from_RPY(link_i.inertial.origin.rpy)
+            link_i_param = link_parametric.linkParametric(link_i.name,link_i, R, idx)
+            link_i_param.set_external_methods(self.zeros, self.forward_kinematics)
+            link_parametric_dict.update({link_name:link_i_param})
+        self.link_parametric_dict = link_parametric_dict
+    
+    def define_joint_parametric(self):
+        joint_parametric_dict = {}
+        for idx in range(len(self.tree.joints)): 
+            joint_i = self.tree.joints[idx]
+            name_joint = joint_i.name
+            if self.tree.parents[idx].name in self.link_name_list: 
+                name_parent = self.tree.parents[idx].name
+                joint_i_param = link_parametric.jointParametric(name_joint,self.link_parametric_dict[name_parent], joint_i)
+                joint_parametric_dict.update({name_joint:joint_i_param})
+        self.joint_parametric_dict = joint_parametric_dict
+    
+    def find_link_by_name(self,link_name):     
+        link_list = [corresponding_link for corresponding_link in self.tree.links if corresponding_link.name == link_name]
+        if len(link_list) != 0:
+            return link_list[0]
+        else:
+            return None
+
     def extract_link_properties(self, link_i, density, length_multiplier):
-        if link_i.name in self.link_name_list:
-            j = self.link_name_list.index(link_i.name)
-            link_i_param = link_parametric.linkParametric(link_i.name, length_multiplier[j,:], density[j], link_i)
+        if link_i.name in self.link_parametric_dict:
+            link_i_param = self.link_parametric_dict[link_i.name]
+            link_i_param.update_link(length_multiplier, density)
+            print("udpating link", link_i.name)
             I = link_i_param.I
             mass = link_i_param.mass 
             origin = link_i_param.origin
@@ -197,17 +229,13 @@ class RBDAlgorithms(SpatialMath):
     def extract_joint_properties(self, joint_i, density, length_multiplier): 
         
         if(joint_i in self.tree.joints):
-            index = self.tree.joints.index(joint_i)
-            if self.tree.parents[index].name in self.link_name_list: 
-                link_original_parent = self.tree.parents[index]   
-                j = self.link_name_list.index(self.tree.parents[index].name)
-                link_i_parametric = link_parametric.linkParametric(self.tree.parents[index].name, length_multiplier[j,:],density[j],link_original_parent)
-                joint_i_param = link_parametric.jointParametric(joint_i.name,link_i_parametric, joint_i)
+            if(joint_i.name in self.joint_parametric_dict):
+                joint_i_param = self.joint_parametric_dict[joint_i.name]
+                joint_i_param.modify(length_multiplier)
                 o_joint = [joint_i_param.origin[0],joint_i_param.origin[1],joint_i_param.origin[2]]
                 rpy_joint = [joint_i_param.origin[3],joint_i_param.origin[4], joint_i_param.origin[5]]
                 axis = joint_i.axis
                 return o_joint, rpy_joint, axis
-              
         if(hasattr(joint_i, "origin")):
             o_joint =joint_i.origin.xyz
             rpy_joint =joint_i.origin.rpy
