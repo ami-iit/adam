@@ -213,16 +213,16 @@ class jointParametric:
         length = self.parent_link.get_principal_lenght_parametric()
         # Ack for avoiding depending on casadi 
         vo = self.parent_link.origin[2]
-        xyz_rpy = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        xyz_rpy[0] = self.joint.origin.xyz[0]
-        xyz_rpy[1] = self.joint.origin.xyz[1]
-        xyz_rpy[2] = self.joint.origin.xyz[2]
-        xyz_rpy_temp=  [*self.joint.origin.xyz, *self.joint.origin.rpy]
-        xyz_rpy[3] = xyz_rpy_temp[3]
-        xyz_rpy[4] = xyz_rpy_temp[4]
-        xyz_rpy[5] = xyz_rpy_temp[5]
-        if(xyz_rpy[2]<0): 
-            xyz_rpy[2] = -length +self.parent_link_offset - self.offset   
+        xyz =self.parent_link.zeros(3)
+        xyz[0] = self.joint.origin.xyz[0]
+        xyz[1] = self.joint.origin.xyz[1]
+        xyz[2] = self.joint.origin.xyz[2]
+        # xyz_rpy_temp=  [*self.joint.origin.xyz, *self.joint.origin.rpy]
+        # xyz_rpy[3] = xyz_rpy_temp[3]
+        # xyz_rpy[4] = xyz_rpy_temp[4]
+        # xyz_rpy[5] = xyz_rpy_temp[5]
+        if(self.joint.origin.xyz[2]<0): 
+            xyz[2] = -length +self.parent_link_offset - self.offset   
         else:
-            xyz_rpy[2] = vo+ length/2 - self.offset
-        self.origin = xyz_rpy
+            xyz[2] = vo+ length/2 - self.offset
+        self.xyz = xyz.array

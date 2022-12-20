@@ -232,8 +232,9 @@ class RBDAlgorithms(SpatialMath):
             if(joint_i.name in self.joint_parametric_dict):
                 joint_i_param = self.joint_parametric_dict[joint_i.name]
                 joint_i_param.modify(length_multiplier)
-                o_joint = [joint_i_param.origin[0],joint_i_param.origin[1],joint_i_param.origin[2]]
-                rpy_joint = [joint_i_param.origin[3],joint_i_param.origin[4], joint_i_param.origin[5]]
+                o_joint = joint_i_param.xyz
+                rpy_joint = joint_i.origin.rpy
+                print(o_joint)
                 axis = joint_i.axis
                 return o_joint, rpy_joint, axis
         if(hasattr(joint_i, "origin")):
@@ -289,6 +290,7 @@ class RBDAlgorithms(SpatialMath):
                         q_,
                     )
                     T_fk = T_fk @ T_joint
+        print(T_fk)
         return T_fk
 
     def joints_jacobian(
