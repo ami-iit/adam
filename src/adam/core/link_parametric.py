@@ -24,9 +24,8 @@ class linkParametric():
             if(new_direction[i] == one_type_free):
                 self.growing_direction = i
 
-    def set_external_methods(self, zeros, fk): 
+    def set_external_methods(self, zeros): 
         self.zeros = zeros
-        self.fk = fk 
 
     def update_link(self,lenght_multiplier_vector, density_vector):
         lenght_multiplier_i = lenght_multiplier_vector[self.index,:]
