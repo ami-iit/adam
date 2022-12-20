@@ -1,36 +1,28 @@
-from enum import IntEnum
+
 import math
-
-class I_parametric():
-    def __init__(self) -> None:
-        self.ixx = 0.0
-        self.ixy = 0.0
-        self.ixz = 0.0
-        self.iyy = 0.0
-        self.iyz = 0.0
-        self.izz = 0.0
-
-class Geometry(IntEnum):
-    """The different types of geometries that constitute the URDF"""
-    BOX = 1
-    CYLINDER = 2
-    SPHERE = 3
-
-class GrowingDirection(IntEnum):
-    """The possible sides of a box geometry"""
-    X = 0
-    Y = 1
-    Z = 2
+from adam.core.geometry import GrowingDirection
+from adam.core.geometry import I_parametric
+from adam.core.geometry import Shape
 
 class linkParametric():
-    def __init__(self, link_name: str, link, R,index, growing_direction:GrowingDirection = GrowingDirection.Z) -> None:
+    def __init__(self, link_name: str, link, R,index) -> None:
         self.name = link_name
         self.link = link  
         self.R = R
         self.geometry_type, self.visual_data = self.get_geometry(self.get_visual())
         self.offset = self.compute_offset()
-        self.growing_direction = growing_direction 
-        self.index = index        
+        self.index = index  
+             
+    def set_base_link_tranform (self,b_H_l): 
+        b_H_l = b_H_l
+        default_direction = self.zeros(3)
+        default_direction[2] = 1.0 
+        new_direction = default_direction.T@b_H_l[:3,:3]
+        one_type_free = self.zeros(1)
+        one_type_free[0] = 1.0
+        for i in range(3): 
+            if(new_direction[i] == one_type_free):
+                self.growing_direction = i
 
     def set_external_methods(self, zeros, fk): 
         self.zeros = zeros
@@ -47,16 +39,16 @@ class linkParametric():
         self.inertial = self.I
 
     def update_dimensions(self, length_multiplier): 
-        if self.geometry_type == Geometry.BOX:
+        if self.geometry_type == Shape.BOX:
             visual_data_new =[0.0, 0.0, 0.0]
             visual_data_new[0] = self.visual_data.size[0] * length_multiplier[0]
             visual_data_new[1] = self.visual_data.size[1] * length_multiplier[1]
             visual_data_new[2] = self.visual_data.size[2] * length_multiplier[2]
-        elif self.geometry_type == Geometry.CYLINDER:
+        elif self.geometry_type == Shape.CYLINDER:
             visual_data_new = [0.0, 0.0]
             visual_data_new[0] = self.visual_data.length * length_multiplier[0]
             visual_data_new[1] = self.visual_data.radius * length_multiplier[1]
-        elif self.geometry_type == Geometry.SPHERE:
+        elif self.geometry_type == Shape.SPHERE:
             visual_data_new = 0.0
             visual_data_new = self.visual_data.radius * length_multiplier[0]
         self.visual_data_new = visual_data_new
@@ -64,14 +56,14 @@ class linkParametric():
     def get_principal_lenght(self): 
         visual = self.get_visual()
         xyz_rpy = [*visual.origin.xyz, *visual.origin.rpy] 
-        if self.geometry_type == Geometry.CYLINDER:
+        if self.geometry_type == Shape.CYLINDER:
             if(xyz_rpy[3] < 0.0 or xyz_rpy[4] > 0.0):
                 v_l = 2*self.visual_data.radius # returning the diameter, since the orientation of the shape is such that the radius is the principal lenght 
             else: 
                 v_l=self.visual_data.length # returning the lenght, since the orientation of the shape is such that the radius is the principal lenght 
-        elif(self.geometry_type == Geometry.SPHERE): 
+        elif(self.geometry_type == Shape.SPHERE): 
             v_l = self.visual_data.radius
-        elif(self.geometry_type == Geometry.BOX): 
+        elif(self.geometry_type == Shape.BOX): 
             v_l= self.visual_data.size[2]
         else:
             raise Exception(f"THE GEOMETRY IS NOT SPECIFIED")
@@ -81,15 +73,15 @@ class linkParametric():
         visual = self.get_visual()
         xyz_rpy = [*visual.origin.xyz, *visual.origin.rpy] 
         length_vector = self.zeros(3)
-        if self.geometry_type == Geometry.CYLINDER:
+        if self.geometry_type == Shape.CYLINDER:
             length_vector[0] = 2*self.visual_data_new[1]
             length_vector[1] = 2*self.visual_data_new[1]
             length_vector[2] = self.visual_data_new[2]        
-        elif(self.geometry_type == Geometry.SPHERE): 
+        elif(self.geometry_type == Shape.SPHERE): 
             length_vector[0] = 2*self.visual_data_new
             length_vector[1] = 2*self.visual_data_new
             length_vector[2] = self.visual_data_new
-        elif(self.geometry_type == Geometry.BOX): 
+        elif(self.geometry_type == Shape.BOX): 
             length_vector[0] = self.visual_data_new[0]
             length_vector[1] = self.visual_data_new[1]
             length_vector[2] = self.visual_data_new[2]
@@ -132,21 +124,21 @@ class linkParametric():
     @staticmethod
     def get_geometry(visual_obj):
         if hasattr(visual_obj.geometry, "size"):
-            return [Geometry.BOX, visual_obj.geometry]
+            return [Shape.BOX, visual_obj.geometry]
         elif hasattr(visual_obj.geometry, "length"):
-            return [Geometry.CYLINDER, visual_obj.geometry]
+            return [Shape.CYLINDER, visual_obj.geometry]
         elif hasattr(visual_obj.geometry,"radius"):
-            return [Geometry.SPHERE, visual_obj.geometry]
+            return [Shape.SPHERE, visual_obj.geometry]
 
     """Function that starting from a multiplier and link visual characteristics computes the link volume"""
     def compute_volume(self):
         volume = 0.0
         """Modifies a link's volume by a given multiplier, in a manner that is logical with the link's geometry"""
-        if self.geometry_type == Geometry.BOX:
+        if self.geometry_type == Shape.BOX:
             volume = self.visual_data_new[0] * self.visual_data_new[1] * self.visual_data_new[2]
-        elif self.geometry_type == Geometry.CYLINDER:
+        elif self.geometry_type == Shape.CYLINDER:
             volume = math.pi * self.visual_data_new[1] ** 2 * self.visual_data_new[0]
-        elif self.geometry_type == Geometry.SPHERE:
+        elif self.geometry_type == Shape.SPHERE:
             volume = 4 * math.pi * self.visual_data_new ** 3 / 3
         return volume
 
@@ -169,7 +161,7 @@ class linkParametric():
             origin[self.growing_direction] = self.offset-length/2
         else:
             origin[self.growing_direction] = length/2 +self.offset
-        if self.geometry_type == Geometry.SPHERE:
+        if self.geometry_type == Shape.SPHERE:
             origin = xyz_rpy
         return origin
 
@@ -180,11 +172,11 @@ class linkParametric():
         xyz_rpy =  [*visual.origin.xyz, *visual.origin.rpy]
         """Calculates inertia (ixx, iyy and izz) with the formula that corresponds to the geometry
         Formulas retrieved from https://en.wikipedia.org/wiki/List_of_moments_of_inertia"""
-        if self.geometry_type == Geometry.BOX:
+        if self.geometry_type == Shape.BOX:
             I.ixx = self.mass * (self.visual_data_new[1] ** 2+ self.visual_data_new[2] ** 2)/12
             I.iyy = self.mass* (self.visual_data_new[0]**2 + self.visual_data_new[2]**2)/12
             I.izz = self.mass * (self.visual_data_new[0]**2 + self.visual_data_new[1]**2)/12
-        elif self.geometry_type == Geometry.CYLINDER:
+        elif self.geometry_type == Shape.CYLINDER:
             i_xy_incomplete = (
                 3 *(self.visual_data_new[1] ** 2) + self.visual_data_new[0] ** 2
             ) / 12
@@ -192,36 +184,8 @@ class linkParametric():
             I.iyy = self.mass * i_xy_incomplete
             I.izz = self.mass * self.visual_data_new[1] ** 2 / 2
             return I
-        elif self.geometry_type == Geometry.SPHERE:
+        elif self.geometry_type == Shape.SPHERE:
             I.ixx = 2 * self.mass * self.visual_data_new** 2 / 5
             I.iyy = I.ixx
             I.izz = I.ixx
         return I
-
-class jointParametric:
-    def __init__(self, joint_name:str, parent_link:linkParametric, joint) -> None:
-        self.jointName = joint_name
-        self.parent_link_name = parent_link.name
-        self.joint = joint
-        self.parent_link = parent_link
-        self.parent_link_offset = self.parent_link.offset
-        joint_offset = self.parent_link.compute_joint_offset(joint)
-        self.offset = joint_offset
-    
-    def update_joint(self): 
-        length = self.parent_link.get_principal_lenght_parametric()
-        # Ack for avoiding depending on casadi 
-        vo = self.parent_link.origin[2]
-        xyz =self.parent_link.zeros(3)
-        xyz[0] = self.joint.origin.xyz[0]
-        xyz[1] = self.joint.origin.xyz[1]
-        xyz[2] = self.joint.origin.xyz[2]
-        if(self.joint.origin.xyz[2]<0): 
-            xyz[2] = -length +self.parent_link_offset - self.offset   
-        else:
-            xyz[2] = vo+ length/2 - self.offset
-        self.xyz = xyz.array
-        
-    def update_parent_link_and_joint(self, length_multiplier, density):
-        self.parent_link.update_link(length_multiplier,density)
-        self.update_joint()    

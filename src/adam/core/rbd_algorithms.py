@@ -6,7 +6,8 @@ import numpy.typing as npt
 from adam.core.spatial_math import SpatialMath
 from adam.core.urdf_tree import URDFTree
 import dataclasses
-from adam.core import link_parametric
+from adam.core.link_parametric import linkParametric
+from adam.core.joint_parametric import jointParametric
 
 class RBDAlgorithms(SpatialMath):
     """This is a small abstract class that implements Rigid body algorithms retrieving robot quantities represented
@@ -46,6 +47,7 @@ class RBDAlgorithms(SpatialMath):
         self.link_name_list = link_name_list
         self.define_link_parametrics()
         self.define_joint_parametric()
+        self.set_base_to_link_transf()
 
     def crba(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike, density:npt.ArrayLike = None, length_multiplier: npt.ArrayLike = None
@@ -179,15 +181,31 @@ class RBDAlgorithms(SpatialMath):
 
     def define_link_parametrics(self): 
         link_parametric_dict = {}
+       
         for idx in range(len(self.link_name_list)):
             link_name = self.link_name_list[idx]
             link_i = self.find_link_by_name(link_name)
             R = self.R_from_RPY(link_i.inertial.origin.rpy)
-            link_i_param = link_parametric.linkParametric(link_i.name,link_i, R, idx)
+            link_i_param = linkParametric(link_i.name,link_i, R, idx)
             link_i_param.set_external_methods(self.zeros, self.forward_kinematics)
             link_parametric_dict.update({link_name:link_i_param})
         self.link_parametric_dict = link_parametric_dict
     
+    def set_base_to_link_transf(self): 
+        fake_length_one = self.zeros(3)
+        for j in range(3):
+            fake_length_one[j] = 1.0
+
+        fake_length_new = fake_length_one
+        for i in range(len(self.link_name_list)-1):
+            fake_length_new = self.vertcat(fake_length_new, fake_length_one) 
+        
+        for item in self.link_name_list:
+            q = self.zeros(self.NDoF)
+            fake_density = self.zeros(len(self.link_name_list))
+            b_H_r = self.forward_kinematics(item, self.eye(4), q.array, fake_density, fake_length_new)
+            self.link_parametric_dict[item].set_base_link_tranform(b_H_r)
+
     def define_joint_parametric(self):
         joint_parametric_dict = {}
         for idx in range(len(self.tree.joints)): 
@@ -195,7 +213,7 @@ class RBDAlgorithms(SpatialMath):
             name_joint = joint_i.name
             if self.tree.parents[idx].name in self.link_name_list: 
                 name_parent = self.tree.parents[idx].name
-                joint_i_param = link_parametric.jointParametric(name_joint,self.link_parametric_dict[name_parent], joint_i)
+                joint_i_param = jointParametric(name_joint,self.link_parametric_dict[name_parent], joint_i)
                 joint_parametric_dict.update({name_joint:joint_i_param})
         self.joint_parametric_dict = joint_parametric_dict
     
