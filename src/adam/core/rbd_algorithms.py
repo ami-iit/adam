@@ -210,7 +210,6 @@ class RBDAlgorithms(SpatialMath):
         if link_i.name in self.link_parametric_dict:
             link_i_param = self.link_parametric_dict[link_i.name]
             link_i_param.update_link(length_multiplier, density)
-            print("udpating link", link_i.name)
             I = link_i_param.I
             mass = link_i_param.mass 
             origin = link_i_param.origin
@@ -231,10 +230,9 @@ class RBDAlgorithms(SpatialMath):
         if(joint_i in self.tree.joints):
             if(joint_i.name in self.joint_parametric_dict):
                 joint_i_param = self.joint_parametric_dict[joint_i.name]
-                joint_i_param.modify(length_multiplier)
+                joint_i_param.update_parent_link_and_joint(length_multiplier, density)
                 o_joint = joint_i_param.xyz
                 rpy_joint = joint_i.origin.rpy
-                print(o_joint)
                 axis = joint_i.axis
                 return o_joint, rpy_joint, axis
         if(hasattr(joint_i, "origin")):
@@ -290,7 +288,6 @@ class RBDAlgorithms(SpatialMath):
                         q_,
                     )
                     T_fk = T_fk @ T_joint
-        print(T_fk)
         return T_fk
 
     def joints_jacobian(

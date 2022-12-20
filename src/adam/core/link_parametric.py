@@ -207,9 +207,8 @@ class jointParametric:
         self.parent_link_offset = self.parent_link.offset
         joint_offset = self.parent_link.compute_joint_offset(joint)
         self.offset = joint_offset
-        
-    def modify(self, length_multiplier):
-        self.parent_link.update_dimensions(length_multiplier)
+    
+    def update_joint(self): 
         length = self.parent_link.get_principal_lenght_parametric()
         # Ack for avoiding depending on casadi 
         vo = self.parent_link.origin[2]
@@ -217,12 +216,12 @@ class jointParametric:
         xyz[0] = self.joint.origin.xyz[0]
         xyz[1] = self.joint.origin.xyz[1]
         xyz[2] = self.joint.origin.xyz[2]
-        # xyz_rpy_temp=  [*self.joint.origin.xyz, *self.joint.origin.rpy]
-        # xyz_rpy[3] = xyz_rpy_temp[3]
-        # xyz_rpy[4] = xyz_rpy_temp[4]
-        # xyz_rpy[5] = xyz_rpy_temp[5]
         if(self.joint.origin.xyz[2]<0): 
             xyz[2] = -length +self.parent_link_offset - self.offset   
         else:
             xyz[2] = vo+ length/2 - self.offset
         self.xyz = xyz.array
+        
+    def update_parent_link_and_joint(self, length_multiplier, density):
+        self.parent_link.update_link(length_multiplier,density)
+        self.update_joint()    

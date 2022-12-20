@@ -48,7 +48,6 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
             T_b = cs.SX.sym("T_b", 4, 4)
             s = cs.SX.sym("s", self.NDoF)
             [M, _] = super().crba(T_b, s)
-            #  return cs.Function("M", [T_b, s], [M.array], self.f_opts)
             return cs.Function("M", [T_b, s], [M.array], self.f_opts)
         else:
             T_b = cs.SX.sym("T_b", 4, 4)
@@ -139,7 +138,7 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
             return super().get_total_mass()
         else: 
             density = cs.SX.sym("density", len(self.link_name_list))
-            length_multiplier = cs.SX.sym("lenght_multiplier",len(self.link_name_list), 3)
+            length_multiplier = cs.SX.sym("length_multiplier",len(self.link_name_list), 3)
             m = super().get_total_mass(density, length_multiplier)
             return cs.Function("m", [density, length_multiplier], [m], self.f_opts)
    
@@ -158,7 +157,7 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
             s = cs.SX.sym("s", self.NDoF)
             T_b = cs.SX.sym("T_b", 4, 4)
             density = cs.SX.sym("density", len(self.link_name_list))
-            length_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list), 3)
+            length_multiplier = cs.SX.sym("length_multiplier", len(self.link_name_list), 3)
             com_pos = super().CoM_position(T_b, s, density, length_multiplier)
             return cs.Function("CoM_pos", [T_b, s, density, length_multiplier], [com_pos.array], self.f_opts)
     
@@ -182,7 +181,7 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
             v_b = cs.SX.sym("v_b", 6)
             s_dot = cs.SX.sym("s_dot", self.NDoF)
             density = cs.SX.sym("density", len(self.link_name_list))
-            length_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list), 3)
+            length_multiplier = cs.SX.sym("length_multiplier", len(self.link_name_list), 3)
             h = super().rnea(T_b, s, v_b, s_dot, self.g, density, length_multiplier)
             return cs.Function("h", [T_b, s, v_b, s_dot, density, length_multiplier], [h.array], self.f_opts)
 
@@ -207,7 +206,7 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
             v_b = cs.SX.sym("v_b", 6)
             q_dot = cs.SX.sym("q_dot", self.NDoF)
             density = cs.SX.sym("density", len(self.link_name_list))
-            length_multiplier = cs.SX.sym("lenght_multiplier",len(self.link_name_list), 3)
+            length_multiplier = cs.SX.sym("length_multiplier",len(self.link_name_list), 3)
             # set in the bias force computation the gravity term to zero
             C = super().rnea(T_b, q, v_b, q_dot, np.zeros(6), density, length_multiplier)
             return cs.Function("C", [T_b, q, v_b, q_dot, density, length_multiplier], [C.array], self.f_opts)
@@ -229,7 +228,7 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
             T_b = cs.SX.sym("T_b", 4, 4)
             q = cs.SX.sym("q", self.NDoF)
             density = cs.SX.sym("density", len(self.link_name_list))
-            lenght_multiplier = cs.SX.sym("lenght_multiplier", len(self.link_name_list), 3)
+            lenght_multiplier = cs.SX.sym("length_multiplier", len(self.link_name_list), 3)
             # set in the bias force computation the velocity to zero
             G = super().rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF),self.g, density, lenght_multiplier)
             return cs.Function("G", [T_b, q, density, lenght_multiplier], [G.array], self.f_opts)
