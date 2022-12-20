@@ -201,7 +201,7 @@ class linkParametric():
 class jointParametric:
     def __init__(self, joint_name:str, parent_link:linkParametric, joint) -> None:
         self.jointName = joint_name
-        self.parent_link_name = parent_link
+        self.parent_link_name = parent_link.name
         self.joint = joint
         self.parent_link = parent_link
         self.parent_link_offset = self.parent_link.offset
