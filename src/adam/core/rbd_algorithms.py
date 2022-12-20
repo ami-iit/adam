@@ -6,8 +6,6 @@ import numpy.typing as npt
 from adam.core.spatial_math import SpatialMath
 from adam.core.urdf_tree import URDFTree
 import dataclasses
-from adam.core.link_parametric import linkParametric
-from adam.core.joint_parametric import jointParametric
 
 class RBDAlgorithms(SpatialMath):
     """This is a small abstract class that implements Rigid body algorithms retrieving robot quantities represented
