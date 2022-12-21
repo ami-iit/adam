@@ -112,7 +112,6 @@ def test_mass_matrix():
     mass_test_hardware = SX2DM(
         M_with_hardware(H_b, s_, original_density, original_length)
     )
-    print("M=", cs.sumsqr(mass_test - mass_test_hardware))
     assert mass_test - mass_test_hardware == pytest.approx(0.0, abs=1e-4)
 
 
@@ -123,7 +122,6 @@ def test_CMM():
     Jcm_test_hardware = SX2DM(
         Jcm_with_hardware(H_b, s_, original_density, original_length)
     )
-    print("Jcmm=", cs.sumsqr(Jcm_test - Jcm_test_hardware))
     assert Jcm_test - Jcm_test_hardware == pytest.approx(0.0, abs=1e-4)
 
 
@@ -134,7 +132,6 @@ def test_CoM_pos():
     CoM_hardware = SX2DM(
         com_with_hardware_f(H_b, s_, original_density, original_length)
     )
-    print("CoM=", cs.sumsqr(CoM_cs - CoM_hardware))
     assert CoM_cs - CoM_hardware == pytest.approx(0.0, abs=1e-5)
 
 
@@ -142,7 +139,6 @@ def test_total_mass():
     mass = comp.get_total_mass()
     mass_hardware_fun = comp_w_hardware.get_total_mass()
     mass_hardware = SX2DM(mass_hardware_fun(original_density, original_length))
-    print("mass=", cs.sumsqr(mass - mass_hardware))
     assert mass - mass_hardware == pytest.approx(0.0, abs=1e-5)
 
 
@@ -153,7 +149,6 @@ def test_jacobian():
     J_test_hardware = SX2DM(
         J_tot_with_hardware(H_b, s_, original_density, original_length)
     )
-    print("J=", cs.sumsqr(J_test - J_test_hardware))
     assert J_test - J_test_hardware == pytest.approx(0.0, abs=1e-5)
 
 
@@ -164,7 +159,6 @@ def test_jacobian_non_actuated():
     J_tot_with_hardware_test = SX2DM(
         J_tot_with_hardware(H_b, s_, original_density, original_length)
     )
-    print("J=", cs.sumsqr(J_test - J_tot_with_hardware_test))
     assert J_test - J_tot_with_hardware_test == pytest.approx(0.0, abs=1e-5)
 
 
@@ -175,7 +169,6 @@ def test_fk():
     H_with_hardware_test = SX2DM(
         T_with_hardware(H_b, s_, original_density, original_length)
     )
-    print("fk=", cs.sumsqr(H_test - H_with_hardware_test))
     assert H_with_hardware_test[:3, :3] - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert H_with_hardware_test[:3, 3] - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
 
@@ -187,7 +180,6 @@ def test_fk_non_actuated():
     H_with_hardware_test = SX2DM(
         T_with_hardware(H_b, s_, original_density, original_length)
     )
-    print("fk=", cs.sumsqr(H_test - H_with_hardware_test))
     assert H_with_hardware_test[:3, :3] - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert H_with_hardware_test[:3, 3] - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
 
@@ -199,7 +191,6 @@ def test_bias_force():
     h_with_hardware_test = SX2DM(
         h_with_hardware(H_b, s_, vb_, s_dot_, original_density, original_length)
     )
-    print("h=", (h_with_hardware_test - h_test))
     assert h_with_hardware_test - h_test == pytest.approx(0.0, abs=1e-4)
 
 
@@ -210,7 +201,6 @@ def test_coriolis_term():
     C_with_hardware_test = SX2DM(
         C_with_hardware(H_b, s_, vb_, s_dot_, original_density, original_length)
     )
-    print("C=", (C_test - C_with_hardware_test))
     assert C_with_hardware_test - C_test == pytest.approx(0.0, abs=1e-4)
 
 
@@ -219,5 +209,4 @@ def test_gravity_term():
     G_test = SX2DM(G(H_b, s_))
     G_with_hardware = comp_w_hardware.gravity_term_fun()
     G_with_hardware_test = G_with_hardware(H_b, s_, original_density, original_length)
-    print("G=", (G_test - G_with_hardware_test))
     assert G_with_hardware_test - G_test == pytest.approx(0.0, abs=1e-4)
