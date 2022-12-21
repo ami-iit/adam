@@ -81,9 +81,9 @@ class linkParametric:
         xyz_rpy = [*visual.origin.xyz, *visual.origin.rpy]
         length_vector = self.zeros(3)
         if self.geometry_type == Shape.CYLINDER:
-            length_vector[0] = 2 * self.visual_data_new[1]
-            length_vector[1] = 2 * self.visual_data_new[1]
-            length_vector[2] = self.visual_data_new[2]
+            length_vector[0] = 2 * self.visual_data_new[0]
+            length_vector[1] = 2 * self.visual_data_new[0]
+            length_vector[2] = self.visual_data_new[1]
         elif self.geometry_type == Shape.SPHERE:
             length_vector[0] = 2 * self.visual_data_new
             length_vector[1] = 2 * self.visual_data_new
