@@ -59,10 +59,10 @@ def ComputeOriginalDensity(kinDyn, link_name):
     elif hasattr(visual_obj.geometry, "length"):
         length = link_original.visuals[0].geometry.length
         radius = link_original.visuals[0].geometry.radius
-        volume = math.pi * radius ** 2 * length
+        volume = math.pi * radius**2 * length
     elif hasattr(visual_obj.geometry, "radius"):
         radius = link_original.visuals[0].geometry.radius
-        volume = 4 * (math.pi * radius ** 3) / 3
+        volume = 4 * (math.pi * radius**3) / 3
     return mass / volume
 
 

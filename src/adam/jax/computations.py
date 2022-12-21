@@ -27,7 +27,8 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         Args:
             urdfstring (str): path of the urdf
             joints_name_list (list): list of the actuated joints
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            root_link (str, optional): the first link. Defaults to 'root_link'
+            link_parametric_list (list, optional): list of link parametric w.r.t. length and density.
         """
         super().__init__(
             urdfstring=urdfstring,
@@ -49,6 +50,8 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
+            density (jnp.array, optional): The density of the links contained in link_parametric_list
+            length_multiplier (jnp.array, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             M (jax): Mass Matrix
@@ -70,6 +73,8 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
+            density (jnp.array, optional): The density of the links contained in link_parametric_list
+            length_multiplier (jnp.array, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             Jcc (jnp.array): Centroidal Momentum matrix
@@ -91,6 +96,8 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         Args:
             frame (str): The tip of the chain
             joint_positions (jnp.array): The joints position
+            density (jnp.array, optional): The density of the links contained in link_parametric_list
+            length_multiplier (jnp.array, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             J (jnp.array): The Jacobian between the root and the frame
@@ -115,6 +122,8 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
             frame (str): The frame to which the fk will be computed
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
+            density (jnp.array, optional): The density of the links contained in link_parametric_list
+            length_multiplier (jnp.array, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             T_fk (jnp.array): The fk represented as Homogenous transformation matrix
@@ -153,6 +162,8 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
             base_transform (jnp.array): The homogenous transform from base to world frame
             s (jnp.array): The joints position
             frame (str): The frame to which the jacobian will be computed
+            density (jnp.array, optional): The density of the links contained in link_parametric_list
+            length_multiplier (jnp.array, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             J_tot (jnp.array): The Jacobian relative to the frame
@@ -182,6 +193,8 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
             joint_positions (jnp.array): The joints position
             base_velocity (jnp.array): The base velocity in mixed representation
             s_dot (jnp.array): The joints velocity
+            density (jnp.array, optional): The density of the links contained in link_parametric_list
+            length_multiplier (jnp.array, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             h (jnp.array): the bias force
@@ -217,6 +230,8 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
             joint_positions (jnp.array): The joints position
             base_velocity (jnp.array): The base velocity in mixed representation
             s_dot (jnp.array): The joints velocity
+            density (jnp.array, optional): The density of the links contained in link_parametric_list
+            length_multiplier (jnp.array, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             C (jnp.array): the Coriolis term
@@ -248,6 +263,8 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
+            density (jnp.array, optional): The density of the links contained in link_parametric_list
+            length_multiplier (jnp.array, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             G (jnp.array): the gravity term
@@ -278,6 +295,8 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
+            density (jnp.array, optional): The density of the links contained in link_parametric_list
+            length_multiplier (jnp.array, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             com (jnp.array): The CoM position

@@ -25,7 +25,8 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Args:
             urdfstring (str): path of the urdf
             joints_name_list (list): list of the actuated joints
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            root_link (str, optional): the first link. Defaults to 'root_link'
+            link_parametric_list (list, optional): list of link parametric w.r.t. length and density.
         """
         super().__init__(
             urdfstring=urdfstring,
@@ -47,6 +48,8 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
+            density (np.ndarray, optional): The density of the links contained in link_parametric_list
+            length_multiplier (np.ndarray, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             M (np.ndarray): Mass Matrix
@@ -68,6 +71,8 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joint positions
+            density (np.ndarray, optional): The density of the links contained in link_parametric_list
+            length_multiplier (np.ndarray, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             Jcc (np.ndarray): Centroidal Momentum matrix
@@ -89,6 +94,8 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
             frame (str): The frame to which the fk will be computed
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
+            density (np.ndarray, optional): The density of the links contained in link_parametric_list
+            length_multiplier (np.ndarray, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             T_fk (np.ndarray): The fk represented as Homogenous transformation matrix
@@ -115,6 +122,8 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
             frame (str): The frame to which the jacobian will be computed
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
+            density (np.ndarray, optional): The density of the links contained in link_parametric_list
+            length_multiplier (np.ndarray, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             J_tot (np.ndarray): The Jacobian relative to the frame
@@ -139,6 +148,8 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Args:
             frame (str): The tip of the chain
             joint_positions (np.ndarray): The joints position
+            density (np.ndarray, optional): The density of the links contained in link_parametric_list
+            length_multiplier (np.ndarray, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             J (np.ndarray): The Jacobian between the root and the frame
@@ -161,6 +172,8 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
+            density (np.ndarray, optional): The density of the links contained in link_parametric_list
+            length_multiplier (np.ndarray, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             CoM (np.ndarray): The CoM position
@@ -188,8 +201,9 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
             joint_positions (np.ndarray): The joints position
             base_velocity (np.ndarray): The base velocity in mixed representation
             joint_velocities (np.ndarray): The joint velocities
+            density (np.ndarray, optional): The density of the links contained in link_parametric_list
+            length_multiplier (np.ndarray, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
-        Returns:
             h (np.ndarray): the bias force
         """
         return (
@@ -223,6 +237,8 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
             joint_positions (np.ndarray): The joints position
             base_velocity (np.ndarray): The base velocity in mixed representation
             joint_velocities (np.ndarray): The joint velocities
+            density (np.ndarray, optional): The density of the links contained in link_parametric_list
+            length_multiplier (np.ndarray, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             C (np.ndarray): the Coriolis term
@@ -255,6 +271,8 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
+            density (np.ndarray, optional): The density of the links contained in link_parametric_list
+            length_multiplier (np.ndarray, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             G (np.ndarray): the gravity term

@@ -36,7 +36,7 @@ class ArrayLike(abc.ABC):
             x (npt.ArrayLike): elements
 
         Returns:
-            npt.ArrayLike: vertical concatenation of elements x
+            npt.ArrayLike: horizontal concatenation of elements x
         """
         pass
 

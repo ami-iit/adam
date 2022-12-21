@@ -134,7 +134,7 @@ class NumpyLike(ArrayLike):
     def horzcat(*x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
         """
         Returns:
-            NumpyLike: vertical concatenation of x
+            NumpyLike: horrizontal concatenation of x
         """
         if isinstance(x[0], NumpyLike):
             v = np.hstack([x[i].array for i in range(len(x))])

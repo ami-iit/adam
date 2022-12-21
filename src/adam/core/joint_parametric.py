@@ -2,6 +2,8 @@ from adam.core.link_parametric import linkParametric
 
 
 class jointParametric:
+    """Class for joint whose parent is parametric w.r.t. length and density"""
+
     def __init__(self, joint_name: str, parent_link: linkParametric, joint) -> None:
         self.jointName = joint_name
         self.parent_link_name = parent_link.name
@@ -23,7 +25,7 @@ class jointParametric:
             xyz[2] = -length + self.parent_link_offset - self.offset
         else:
             xyz[2] = vo + length / 2 - self.offset
-        self.xyz = xyz.array
+        self.xyz = xyz
 
     def update_parent_link_and_joint(self, length_multiplier, density):
         self.parent_link.update_link(length_multiplier, density)

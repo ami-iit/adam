@@ -26,7 +26,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         Args:
             urdfstring (str): path of the urdf
             joints_name_list (list): list of the actuated joints
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            root_link (str, optional): the first link. Defaults to 'root_link'
+            link_parametric_list (list, optional): list of link parametric w.r.t. length and density.
         """
         super().__init__(
             urdfstring=urdfstring,
@@ -48,6 +49,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             s (torch.tensor): The joints position
+            density (torch.tensor, optional): The density of the links contained in link_parametric_list
+            length_multiplier (torch.tensor, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             M (torch.tensor): Mass Matrix
@@ -67,6 +70,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             s (torch.tensor): The joints position
+            density (torch.tensor, optional): The density of the links contained in link_parametric_list
+            length_multiplier (torch.tensor, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             Jcc (torch.tensor): Centroidal Momentum matrix
@@ -88,6 +93,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
             frame (str): The frame to which the fk will be computed
             base_transform (torch.tensor): The homogenous transform from base to world frame
             s (torch.tensor): The joints position
+            density (torch.tensor, optional): The density of the links contained in link_parametric_list
+            length_multiplier (torch.tensor, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             T_fk (torch.tensor): The fk represented as Homogenous transformation matrix
@@ -113,6 +120,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
             frame (str): The frame to which the jacobian will be computed
             base_transform (torch.tensor): The homogenous transform from base to world frame
             joint_positions (torch.tensor): The joints position
+            density (torch.tensor, optional): The density of the links contained in link_parametric_list
+            length_multiplier (torch.tensor, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             J_tot (torch.tensor): The Jacobian relative to the frame
@@ -137,6 +146,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         Args:
             frame (str): The tip of the chain
             joint_positions (torch.tensor): The joints position
+            density (torch.tensor, optional): The density of the links contained in link_parametric_list
+            length_multiplier (torch.tensor, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             J (torch.tensor): The Jacobian between the root and the frame
@@ -159,6 +170,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             joint_positions (torch.tensor): The joints position
+            density (torch.tensor, optional): The density of the links contained in link_parametric_list
+            length_multiplier (torch.tensor, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             com (torch.tensor): The CoM position
@@ -186,6 +199,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
             s (torch.tensor): The joints position
             base_velocity (torch.tensor): The base velocity in mixed representation
             joint_velocities (torch.tensor): The joints velocity
+            density (torch.tensor, optional): The density of the links contained in link_parametric_list
+            length_multiplier (torch.tensor, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             h (torch.tensor): the bias force
@@ -221,6 +236,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
             joint_positions (torch.tensor): The joints position
             base_velocity (torch.tensor): The base velocity in mixed representation
             joint_velocities (torch.tensor): The joints velocity
+            density (torch.tensor, optional): The density of the links contained in link_parametric_list
+            length_multiplier (torch.tensor, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             C (torch.tensor): the Coriolis term
@@ -253,6 +270,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             base_positions (torch.tensor): The joints position
+            density (torch.tensor, optional): The density of the links contained in link_parametric_list
+            length_multiplier (torch.tensor, optional): The length multipliers for the shapes of the links contained in link_parametric_list.
 
         Returns:
             G (torch.tensor): the gravity term

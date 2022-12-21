@@ -1,10 +1,11 @@
 import math
-from adam.core.geometry import GrowingDirection
-from adam.core.geometry import I_parametric
-from adam.core.geometry import Shape
+from adam.core.geometry_parametric import I_parametric
+from adam.core.geometry_parametric import Shape
 
 
 class linkParametric:
+    """Class for link parametric w.r.t. length and density"""
+
     def __init__(self, link_name: str, link, R, index) -> None:
         self.name = link_name
         self.link = link
@@ -150,7 +151,7 @@ class linkParametric:
         elif self.geometry_type == Shape.CYLINDER:
             volume = math.pi * self.visual_data_new[1] ** 2 * self.visual_data_new[0]
         elif self.geometry_type == Shape.SPHERE:
-            volume = 4 * math.pi * self.visual_data_new ** 3 / 3
+            volume = 4 * math.pi * self.visual_data_new**3 / 3
         return volume
 
     """Function that computes the mass starting from the density, the length multiplier and the link"""
@@ -209,7 +210,7 @@ class linkParametric:
             I.izz = self.mass * self.visual_data_new[1] ** 2 / 2
             return I
         elif self.geometry_type == Shape.SPHERE:
-            I.ixx = 2 * self.mass * self.visual_data_new ** 2 / 5
+            I.ixx = 2 * self.mass * self.visual_data_new**2 / 5
             I.iyy = I.ixx
             I.izz = I.ixx
         return I

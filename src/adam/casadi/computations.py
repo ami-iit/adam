@@ -27,7 +27,8 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Args:
             urdfstring (str): path of the urdf
             joints_name_list (list): list of the actuated joints
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            root_link (str, optional): the first link. Defaults to 'root_link'
+            link_parametric_list (list, optional): list of link parametric w.r.t. length and density
         """
         super().__init__(
             urdfstring=urdfstring,
@@ -139,7 +140,6 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         J_tot = super().jacobian(frame, T_b, s)
         return cs.Function("J_tot", [T_b, s], [J_tot.array], self.f_opts)
 
-    # TODOOOO
     def relative_jacobian_fun(self, frame: str) -> cs.Function:
         """Returns the Jacobian between the root link and a specified frame frames
 
@@ -149,12 +149,26 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Returns:
             J (casADi function): The Jacobian between the root and the frame
         """
+        if self.urdf_tree.is_model_parametric():
+            s = cs.SX.sym("s", self.NDoF)
+            density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
+            length_multiplier = cs.SX.sym(
+                "length_multiplier", self.urdf_tree.NLinkParametric, 3
+            )
+            J = super().relative_jacobian(frame, s, density, length_multiplier)
+            return cs.Function(
+                "J", [s, density, length_multiplier], [J.array], self.f_opts
+            )
         s = cs.SX.sym("s", self.NDoF)
         J = super().relative_jacobian(frame, s)
         return cs.Function("J", [s], [J.array], self.f_opts)
 
     def get_total_mass(self):
+        """Returns the total mass of the kinematic chain
 
+        Returns:
+            J (casADi function): The total mass of the kinematic chain
+        """
         if self.urdf_tree.is_model_parametric():
             density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
             length_multiplier = cs.SX.sym(

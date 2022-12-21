@@ -139,7 +139,7 @@ class TorchLike(ArrayLike):
     def horzcat(*x: ntp.ArrayLike) -> "TorchLike":
         """
         Returns:
-            TorchLike: vertical concatenation of x
+            TorchLike: horrizontal concatenation of x
         """
         if isinstance(x[0], TorchLike):
             v = torch.hstack([x[i].array for i in range(len(x))])
