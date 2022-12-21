@@ -146,6 +146,7 @@ class TorchLike(ArrayLike):
         else:
             v = torch.FloatTensor(x)
         return TorchLike(v)
+
     @staticmethod
     def eye(x: int) -> "TorchLike":
         """

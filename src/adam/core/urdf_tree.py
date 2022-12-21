@@ -14,6 +14,7 @@ from urdf_parser_py.urdf import URDF
 from adam.core.link_parametric import linkParametric
 from adam.core.joint_parametric import jointParametric
 
+
 @dataclass
 class Tree:
     joints: List[str] = field(default_factory=list)
@@ -38,7 +39,7 @@ class URDFTree:
         urdfstring: str,
         joints_name_list: list,
         root_link: str = "root_link",
-        link_name_list: List = None
+        link_parametric_list: List = None,
     ) -> None:
         """
         Args:
@@ -50,7 +51,8 @@ class URDFTree:
         self.joints_list = self.get_joints_info_from_reduced_model(joints_name_list)
         self.NDoF = len(self.joints_list)
         self.root_link = root_link
-        self.link_name_list = link_name_list
+        self.link_parametric_list = link_parametric_list
+        self.NLinkParametric = len(self.link_parametric_list)
 
     def get_joints_info_from_reduced_model(self, joints_name_list: list) -> list:
         joints_list = []
@@ -148,47 +150,52 @@ class URDFTree:
         tree.N = len(tree.links)
         logging.debug(table_joints)
         self.links = links
-        self.frames = frames 
+        self.frames = frames
         self.joints = joints
-        self.tree = tree 
+        self.tree = tree
+        self.define_link_parametrics()
+        self.define_joint_parametric()
 
     def extract_link_properties(self, link_i):
         if link_i.name in self.link_parametric_dict:
             link_i_param = self.link_parametric_dict[link_i.name]
-            link_i_param.update_link(self.length_multiplier, self.density)
             I = link_i_param.I
-            mass = link_i_param.mass 
+            mass = link_i_param.mass
             origin = link_i_param.origin
             o = self.zeros(3)
             o[0] = origin[0]
             o[1] = origin[1]
             o[2] = origin[2]
-            rpy = [origin[3],origin[4],origin[5]]
+            rpy = [origin[3], origin[4], origin[5]]
         else:
             I = link_i.inertial.inertia
             mass = link_i.inertial.mass
             o = link_i.inertial.origin.xyz
-            rpy = link_i.inertial.origin.rpy           
-        return I, mass, o, rpy  
+            rpy = link_i.inertial.origin.rpy
+        return I, mass, o, rpy
 
-    def set_external_methods(self, zeros, R_from_RPY):
-        self.zeros = zeros 
+    def set_external_methods(self, zeros, R_from_RPY, fk):
+        self.zeros = zeros
         self.R_from_RPY = R_from_RPY
+        self.fk = fk
 
-    def define_link_parametrics(self): 
+    def define_link_parametrics(self):
         link_parametric_dict = {}
-    
-        for idx in range(len(self.link_name_list)):
-            link_name = self.link_name_list[idx]
+        for idx in range(len(self.link_parametric_list)):
+            link_name = self.link_parametric_list[idx]
             link_i = self.find_link_by_name(link_name)
             R = self.R_from_RPY(link_i.inertial.origin.rpy)
-            link_i_param = linkParametric(link_i.name,link_i, R, idx)
+            link_i_param = linkParametric(link_i.name, link_i, R, idx)
             link_i_param.set_external_methods(self.zeros)
-            link_parametric_dict.update({link_name:link_i_param})
+            link_parametric_dict.update({link_name: link_i_param})
         self.link_parametric_dict = link_parametric_dict
 
-    def find_link_by_name(self,link_name):     
-        link_list = [corresponding_link for corresponding_link in self.tree.links if corresponding_link.name == link_name]
+    def find_link_by_name(self, link_name):
+        link_list = [
+            corresponding_link
+            for corresponding_link in self.tree.links
+            if corresponding_link.name == link_name
+        ]
         if len(link_list) != 0:
             return link_list[0]
         else:
@@ -196,37 +203,72 @@ class URDFTree:
 
     def define_joint_parametric(self):
         joint_parametric_dict = {}
-        for idx in range(len(self.tree.joints)): 
-            joint_i = self.tree.joints[idx]
+        for joint_i in self.tree.joints:
             name_joint = joint_i.name
-            if self.tree.parents[idx].name in self.link_name_list: 
-                name_parent = self.tree.parents[idx].name
-                joint_i_param = jointParametric(name_joint,self.link_parametric_dict[name_parent], joint_i)
-                joint_parametric_dict.update({name_joint:joint_i_param})
+            parent_i = self.get_parent_joint(joint_i)
+            if parent_i in self.link_parametric_list:
+                name_parent = parent_i.name
+                joint_i_param = jointParametric(
+                    name_joint, self.link_parametric_dict[name_parent], joint_i
+                )
+                joint_parametric_dict.update({name_joint: joint_i_param})
         self.joint_parametric_dict = joint_parametric_dict
-    
-    def extract_joint_properties(self, joint_i):     
-        if(joint_i in self.tree.joints):
-            if(joint_i.name in self.joint_parametric_dict):
+
+    def extract_joint_properties(self, joint_i):
+        if joint_i in self.tree.joints:
+            if joint_i.name in self.joint_parametric_dict:
                 joint_i_param = self.joint_parametric_dict[joint_i.name]
-                joint_i_param.update_parent_link_and_joint(self.length_multiplier, self.density)
                 o_joint = joint_i_param.xyz
                 rpy_joint = joint_i.origin.rpy
                 axis = joint_i.axis
                 return o_joint, rpy_joint, axis
-        if(hasattr(joint_i, "origin")):
-            o_joint =joint_i.origin.xyz
-            rpy_joint =joint_i.origin.rpy
+        if hasattr(joint_i, "origin"):
+            o_joint = joint_i.origin.xyz
+            rpy_joint = joint_i.origin.rpy
             axis = joint_i.axis
-        else: 
-            # fake output 
+        else:
+            # fake output
             o_joint = []
-            rpy_joint = []        
-            axis = [0.0,0.0,0.0]
+            rpy_joint = []
+            axis = [0.0, 0.0, 0.0]
 
         return o_joint, rpy_joint, axis
-    
-    def set_density_and_length(self,density, length_multiplier): 
+
+    def set_density_and_length(self, density, length_multiplier):
         self.density = density
         self.length_multiplier = length_multiplier
-       
+        for item in self.link_parametric_dict:
+            link_i_param = self.link_parametric_dict[item]
+            link_i_param.update_link(self.length_multiplier, self.density)
+        for item in self.joint_parametric_dict:
+            joint_i_param = self.joint_parametric_dict[item]
+            joint_i_param.update_parent_link_and_joint(
+                self.length_multiplier, self.density
+            )
+
+    def set_base_to_link_transf(self):
+        fake_length_one = self.zeros(3)
+        print("fake length before transpose", fake_length_one)
+        for j in range(3):
+            fake_length_one[j] = 1.0
+
+        fake_length_new = fake_length_one.T
+        for i in range(len(self.link_parametric_list) - 1):
+            fake_length_new = self.vertcat(fake_length_new, fake_length_one.T)
+
+        for item in self.link_parametric_list:
+            q = self.zeros(self.NDoF)
+            fake_density = self.zeros(len(self.link_parametric_list))
+            self.link_parametric_dict[item].growing_
+            b_H_r = self.fk(item, self.eye(4), q.array, fake_density, fake_length_new)
+            self.link_parametric_dict[item].set_base_link_tranform(b_H_r)
+
+    def is_model_parametric(self):
+        if not (self.link_parametric_list):
+            return False
+        return True
+
+    def get_parent_joint(self, joint_i):
+        idx = self.tree.joints.index(joint_i)
+        parent_joint = self.tree.parents[idx]
+        return parent_joint

@@ -143,6 +143,7 @@ def test_jacobian_non_actuated():
     J_test = cs.DM(J_tot(H_b, s_))
     assert iDynNumpyJ_ - J_test == pytest.approx(0.0, abs=1e-5)
 
+
 def test_fk():
     H_idyntree = kinDyn.getWorldTransform("l_sole")
     p_idy2np = H_idyntree.getPosition().toNumPy()

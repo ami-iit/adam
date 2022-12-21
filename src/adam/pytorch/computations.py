@@ -19,7 +19,7 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         urdfstring: str,
         joints_name_list: list,
         root_link: str = "root_link",
-        link_name_list: list = [],
+        link_parametric_list: list = [],
         gravity: np.array = torch.FloatTensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
@@ -33,11 +33,15 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
             joints_name_list=joints_name_list,
             root_link=root_link,
             gravity=gravity,
-            link_name_list=link_name_list
+            link_parametric_list=link_parametric_list,
         )
 
     def mass_matrix(
-        self, base_transform: torch.Tensor, s: torch.Tensor, density: torch.Tensor = None, length_multiplier: torch.Tensor = None
+        self,
+        base_transform: torch.Tensor,
+        s: torch.Tensor,
+        density: torch.Tensor = None,
+        length_multiplier: torch.Tensor = None,
     ) -> torch.Tensor:
         """Returns the Mass Matrix functions computed the CRBA
 
@@ -52,7 +56,11 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         return M.array
 
     def centroidal_momentum_matrix(
-        self, base_transform: torch.Tensor, s: torch.Tensor, density: torch.Tensor = None, length_multiplier: torch.Tensor = None
+        self,
+        base_transform: torch.Tensor,
+        s: torch.Tensor,
+        density: torch.Tensor = None,
+        length_multiplier: torch.Tensor = None,
     ) -> torch.Tensor:
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
@@ -67,7 +75,12 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         return Jcm.array
 
     def forward_kinematics(
-        self, frame, base_transform: torch.Tensor, s: torch.Tensor, density: torch.Tensor = None, length_multiplier: torch.Tensor = None
+        self,
+        frame,
+        base_transform: torch.Tensor,
+        s: torch.Tensor,
+        density: torch.Tensor = None,
+        length_multiplier: torch.Tensor = None,
     ) -> torch.Tensor:
         """Computes the forward kinematics relative to the specified frame
 
@@ -79,7 +92,7 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         Returns:
             T_fk (torch.tensor): The fk represented as Homogenous transformation matrix
         """
-        ## TODO 
+        ## TODO
         return (
             super().forward_kinematics(
                 frame, torch.FloatTensor(base_transform), torch.FloatTensor(s)
@@ -87,7 +100,12 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         ).array
 
     def jacobian(
-        self, frame: str, base_transform: torch.Tensor, joint_positions: torch.Tensor, density: torch.Tensor = None, length_multiplier: torch.Tensor = None
+        self,
+        frame: str,
+        base_transform: torch.Tensor,
+        joint_positions: torch.Tensor,
+        density: torch.Tensor = None,
+        length_multiplier: torch.Tensor = None,
     ) -> torch.Tensor:
         """Returns the Jacobian relative to the specified frame
 
@@ -99,9 +117,21 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         Returns:
             J_tot (torch.tensor): The Jacobian relative to the frame
         """
-        return super().jacobian(frame, base_transform, joint_positions, density, length_multiplier).array
+        return (
+            super()
+            .jacobian(
+                frame, base_transform, joint_positions, density, length_multiplier
+            )
+            .array
+        )
 
-    def relative_jacobian(self, frame, joint_positions: torch.Tensor, density: torch.Tensor = None, length_multiplier: torch.Tensor = None) -> torch.Tensor:
+    def relative_jacobian(
+        self,
+        frame,
+        joint_positions: torch.Tensor,
+        density: torch.Tensor = None,
+        length_multiplier: torch.Tensor = None,
+    ) -> torch.Tensor:
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
@@ -111,10 +141,18 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         Returns:
             J (torch.tensor): The Jacobian between the root and the frame
         """
-        return super().relative_jacobian(frame, joint_positions, density, length_multiplier).array
+        return (
+            super()
+            .relative_jacobian(frame, joint_positions, density, length_multiplier)
+            .array
+        )
 
     def CoM_position(
-        self, base_transform: torch.Tensor, joint_positions: torch.Tensor, density: torch.Tensor = None, length_multiplier: torch.Tensor = None
+        self,
+        base_transform: torch.Tensor,
+        joint_positions: torch.Tensor,
+        density: torch.Tensor = None,
+        length_multiplier: torch.Tensor = None,
     ) -> torch.Tensor:
         """Returns the CoM positon
 
@@ -125,7 +163,11 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         Returns:
             com (torch.tensor): The CoM position
         """
-        return super().CoM_position(base_transform, joint_positions, density, length_multiplier).array.squeeze()
+        return (
+            super()
+            .CoM_position(base_transform, joint_positions, density, length_multiplier)
+            .array.squeeze()
+        )
 
     def bias_force(
         self,
@@ -134,7 +176,7 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         base_velocity: torch.Tensor,
         joint_velocities: torch.Tensor,
         density: torch.Tensor = None,
-        length_multiplier: torch.Tensor = None
+        length_multiplier: torch.Tensor = None,
     ) -> torch.Tensor:
         """Returns the bias force of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
@@ -156,8 +198,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
                 base_velocity.reshape(6, 1),
                 joint_velocities,
                 self.g,
-                density, 
-                length_multiplier
+                density,
+                length_multiplier,
             )
             .array.squeeze()
         )
@@ -168,8 +210,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
         joint_positions: torch.Tensor,
         base_velocity: torch.Tensor,
         joint_velocities: torch.Tensor,
-        density: torch.Tensor = None, 
-        length_multiplier: torch.Tensor = None
+        density: torch.Tensor = None,
+        length_multiplier: torch.Tensor = None,
     ) -> torch.Tensor:
         """Returns the coriolis term of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
@@ -192,14 +234,18 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
                 base_velocity.reshape(6, 1),
                 joint_velocities,
                 torch.zeros(6),
-                density, 
-                length_multiplier
+                density,
+                length_multiplier,
             )
             .array.squeeze()
         )
 
     def gravity_term(
-        self, base_transform: torch.Tensor, base_positions: torch.Tensor, density: torch.Tensor = None, length_multiplier: torch.Tensor = None
+        self,
+        base_transform: torch.Tensor,
+        base_positions: torch.Tensor,
+        density: torch.Tensor = None,
+        length_multiplier: torch.Tensor = None,
     ) -> torch.Tensor:
         """Returns the gravity term of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
@@ -219,8 +265,8 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
                 torch.zeros(6).reshape(6, 1),
                 torch.zeros(self.NDoF),
                 torch.FloatTensor(self.g),
-                density, 
-                length_multiplier
+                density,
+                length_multiplier,
             )
             .array.squeeze()
         )

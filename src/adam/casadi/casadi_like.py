@@ -118,6 +118,7 @@ class CasadiLike(ArrayLike):
         # Then the list is unpacked with the * operator.
         y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
         return CasadiLike(cs.vertcat(*y))
+
     @staticmethod
     def horzcat(*x) -> "CasadiLike":
         """

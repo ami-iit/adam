@@ -18,7 +18,7 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         urdfstring: str,
         joints_name_list: list,
         root_link: str = "root_link",
-        link_name_list:list =[],
+        link_parametric_list: list = [],
         gravity: np.array = np.array([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
@@ -32,11 +32,15 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
             joints_name_list=joints_name_list,
             root_link=root_link,
             gravity=gravity,
-            link_name_list=link_name_list
+            link_parametric_list=link_parametric_list,
         )
 
     def mass_matrix(
-        self, base_transform: np.ndarray, joint_positions: np.ndarray, density: np.ndarray = None, length_multiplier: np.ndarray = None 
+        self,
+        base_transform: np.ndarray,
+        joint_positions: np.ndarray,
+        density: np.ndarray = None,
+        length_multiplier: np.ndarray = None,
     ) -> np.ndarray:
         """Returns the Mass Matrix functions computed the CRBA
 
@@ -47,11 +51,17 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             M (np.ndarray): Mass Matrix
         """
-        [M, _] = super().crba(base_transform, joint_positions, density, length_multiplier)
+        [M, _] = super().crba(
+            base_transform, joint_positions, density, length_multiplier
+        )
         return M.array
 
     def centroidal_momentum_matrix(
-        self, base_transform: np.ndarray, s: np.ndarray, density: np.ndarray = None, length_multiplier: np.ndarray = None
+        self,
+        base_transform: np.ndarray,
+        s: np.ndarray,
+        density: np.ndarray = None,
+        length_multiplier: np.ndarray = None,
     ) -> np.ndarray:
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
@@ -66,7 +76,12 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         return Jcm.array
 
     def forward_kinematics(
-        self, frame: str, base_transform: np.ndarray, joint_positions: np.ndarray, density: np.ndarray = None, length_multiplier: np.ndarray = None
+        self,
+        frame: str,
+        base_transform: np.ndarray,
+        joint_positions: np.ndarray,
+        density: np.ndarray = None,
+        length_multiplier: np.ndarray = None,
     ) -> np.ndarray:
         """Computes the forward kinematics relative to the specified frame
 
@@ -80,12 +95,19 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         """
         return (
             super()
-            .forward_kinematics(frame, base_transform, joint_positions, density, length_multiplier)
+            .forward_kinematics(
+                frame, base_transform, joint_positions, density, length_multiplier
+            )
             .array.squeeze()
         )
 
     def jacobian(
-        self, frame: str, base_transform: np.ndarray, joint_positions: np.ndarray, density: np.ndarray = None, length_multiplier: np.ndarray = None
+        self,
+        frame: str,
+        base_transform: np.ndarray,
+        joint_positions: np.ndarray,
+        density: np.ndarray = None,
+        length_multiplier: np.ndarray = None,
     ) -> np.ndarray:
         """Returns the Jacobian relative to the specified frame
 
@@ -97,9 +119,21 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             J_tot (np.ndarray): The Jacobian relative to the frame
         """
-        return super().jacobian(frame, base_transform, joint_positions, density, length_multiplier).array.squeeze()
+        return (
+            super()
+            .jacobian(
+                frame, base_transform, joint_positions, density, length_multiplier
+            )
+            .array.squeeze()
+        )
 
-    def relative_jacobian(self, frame: str, joint_positions: np.ndarray, density: np.ndarray = None, length_multiplier: np.ndarray = None) -> np.ndarray:
+    def relative_jacobian(
+        self,
+        frame: str,
+        joint_positions: np.ndarray,
+        density: np.ndarray = None,
+        length_multiplier: np.ndarray = None,
+    ) -> np.ndarray:
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
@@ -109,10 +143,18 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             J (np.ndarray): The Jacobian between the root and the frame
         """
-        return super().relative_jacobian(frame, joint_positions, density, length_multiplier).array
+        return (
+            super()
+            .relative_jacobian(frame, joint_positions, density, length_multiplier)
+            .array
+        )
 
     def CoM_position(
-        self, base_transform: np.ndarray, joint_positions: np.ndarray, density: np.ndarray = None, length_multiplier: np.ndarray = None
+        self,
+        base_transform: np.ndarray,
+        joint_positions: np.ndarray,
+        density: np.ndarray = None,
+        length_multiplier: np.ndarray = None,
     ) -> np.ndarray:
         """Returns the CoM positon
 
@@ -123,7 +165,11 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             CoM (np.ndarray): The CoM position
         """
-        return super().CoM_position(base_transform, joint_positions, density, length_multiplier).array.squeeze()
+        return (
+            super()
+            .CoM_position(base_transform, joint_positions, density, length_multiplier)
+            .array.squeeze()
+        )
 
     def bias_force(
         self,
@@ -132,7 +178,7 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         base_velocity: np.ndarray,
         joint_velocities: np.ndarray,
         density: np.ndarray = None,
-        length_multiplier: np.ndarray = None
+        length_multiplier: np.ndarray = None,
     ) -> np.ndarray:
         """Returns the bias force of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
@@ -154,8 +200,8 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
                 base_velocity.reshape(6, 1),
                 joint_velocities,
                 self.g,
-                density, 
-                length_multiplier
+                density,
+                length_multiplier,
             )
             .array.squeeze()
         )
@@ -167,7 +213,7 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         base_velocity: np.ndarray,
         joint_velocities: np.ndarray,
         density: np.ndarray = None,
-        length_multiplier: np.ndarray = None
+        length_multiplier: np.ndarray = None,
     ) -> np.ndarray:
         """Returns the coriolis term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
@@ -190,14 +236,18 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
                 base_velocity.reshape(6, 1),
                 joint_velocities,
                 np.zeros(6),
-                density, 
-                length_multiplier
+                density,
+                length_multiplier,
             )
             .array.squeeze()
         )
 
     def gravity_term(
-        self, base_transform: np.ndarray, joint_positions: np.ndarray, density: np.ndarray = None, length_multiplier: np.ndarray = None
+        self,
+        base_transform: np.ndarray,
+        joint_positions: np.ndarray,
+        density: np.ndarray = None,
+        length_multiplier: np.ndarray = None,
     ) -> np.ndarray:
         """Returns the gravity term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
@@ -218,7 +268,7 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
                 np.zeros(self.NDoF),
                 self.g,
                 density,
-                length_multiplier
+                length_multiplier,
             )
             .array.squeeze()
         )
