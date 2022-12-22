@@ -393,7 +393,7 @@ class RBDAlgorithms(SpatialMath):
         )
         # set initial acceleration (rotated gravity + apparent acceleration)
         # reshape g as a vertical vector
-        a[0] = -X_to_mixed @ g.reshape(6, 1) + acc_to_mixed
+        a[0] = -X_to_mixed @ g.reshape(-1, 1) + acc_to_mixed
 
         for i in range(self.tree.N):
             link_i = self.tree.links[i]
