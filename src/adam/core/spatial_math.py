@@ -1,7 +1,7 @@
 import abc
 
-import numpy as np
 import numpy.typing as npt
+from urdf_parser_py.urdf import Joint
 
 
 class ArrayLike(abc.ABC):
@@ -344,3 +344,64 @@ class SpatialMath(ArrayLike):
             npt.ArrayLike: negative spatial skew matrix traspose
         """
         return -cls.spatial_skew(v).T
+
+    @classmethod
+    def joint_transform(cls, joint: Joint, q: npt.ArrayLike) -> npt.ArrayLike:
+        if joint.type == "fixed":
+            return cls.X_fixed_joint(joint.origin.xyz, joint.origin.rpy)
+        elif joint.type in ["revolute", "continuous"]:
+            return cls.X_revolute_joint(
+                joint.origin.xyz, joint.origin.rpy, joint.axis, q
+            )
+        elif joint.type in ["prismatic"]:
+            return cls.X_prismatic_joint(
+                joint.origin.xyz,
+                joint.origin.rpy,
+                joint.axis,
+                q,
+            )
+
+    @classmethod
+    def motion_subspace(cls, joint: Joint) -> npt.ArrayLike:
+        if joint.type == "fixed":
+            return cls.vertcat(0, 0, 0, 0, 0, 0)
+        elif joint.type in ["revolute", "continuous"]:
+            return cls.vertcat(
+                0,
+                0,
+                0,
+                joint.axis[0],
+                joint.axis[1],
+                joint.axis[2],
+            )
+        elif joint.type in ["prismatic"]:
+            return cls.vertcat(
+                joint.axis[0],
+                joint.axis[1],
+                joint.axis[2],
+                0,
+                0,
+                0,
+            )
+
+    @classmethod
+    def joint_homogenous(cls, joint: Joint, q: npt.ArrayLike) -> npt.ArrayLike:
+        if joint.type == "fixed":
+            xyz = joint.origin.xyz
+            rpy = joint.origin.rpy
+            return cls.H_from_Pos_RPY(xyz, rpy)
+        elif joint.type in ["revolute", "continuous"]:
+            return cls.H_revolute_joint(
+                joint.origin.xyz,
+                joint.origin.rpy,
+                joint.axis,
+                q,
+            )
+        elif joint.type in ["prismatic"]:
+
+            return cls.H_prismatic_joint(
+                joint.origin.xyz,
+                joint.origin.rpy,
+                joint.axis,
+                q,
+            )
