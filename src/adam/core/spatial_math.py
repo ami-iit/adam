@@ -1,7 +1,7 @@
 import abc
 
 import numpy.typing as npt
-from urdf_parser_py.urdf import Joint
+from urdf_parser_py.urdf import Joint, Inertia, Link
 
 
 class ArrayLike(abc.ABC):
@@ -293,7 +293,23 @@ class SpatialMath(ArrayLike):
         return X
 
     @classmethod
-    def spatial_inertia(
+    def link_spatial_inertia(cls, link: Link):
+        """_summary_
+
+        Args:
+            link (Link): Link
+
+        Returns:
+            npt.ArrayLike: the 6x6 inertia matrix expressed at the origin of the link (with rotation)
+        """
+        I = link.inertial.inertia
+        mass = link.inertial.mass
+        o = link.inertial.origin.xyz
+        rpy = link.inertial.origin.rpy
+        return cls._spatial_inertia(I, mass, o, rpy)
+
+    @classmethod
+    def _spatial_inertia(
         cls, I: npt.ArrayLike, mass: npt.ArrayLike, c: npt.ArrayLike, rpy: npt.ArrayLike
     ) -> npt.ArrayLike:
         """
@@ -346,7 +362,7 @@ class SpatialMath(ArrayLike):
         return -cls.spatial_skew(v).T
 
     @classmethod
-    def joint_transform(cls, joint: Joint, q: npt.ArrayLike) -> npt.ArrayLike:
+    def joint_spatial_transform(cls, joint: Joint, q: npt.ArrayLike) -> npt.ArrayLike:
         if joint.type == "fixed":
             return cls.X_fixed_joint(joint.origin.xyz, joint.origin.rpy)
         elif joint.type in ["revolute", "continuous"]:

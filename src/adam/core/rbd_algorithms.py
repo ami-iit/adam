@@ -5,7 +5,6 @@ import numpy.typing as npt
 
 from adam.core.spatial_math import SpatialMath
 from adam.core.urdf_tree import URDFTree
-import dataclasses
 
 
 class RBDAlgorithms(SpatialMath):
@@ -64,15 +63,14 @@ class RBDAlgorithms(SpatialMath):
             link_i = self.tree.links[i]
             link_pi = self.tree.parents[i]
             joint_i = self.tree.joints[i]
-            I, mass, o, rpy = self.extract_link_properties(link_i)
-            Ic[i] = self.spatial_inertia(I, mass, o, rpy)
+            Ic[i] = self.link_spatial_inertia(link=link_i)
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
                 Phi[i] = self.eye(6)
             else:
                 q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
-                X_p[i] = self.joint_transform(joint=joint_i, q=q)
+                X_p[i] = self.joint_spatial_transform(joint=joint_i, q=q)
                 Phi[i] = self.motion_subspace(joint=joint_i)
 
         for i in range(self.tree.N - 1, -1, -1):
@@ -137,13 +135,6 @@ class RBDAlgorithms(SpatialMath):
         Jcm = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
         return M, Jcm
 
-    def extract_link_properties(self, link_i):
-        I = link_i.inertial.inertia
-        mass = link_i.inertial.mass
-        o = link_i.inertial.origin.xyz
-        rpy = link_i.inertial.origin.rpy
-        return I, mass, o, rpy
-
     def _forward_kinematics(
         self, frame, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
@@ -186,22 +177,15 @@ class RBDAlgorithms(SpatialMath):
         P_ee = T_ee[:3, 3]
         for item in chain:
             joint = self.robot_desc.joint_map[item]
-            if joint.type == "fixed":
-                joint_frame = self.H_from_Pos_RPY(joint.origin.xyz, joint.origin.rpy)
-                T_fk = T_fk @ joint_frame
-            elif joint.type in ["revolute", "continuous"]:
-                q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
-                T_joint = self.joint_homogenous(joint=joint, q=q_)
-                T_fk = T_fk @ T_joint
+            q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
+            T_joint = self.joint_homogenous(joint=joint, q=q_)
+            T_fk = T_fk @ T_joint
+            if joint.type in ["revolute", "continuous"]:
                 p_prev = P_ee - T_fk[:3, 3]
                 z_prev = T_fk[:3, :3] @ joint.axis
                 J_lin = self.skew(z_prev) @ p_prev
                 J_ang = z_prev
-
             elif joint.type in ["prismatic"]:
-                q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
-                T_joint = self.joint_homogenous(joint=joint, q=q_)
-                T_fk = T_fk @ T_joint
                 z_prev = T_fk[:3, :3] @ joint.axis
                 J_lin = z_prev
                 J_ang = self.zeros(3)
@@ -331,20 +315,18 @@ class RBDAlgorithms(SpatialMath):
             link_i = self.tree.links[i]
             link_pi = self.tree.parents[i]
             joint_i = self.tree.joints[i]
-            I, mass, o, rpy = self.extract_link_properties(link_i)
-            Ic[i] = self.spatial_inertia(I, mass, o, rpy)
-
+            Ic[i] = self.link_spatial_inertia(link=link_i)
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
                 Phi[i] = self.eye(6)
-                v_J = Phi[i] @ X_to_mixed @ base_velocity
+                v_J = X_to_mixed @ base_velocity
             else:
                 q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
                 q_dot = (
                     joint_velocities[joint_i.idx] if joint_i.idx is not None else 0.0
                 )
-                X_p[i] = self.joint_transform(joint_i, q)
+                X_p[i] = self.joint_spatial_transform(joint_i, q)
                 Phi[i] = self.motion_subspace(joint_i)
                 v_J = Phi[i] * q_dot
 
