@@ -94,6 +94,7 @@ class JaxLike(ArrayLike):
 
     def __sub__(self, other: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
         """Overrides - operator"""
+
         if type(self) is not type(other):
             return JaxLike(self.array.squeeze() - other.squeeze())
         return JaxLike(self.array.squeeze() - other.array.squeeze())
@@ -101,8 +102,8 @@ class JaxLike(ArrayLike):
     def __rsub__(self, other: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
         """Overrides - operator"""
         if type(self) is not type(other):
-            return JaxLike(self.array.squeeze() - other.squeeze())
-        return JaxLike(self.array.squeeze() - other.array.squeeze())
+            return JaxLike(other.squeeze() - self.array.squeeze())
+        return JaxLike(other.array.squeeze() - self.array.squeeze())
 
     def __neg__(self) -> "JaxLike":
         """Overrides - operator"""

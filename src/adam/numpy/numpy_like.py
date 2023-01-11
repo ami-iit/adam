@@ -103,8 +103,8 @@ class NumpyLike(ArrayLike):
     def __rsub__(self, other: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
         """Overrides - operator"""
         if type(self) is not type(other):
-            return NumpyLike(self.array.squeeze() - other.squeeze())
-        return NumpyLike(self.array.squeeze() - other.array.squeeze())
+            return NumpyLike(other.squeeze() - self.array.squeeze())
+        return NumpyLike(other.array.squeeze() - self.array.squeeze())
 
     def __neg__(self):
         """Overrides - operator"""
