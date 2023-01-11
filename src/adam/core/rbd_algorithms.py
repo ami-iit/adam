@@ -144,7 +144,7 @@ class RBDAlgorithms(SpatialMath):
         rpy = link_i.inertial.origin.rpy
         return I, mass, o, rpy
 
-    def forward_kinematics(
+    def _forward_kinematics(
         self, frame, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
         """Computes the forward kinematics relative to the specified frame
@@ -182,20 +182,18 @@ class RBDAlgorithms(SpatialMath):
         chain = self.robot_desc.get_chain(self.root_link, frame, links=False)
         T_fk = self.eye(4) @ base_transform
         J = self.zeros(6, self.NDoF)
-        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
+        T_ee = self._forward_kinematics(frame, base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
         for item in chain:
             joint = self.robot_desc.joint_map[item]
             if joint.type == "fixed":
-                xyz = joint.origin.xyz
-                rpy = joint.origin.rpy
-                joint_frame = self.H_from_Pos_RPY(xyz, rpy)
+                joint_frame = self.H_from_Pos_RPY(joint.origin.xyz, joint.origin.rpy)
                 T_fk = T_fk @ joint_frame
             elif joint.type in ["revolute", "continuous"]:
                 q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
                 T_joint = self.joint_homogenous(joint=joint, q=q_)
                 T_fk = T_fk @ T_joint
-                p_prev = P_ee - T_fk[:3, 3].array
+                p_prev = P_ee - T_fk[:3, 3]
                 z_prev = T_fk[:3, :3] @ joint.axis
                 J_lin = self.skew(z_prev) @ p_prev
                 J_ang = z_prev
@@ -218,7 +216,7 @@ class RBDAlgorithms(SpatialMath):
     ) -> npt.ArrayLike:
 
         J = self.joints_jacobian(frame, base_transform, joint_positions)
-        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
+        T_ee = self._forward_kinematics(frame, base_transform, joint_positions)
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.zeros(6, self.NDoF + 6)
         J_tot[:3, :3] = self.eye(3)
@@ -259,7 +257,7 @@ class RBDAlgorithms(SpatialMath):
         for item in self.robot_desc.link_map:
             link = self.robot_desc.link_map[item]
             if link.inertial is not None:
-                T_fk = self.forward_kinematics(item, base_transform, joint_positions)
+                T_fk = self._forward_kinematics(item, base_transform, joint_positions)
                 T_link = self.H_from_Pos_RPY(
                     link.inertial.origin.xyz,
                     link.inertial.origin.rpy,
