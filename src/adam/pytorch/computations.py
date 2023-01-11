@@ -78,7 +78,7 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
             T_fk (torch.tensor): The fk represented as Homogenous transformation matrix
         """
         return (
-            super().forward_kinematics(
+            super()._forward_kinematics(
                 frame, torch.FloatTensor(base_transform), torch.FloatTensor(s)
             )
         ).array

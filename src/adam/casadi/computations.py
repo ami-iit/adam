@@ -69,7 +69,7 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         """
         s = cs.SX.sym("s", self.NDoF)
         T_b = cs.SX.sym("T_b", 4, 4)
-        T_fk = super().forward_kinematics(frame, T_b, s)
+        T_fk = super()._forward_kinematics(frame, T_b, s)
         return cs.Function("T_fk", [T_b, s], [T_fk.array], self.f_opts)
 
     def jacobian_fun(self, frame: str) -> cs.Function:

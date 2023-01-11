@@ -88,7 +88,7 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
         Returns:
             T_fk (jnp.array): The fk represented as Homogenous transformation matrix
         """
-        return super().forward_kinematics(frame, base_transform, joint_positions).array
+        return super()._forward_kinematics(frame, base_transform, joint_positions).array
 
     def forward_kinematics_fun(self, frame):
         return lambda T, joint_positions: self.forward_kinematics(

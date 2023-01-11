@@ -78,7 +78,7 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         """
         return (
             super()
-            .forward_kinematics(frame, base_transform, joint_positions)
+            ._forward_kinematics(frame, base_transform, joint_positions)
             .array.squeeze()
         )
 
