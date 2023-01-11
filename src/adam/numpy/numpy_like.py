@@ -23,7 +23,7 @@ class NumpyLike(ArrayLike):
             value.array = np.squeeze(value.array)
             try:
                 self.array[idx] = value.array
-            except:
+            except Exception:
                 self.array[idx] = value.array.reshape(-1, 1)
         else:
             self.array[idx] = value

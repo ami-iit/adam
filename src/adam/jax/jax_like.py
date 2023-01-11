@@ -9,6 +9,7 @@ import jax.numpy as jnp
 import numpy.typing as npt
 
 from adam.core.spatial_math import ArrayLike
+from adam.numpy import NumpyLike
 
 
 @dataclass
@@ -23,7 +24,7 @@ class JaxLike(ArrayLike):
             value.array = jnp.squeeze(value.array)
             try:
                 self.array = self.array.at[idx].set(value.array)
-            except:
+            except Exception:
                 self.array = self.array.at[idx].set(value.array.reshape(-1, 1))
         else:
             self.array = self.array.at[idx].set(value)
@@ -49,15 +50,17 @@ class JaxLike(ArrayLike):
 
     def __matmul__(self, other: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
         """Overrides @ operator"""
-        if type(self) is not type(other):
+        if type(other) in [JaxLike, NumpyLike]:
+            return JaxLike(self.array @ other.array)
+        else:
             return JaxLike(self.array @ jnp.array(other))
-        return JaxLike(self.array @ other.array)
 
     def __rmatmul__(self, other: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
         """Overrides @ operator"""
-        if type(self) is not type(other):
-            return JaxLike(jnp.array(other) @ self.array)
-        return JaxLike(other.array @ self.array)
+        if type(other) in [JaxLike, NumpyLike]:
+            return JaxLike(other.array * self.array)
+        else:
+            return JaxLike(jnp.array(other) * self.array)
 
     def __mul__(self, other: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
         """Overrides * operator"""

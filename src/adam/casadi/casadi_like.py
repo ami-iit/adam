@@ -9,6 +9,7 @@ import casadi as cs
 import numpy.typing as npt
 
 from adam.core.spatial_math import ArrayLike
+from adam.numpy import NumpyLike
 
 
 @dataclass
@@ -17,14 +18,14 @@ class CasadiLike(ArrayLike):
 
     def __matmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides @ operator"""
-        if type(self) is type(other):
+        if type(other) in [CasadiLike, NumpyLike]:
             return CasadiLike(self.array @ other.array)
         else:
             return CasadiLike(self.array @ other)
 
     def __rmatmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides @ operator"""
-        if type(self) is type(other):
+        if type(other) in [CasadiLike, NumpyLike]:
             return CasadiLike(other.array @ self.array)
         else:
             return CasadiLike(other @ self.array)
@@ -185,3 +186,40 @@ class CasadiLike(ArrayLike):
             CasadiLike: outer product between x and y
         """
         return CasadiLike(cs.np.outer(x, y))
+
+
+class Data_1:
+    pass
+
+
+@dataclass
+class Data_2:
+    x: cs.SX
+
+    def __rmatmul__(self, other):
+        return other @ self.x
+
+
+if __name__ == "__main__":
+    import numpy as np
+    import jax.numpy as jnp
+
+    from adam.jax import JaxLike
+    from adam.pytorch import TorchLike
+
+    # a = CasadiLike.eye(3)
+    a = JaxLike.eye(3)
+    b = NumpyLike(np.array([[2], [3], [5]]))
+    # b = np.array([[1, 2, 3], [2, 4, 6], [3, 7, 8]])
+    # c = np.eye(3)
+    # d = CasadiLike(cs.SX.sym("d", 3, 1))
+
+    # e = Data_1()
+    # f = Data_2(cs.SX.sym("d", 3, 1))
+    print(a @ b)
+    # print(b @ a)
+
+    # print(d)
+
+    # print(a @ b)
+    # print(c @ d)

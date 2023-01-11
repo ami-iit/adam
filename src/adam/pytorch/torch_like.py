@@ -9,6 +9,7 @@ import numpy.typing as ntp
 import torch
 
 from adam.core.spatial_math import ArrayLike
+from adam.numpy import NumpyLike
 
 
 @dataclass
@@ -23,7 +24,7 @@ class TorchLike(ArrayLike):
             value.array = torch.squeeze(value.array)
             try:
                 self.array[idx] = value.array
-            except:
+            except Exception:
                 self.array[idx] = value.array.reshape(-1, 1)
         else:
             self.array[idx] = torch.FloatTensor(value)
@@ -49,7 +50,7 @@ class TorchLike(ArrayLike):
 
     def __matmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides @ operator"""
-        if type(self) is type(other):
+        if type(other) in [TorchLike, NumpyLike]:
             return TorchLike(self.array @ other.array)
         else:
             return TorchLike(self.array @ torch.FloatTensor(other))
