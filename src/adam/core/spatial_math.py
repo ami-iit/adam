@@ -363,6 +363,14 @@ class SpatialMath(ArrayLike):
 
     @classmethod
     def joint_spatial_transform(cls, joint: Joint, q: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            joint (Joint): Joint
+            q (npt.ArrayLike): joint motion
+
+        Returns:
+            npt.ArrayLike: spatial transform of the joint given q
+        """
         if joint.type == "fixed":
             return cls.X_fixed_joint(joint.origin.xyz, joint.origin.rpy)
         elif joint.type in ["revolute", "continuous"]:
@@ -379,6 +387,13 @@ class SpatialMath(ArrayLike):
 
     @classmethod
     def motion_subspace(cls, joint: Joint) -> npt.ArrayLike:
+        """
+        Args:
+            joint (Joint): Joint
+
+        Returns:
+            npt.ArrayLike: motion subspace of the joint
+        """
         if joint.type == "fixed":
             return cls.vertcat(0, 0, 0, 0, 0, 0)
         elif joint.type in ["revolute", "continuous"]:
@@ -402,6 +417,14 @@ class SpatialMath(ArrayLike):
 
     @classmethod
     def joint_homogenous(cls, joint: Joint, q: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            joint (Joint): Joint
+            q (npt.ArrayLike): joint motion
+
+        Returns:
+            npt.ArrayLike: joint homogeneous transform given q
+        """
         if joint.type == "fixed":
             xyz = joint.origin.xyz
             rpy = joint.origin.rpy
@@ -421,3 +444,16 @@ class SpatialMath(ArrayLike):
                 joint.axis,
                 q,
             )
+
+    @classmethod
+    def adjoint(cls, R: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            R (npt.ArrayLike): Rotation matrix
+        Returns:
+            npt.ArrayLike: adjoint matrix
+        """
+        X = cls.eye(6)
+        X[:3, :3] = R.T
+        X[3:6, 3:6] = R.T
+        return X

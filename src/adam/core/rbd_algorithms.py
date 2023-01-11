@@ -58,11 +58,8 @@ class RBDAlgorithms(SpatialMath):
         X_p = [None] * len(self.tree.links)
         Phi = [None] * len(self.tree.links)
         M = self.zeros(self.NDoF + 6, self.NDoF + 6)
-
         for i in range(self.tree.N):
-            link_i = self.tree.links[i]
-            link_pi = self.tree.parents[i]
-            joint_i = self.tree.joints[i]
+            link_i, link_pi, joint_i = self.extract_elements_from_tree(i)
             Ic[i] = self.link_spatial_inertia(link=link_i)
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
@@ -74,9 +71,7 @@ class RBDAlgorithms(SpatialMath):
                 Phi[i] = self.motion_subspace(joint=joint_i)
 
         for i in range(self.tree.N - 1, -1, -1):
-            link_i = self.tree.links[i]
-            link_pi = self.tree.parents[i]
-            joint_i = self.tree.joints[i]
+            link_i, link_pi, joint_i = self.extract_elements_from_tree(i)
             if link_pi.name != self.tree.parents[0].name:
                 pi = self.tree.links.index(link_pi)
                 Ic[pi] = Ic[pi] + X_p[i].T @ Ic[i] @ X_p[i]
@@ -86,9 +81,7 @@ class RBDAlgorithms(SpatialMath):
             if link_i.name == self.root_link:
                 M[:6, :6] = Phi[i].T @ F
             j = i
-            link_j = self.tree.links[j]
-            link_pj = self.tree.parents[j]
-            joint_j = self.tree.joints[j]
+            link_i, link_pi, joint_i = self.extract_elements_from_tree(i)
             while self.tree.parents[j].name != self.tree.parents[0].name:
                 F = X_p[j].T @ F
                 j = self.tree.links.index(self.tree.parents[j])
@@ -296,9 +289,7 @@ class RBDAlgorithms(SpatialMath):
         a = [None] * len(self.tree.links)
         f = [None] * len(self.tree.links)
 
-        X_to_mixed = self.eye(6)
-        X_to_mixed[:3, :3] = base_transform[:3, :3].T
-        X_to_mixed[3:6, 3:6] = base_transform[:3, :3].T
+        X_to_mixed = self.adjoint(base_transform[:3, :3])
 
         acc_to_mixed = self.zeros(6, 1)
         acc_to_mixed[:3] = (
@@ -312,38 +303,27 @@ class RBDAlgorithms(SpatialMath):
         a[0] = -X_to_mixed @ g.reshape(-1, 1) + acc_to_mixed
 
         for i in range(self.tree.N):
-            link_i = self.tree.links[i]
-            link_pi = self.tree.parents[i]
-            joint_i = self.tree.joints[i]
+            link_i, link_pi, joint_i = self.extract_elements_from_tree(i)
             Ic[i] = self.link_spatial_inertia(link=link_i)
+            q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
+            q_dot = joint_velocities[joint_i.idx] if joint_i.idx is not None else 0.0
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.spatial_transform(self.eye(3), self.zeros(3, 1))
                 Phi[i] = self.eye(6)
-                v_J = X_to_mixed @ base_velocity
-            else:
-                q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
-                q_dot = (
-                    joint_velocities[joint_i.idx] if joint_i.idx is not None else 0.0
-                )
-                X_p[i] = self.joint_spatial_transform(joint_i, q)
-                Phi[i] = self.motion_subspace(joint_i)
-                v_J = Phi[i] * q_dot
-
-            if link_i.name == self.root_link:
-                v[i] = v_J
+                v[i] = X_to_mixed @ base_velocity
                 a[i] = X_p[i] @ a[0]
             else:
+                X_p[i] = self.joint_spatial_transform(joint_i, q)
+                Phi[i] = self.motion_subspace(joint_i)
                 pi = self.tree.links.index(link_pi)
-                v[i] = X_p[i] @ v[pi] + v_J
-                a[i] = X_p[i] @ a[pi] + self.spatial_skew(v[i]) @ v_J
+                v[i] = X_p[i] @ v[pi] + Phi[i] * q_dot
+                a[i] = X_p[i] @ a[pi] + self.spatial_skew(v[i]) @ Phi[i] * q_dot
 
             f[i] = Ic[i] @ a[i] + self.spatial_skew_star(v[i]) @ Ic[i] @ v[i]
 
         for i in range(self.tree.N - 1, -1, -1):
-            joint_i = self.tree.joints[i]
-            link_i = self.tree.links[i]
-            link_pi = self.tree.parents[i]
+            link_i, link_pi, joint_i = self.extract_elements_from_tree(i)
             if joint_i.name == self.tree.joints[0].name:
                 tau[:6] = Phi[i].T @ f[i]
             elif joint_i.idx is not None:
@@ -354,6 +334,12 @@ class RBDAlgorithms(SpatialMath):
 
         tau[:6] = X_to_mixed.T @ tau[:6]
         return tau
+
+    def extract_elements_from_tree(self, i):
+        link_i = self.tree.links[i]
+        link_pi = self.tree.parents[i]
+        joint_i = self.tree.joints[i]
+        return link_i, link_pi, joint_i
 
     def aba(self):
         raise NotImplementedError
