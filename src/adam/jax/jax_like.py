@@ -8,7 +8,7 @@ from typing import Union
 import jax.numpy as jnp
 import numpy.typing as npt
 
-from adam.core.spatial_math import ArrayLike
+from adam.core.spatial_math import ArrayLike, SpatialMath
 from adam.numpy import NumpyLike
 
 
@@ -118,38 +118,12 @@ class JaxLike(ArrayLike):
         return JaxLike(jnp.zeros(x))
 
     @staticmethod
-    def vertcat(*x) -> "JaxLike":
-        """
-        Returns:
-            JaxLike: Vertical concatenation of elements
-        """
-        if isinstance(x[0], JaxLike):
-            v = jnp.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
-        else:
-            v = jnp.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
-        return JaxLike(v)
-
-    @staticmethod
     def eye(x) -> "JaxLike":
         """
         Returns:
             JaxLike: Identity matrix of dimension x
         """
         return JaxLike(jnp.eye(x))
-
-    @staticmethod
-    def skew(x: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
-        """
-        Args:
-            x (Union[JaxLike, npt.ArrayLike]): vector
-
-        Returns:
-            JaxLike: the skew symmetric matrix from x
-        """
-        if not isinstance(x, JaxLike):
-            return -jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0)
-        x = x.array
-        return JaxLike(-jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0))
 
     @staticmethod
     def array(*x) -> "JaxLike":
@@ -159,6 +133,8 @@ class JaxLike(ArrayLike):
         """
         return JaxLike(jnp.array(x))
 
+
+class SpatialMath(SpatialMath, JaxLike):
     @staticmethod
     def sin(x: npt.ArrayLike) -> "JaxLike":
         """
@@ -194,3 +170,29 @@ class JaxLike(ArrayLike):
         x = jnp.array(x)
         y = jnp.array(y)
         return JaxLike(jnp.outer(x, y))
+
+    @staticmethod
+    def skew(x: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
+        """
+        Args:
+            x (Union[JaxLike, npt.ArrayLike]): vector
+
+        Returns:
+            JaxLike: the skew symmetric matrix from x
+        """
+        if not isinstance(x, JaxLike):
+            return -jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0)
+        x = x.array
+        return JaxLike(-jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0))
+
+    @staticmethod
+    def vertcat(*x) -> "JaxLike":
+        """
+        Returns:
+            JaxLike: Vertical concatenation of elements
+        """
+        if isinstance(x[0], JaxLike):
+            v = jnp.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+        else:
+            v = jnp.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
+        return JaxLike(v)

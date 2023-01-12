@@ -8,7 +8,7 @@ from typing import Union
 import casadi as cs
 import numpy.typing as npt
 
-from adam.core.spatial_math import ArrayLike
+from adam.core.spatial_math import ArrayLike, SpatialMath
 from adam.numpy import NumpyLike
 
 
@@ -108,19 +108,6 @@ class CasadiLike(ArrayLike):
         return CasadiLike(cs.SX.zeros(*x))
 
     @staticmethod
-    def vertcat(*x) -> "CasadiLike":
-        """
-        Returns:
-            CasadiLike:  vertical concatenation of elements
-        """
-        # here the logic is a bit convoluted: x is a tuple containing CasadiLike
-        # cs.vertcat accepts *args. A list of cs types is created extracting the value
-        # from the CasadiLike stored in the tuple x.
-        # Then the list is unpacked with the * operator.
-        y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
-        return CasadiLike(cs.vertcat(*y))
-
-    @staticmethod
     def eye(x: int) -> "CasadiLike":
         """
         Args:
@@ -131,6 +118,16 @@ class CasadiLike(ArrayLike):
         """
         return CasadiLike(cs.SX.eye(x))
 
+    @staticmethod
+    def array(*x) -> "CasadiLike":
+        """
+        Returns:
+            CasadiLike: Vector wrapping *x
+        """
+        return CasadiLike(cs.DM(*x))
+
+
+class SpatialMath(SpatialMath, CasadiLike):
     @staticmethod
     def skew(x: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """
@@ -144,14 +141,6 @@ class CasadiLike(ArrayLike):
             return CasadiLike(cs.skew(x.array))
         else:
             return CasadiLike(cs.skew(x))
-
-    @staticmethod
-    def array(*x) -> "CasadiLike":
-        """
-        Returns:
-            CasadiLike: Vector wrapping *x
-        """
-        return CasadiLike(cs.DM(*x))
 
     @staticmethod
     def sin(x: npt.ArrayLike) -> "CasadiLike":
@@ -186,3 +175,22 @@ class CasadiLike(ArrayLike):
             CasadiLike: outer product between x and y
         """
         return CasadiLike(cs.np.outer(x, y))
+
+    @staticmethod
+    def vertcat(*x) -> "CasadiLike":
+        """
+        Returns:
+            CasadiLike:  vertical concatenation of elements
+        """
+        # here the logic is a bit convoluted: x is a tuple containing CasadiLike
+        # cs.vertcat accepts *args. A list of cs types is created extracting the value
+        # from the CasadiLike stored in the tuple x.
+        # Then the list is unpacked with the * operator.
+        y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
+        return CasadiLike(cs.vertcat(*y))
+
+
+if __name__ == "__main__":
+
+    math = SpatialMath()
+    print(math.eye(3))

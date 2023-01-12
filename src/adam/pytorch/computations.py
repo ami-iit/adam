@@ -6,10 +6,10 @@ import numpy as np
 import torch
 
 from adam.core.rbd_algorithms import RBDAlgorithms
-from adam.pytorch.torch_like import TorchLike
+from adam.pytorch.torch_like import TorchLike, SpatialMath
 
 
-class KinDynComputations(RBDAlgorithms, TorchLike):
+class KinDynComputations(RBDAlgorithms):
     """This is a small class that retrieves robot quantities using Pytorch
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -32,6 +32,7 @@ class KinDynComputations(RBDAlgorithms, TorchLike):
             joints_name_list=joints_name_list,
             root_link=root_link,
             gravity=gravity,
+            math=SpatialMath(),
         )
 
     def mass_matrix(

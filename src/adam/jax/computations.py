@@ -7,10 +7,10 @@ import numpy as np
 from jax import grad, jit, vmap
 
 from adam.core.rbd_algorithms import RBDAlgorithms
-from adam.jax.jax_like import JaxLike
+from adam.jax.jax_like import JaxLike, SpatialMath
 
 
-class KinDynComputations(RBDAlgorithms, JaxLike):
+class KinDynComputations(RBDAlgorithms):
     """This is a small class that retrieves robot quantities using Jax
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -33,6 +33,7 @@ class KinDynComputations(RBDAlgorithms, JaxLike):
             joints_name_list=joints_name_list,
             root_link=root_link,
             gravity=gravity,
+            math=SpatialMath(),
         )
 
     def mass_matrix(self, base_transform: jnp.array, joint_positions: jnp.array):

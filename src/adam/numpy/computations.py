@@ -5,10 +5,10 @@
 import numpy as np
 
 from adam.core.rbd_algorithms import RBDAlgorithms
-from adam.numpy.numpy_like import NumpyLike
+from adam.numpy.numpy_like import NumpyLike, SpatialMath
 
 
-class KinDynComputations(RBDAlgorithms, NumpyLike):
+class KinDynComputations(RBDAlgorithms):
     """This is a small class that retrieves robot quantities using NumPy
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -31,6 +31,7 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
             joints_name_list=joints_name_list,
             root_link=root_link,
             gravity=gravity,
+            math=SpatialMath(),
         )
 
     def mass_matrix(

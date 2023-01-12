@@ -8,7 +8,7 @@ from typing import Union
 import numpy.typing as ntp
 import torch
 
-from adam.core.spatial_math import ArrayLike
+from adam.core.spatial_math import ArrayLike, SpatialMath
 from adam.numpy import NumpyLike
 
 
@@ -122,18 +122,6 @@ class TorchLike(ArrayLike):
         return TorchLike(torch.zeros(x).float())
 
     @staticmethod
-    def vertcat(*x: ntp.ArrayLike) -> "TorchLike":
-        """
-        Returns:
-            TorchLike: vertical concatenation of x
-        """
-        if isinstance(x[0], TorchLike):
-            v = torch.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
-        else:
-            v = torch.FloatTensor(x).reshape(-1, 1)
-        return TorchLike(v)
-
-    @staticmethod
     def eye(x: int) -> "TorchLike":
         """
         Args:
@@ -145,26 +133,6 @@ class TorchLike(ArrayLike):
         return TorchLike(torch.eye(x).float())
 
     @staticmethod
-    def skew(x: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        """
-        Args:
-            x (Union[TorchLike, ntp.ArrayLike]): vector
-
-        Returns:
-            TorchLike: skew matrix from x
-        """
-        if not isinstance(x, TorchLike):
-            return TorchLike(
-                torch.FloatTensor(
-                    [[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]]
-                )
-            )
-        x = x.array
-        return TorchLike(
-            torch.FloatTensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
-        )
-
-    @staticmethod
     def array(*x: ntp.ArrayLike) -> "TorchLike":
         """
         Returns:
@@ -172,6 +140,8 @@ class TorchLike(ArrayLike):
         """
         return TorchLike(torch.FloatTensor(x))
 
+
+class SpatialMath(SpatialMath, TorchLike):
     @staticmethod
     def sin(x: ntp.ArrayLike) -> "TorchLike":
         """
@@ -207,3 +177,35 @@ class TorchLike(ArrayLike):
             TorchLike: outer product of x and y
         """
         return TorchLike(torch.outer(torch.tensor(x), torch.tensor(y)))
+
+    @staticmethod
+    def skew(x: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """
+        Args:
+            x (Union[TorchLike, ntp.ArrayLike]): vector
+
+        Returns:
+            TorchLike: skew matrix from x
+        """
+        if not isinstance(x, TorchLike):
+            return TorchLike(
+                torch.FloatTensor(
+                    [[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]]
+                )
+            )
+        x = x.array
+        return TorchLike(
+            torch.FloatTensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
+        )
+
+    @staticmethod
+    def vertcat(*x: ntp.ArrayLike) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: vertical concatenation of x
+        """
+        if isinstance(x[0], TorchLike):
+            v = torch.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+        else:
+            v = torch.FloatTensor(x).reshape(-1, 1)
+        return TorchLike(v)

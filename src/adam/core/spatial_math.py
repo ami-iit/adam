@@ -19,17 +19,6 @@ class ArrayLike(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def vertcat(x: npt.ArrayLike) -> npt.ArrayLike:
-        """
-        Args:
-            x (npt.ArrayLike): elements
-
-        Returns:
-            npt.ArrayLike: vertical concatenation of elements x
-        """
-        pass
-
-    @abc.abstractmethod
     def eye(x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
@@ -37,6 +26,26 @@ class ArrayLike(abc.ABC):
 
         Returns:
             npt.ArrayLike: identity matrix of dimension x
+        """
+        pass
+
+
+class SpatialMath(ArrayLike):
+    """Class implementing the main geometric functions used for computing rigid-body algorithm
+
+    Args:
+        ArrayLike: abstract class describing a generic Array wrapper. It needs to be implemented for every data type
+
+    """
+
+    @abc.abstractmethod
+    def vertcat(x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): elements
+
+        Returns:
+            npt.ArrayLike: vertical concatenation of elements x
         """
         pass
 
@@ -62,14 +71,9 @@ class ArrayLike(abc.ABC):
         """
         pass
 
-
-class SpatialMath(ArrayLike):
-    """Class implementing the main geometric functions used for computing rigid-body algorithm
-
-    Args:
-        ArrayLike: abstract class describing a generic Array wrapper. It needs to be implemented for every data type
-
-    """
+    @abc.abstractmethod
+    def skew(x):
+        pass
 
     @classmethod
     def R_from_axis_angle(cls, axis: npt.ArrayLike, q: npt.ArrayLike) -> npt.ArrayLike:
@@ -437,7 +441,6 @@ class SpatialMath(ArrayLike):
                 q,
             )
         elif joint.type in ["prismatic"]:
-
             return cls.H_prismatic_joint(
                 joint.origin.xyz,
                 joint.origin.rpy,

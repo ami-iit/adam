@@ -5,11 +5,11 @@
 import casadi as cs
 import numpy as np
 
-from adam.casadi.casadi_like import CasadiLike
+from adam.casadi.casadi_like import CasadiLike, SpatialMath
 from adam.core.rbd_algorithms import RBDAlgorithms
 
 
-class KinDynComputations(RBDAlgorithms, CasadiLike):
+class KinDynComputations(RBDAlgorithms):
     """This is a small class that retrieves robot quantities represented in a symbolic fashion using CasADi
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -33,6 +33,7 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
             joints_name_list=joints_name_list,
             root_link=root_link,
             gravity=gravity,
+            math=SpatialMath(),
         )
         self.f_opts = f_opts
 
@@ -151,3 +152,15 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         # set in the bias force computation the velocity to zero
         G = super().rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
         return cs.Function("G", [T_b, q], [G.array], self.f_opts)
+
+    def forward_kinematics(self, frame, T_b, s) -> cs.Function:
+        """Computes the forward kinematics relative to the specified frame
+
+        Args:
+            frame (str): The frame to which the fk will be computed
+
+        Returns:
+            T_fk (casADi function): The fk represented as Homogenous transformation matrix
+        """
+
+        return super()._forward_kinematics(frame, T_b, s)

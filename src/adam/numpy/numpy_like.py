@@ -8,7 +8,7 @@ from typing import Union
 import numpy as np
 import numpy.typing as npt
 
-from adam.core.spatial_math import ArrayLike
+from adam.core.spatial_math import ArrayLike, SpatialMath
 
 
 @dataclass
@@ -119,18 +119,6 @@ class NumpyLike(ArrayLike):
         return NumpyLike(np.zeros(x))
 
     @staticmethod
-    def vertcat(*x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
-        """
-        Returns:
-            NumpyLike: vertical concatenation of x
-        """
-        if isinstance(x[0], NumpyLike):
-            v = np.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
-        else:
-            v = np.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
-        return NumpyLike(v)
-
-    @staticmethod
     def eye(x: int) -> "NumpyLike":
         """
         Args:
@@ -142,20 +130,6 @@ class NumpyLike(ArrayLike):
         return NumpyLike(np.eye(x))
 
     @staticmethod
-    def skew(x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
-        """
-        Args:
-            x (Union[NumpyLike, npt.ArrayLike]): vector
-
-        Returns:
-            NumpyLike:  the skew symmetric matrix from x
-        """
-        if not isinstance(x, NumpyLike):
-            return -np.cross(np.array(x), np.eye(3), axisa=0, axisb=0)
-        x = x.array
-        return NumpyLike(-np.cross(np.array(x), np.eye(3), axisa=0, axisb=0))
-
-    @staticmethod
     def array(*x) -> "NumpyLike":
         """
         Returns:
@@ -163,6 +137,8 @@ class NumpyLike(ArrayLike):
         """
         return NumpyLike(np.array(x))
 
+
+class SpatialMath(SpatialMath, NumpyLike):
     @staticmethod
     def sin(x: npt.ArrayLike) -> "NumpyLike":
         """
@@ -198,3 +174,29 @@ class NumpyLike(ArrayLike):
         x = np.array(x)
         y = np.array(y)
         return NumpyLike(np.outer(x, y))
+
+    @staticmethod
+    def vertcat(*x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
+        """
+        Returns:
+            NumpyLike: vertical concatenation of x
+        """
+        if isinstance(x[0], NumpyLike):
+            v = np.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+        else:
+            v = np.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
+        return NumpyLike(v)
+
+    @staticmethod
+    def skew(x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
+        """
+        Args:
+            x (Union[NumpyLike, npt.ArrayLike]): vector
+
+        Returns:
+            NumpyLike:  the skew symmetric matrix from x
+        """
+        if not isinstance(x, NumpyLike):
+            return -np.cross(np.array(x), np.eye(3), axisa=0, axisb=0)
+        x = x.array
+        return NumpyLike(-np.cross(np.array(x), np.eye(3), axisa=0, axisb=0))
