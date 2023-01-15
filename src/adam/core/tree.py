@@ -25,6 +25,9 @@ class Tree:
     graph: Dict
     root: str
 
+    def __post_init__(self):
+        self.ordered_nodes_list = self.get_ordered_nodes_list()
+
     @staticmethod
     def build_tree(links: List[Link], joints: List[Joint]) -> "Tree":
         nodes: Dict(str, Node) = {
@@ -73,15 +76,13 @@ class Tree:
                 cls.get_children(child, list)
 
     def __iter__(self):
-        yield from [self.graph[name] for name in self.get_ordered_nodes_list()]
+        yield from [self.graph[name] for name in self.ordered_nodes_list]
 
     def __reversed__(self):
-        yield from [
-            self.graph[name] for name in reversed(self.get_ordered_nodes_list())
-        ]
+        yield from [self.graph[name] for name in reversed(self.ordered_nodes_list)]
 
     def __getitem__(self, key):
-        return self.get_ordered_nodes_list()[key]
+        return self.ordered_nodes_list[key]
 
     def __len__(self) -> int:
-        return len(self.get_ordered_nodes_list())
+        return len(self.ordered_nodes_list)
