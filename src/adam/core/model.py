@@ -27,6 +27,8 @@ class Model:
     @staticmethod
     def load(path: pathlib.Path, joints_name_list: list) -> "Model":
 
+        if type(path) is not pathlib.Path:
+            path = pathlib.Path(path)
         if not path.exists():
             raise FileExistsError(path)
 
