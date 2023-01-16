@@ -6,7 +6,7 @@ from typing import Dict, List
 from prettytable import PrettyTable
 from urdf_parser_py.urdf import URDF, Joint, Link
 
-from adam.core.tree import Tree
+from adam.core.tree import Node, Tree
 
 logging.basicConfig(level=logging.DEBUG)
 logging.debug("Showing the robot tree.")
@@ -53,6 +53,25 @@ class Model:
         frames = [l for l in urdf_desc.links if l.inertial is None]
 
         tree = Tree.build_tree(links=links, joints=joints)
+
+        # world_link = Link(name="world_link")
+        # world_joint = Joint(
+        #     name="world_joint",
+        #     parent=world_link,
+        #     child=tree.root,
+        #     joint_type="universal",
+        # )
+
+        # tree.add_node(
+        #     Node(
+        #         name=world_link.name,
+        #         link=world_link,
+        #         parent=None,
+        #         children=[tree.get_node_from_name(tree.root)],
+        #         parent_arc=None,
+        #         arcs=[world_joint],
+        #     )
+        # )
 
         return Model(
             name=name,
@@ -118,19 +137,29 @@ if __name__ == "__main__":
 
     model = Model.load(model_path, joints_name_list)
 
-    model.tree.print()
+    model.tree.print(model.tree.root)
     # print(model.tree.get_ordered_nodes_list())
     # print(model.get_ordered_link_list())
     # print(model.N)
     model.print_table()
     # print(model[3])
 
-    for i, node in reversed(list(enumerate(model.tree))):
+    for i, node in list(enumerate(model.tree)):
+        print(node.name)
         if node.parent is None:
             parent_name = "none"
             joint_name = "none"
         else:
+            # print(node.parent.name)
             parent_name = node.parent.name
             joint_name = node.parent_arc.name
 
         print(f"{i} \t|| \t{parent_name} \t-> \t{joint_name} \t-> \t{node.name} ")
+
+    print(model.tree.ordered_nodes_list)
+    # print(model.tree[0], "\n")
+    # print(model.tree[1], "\n")
+    # print(model.tree[2], "\n")
+    # print(model.tree[3], "\n")
+    # print(model.tree[4], "\n")
+    # print(model.tree[5], "\n")
