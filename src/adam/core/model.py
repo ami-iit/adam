@@ -1,7 +1,7 @@
 import dataclasses
 import logging
 import pathlib
-from typing import Dict, List
+from typing import Dict, Iterable, List
 
 from prettytable import PrettyTable
 from urdf_parser_py.urdf import URDF, Joint, Link
@@ -20,6 +20,7 @@ class Model:
     frames: List[Link] = dataclasses.field(default_factory=list)
     joints: List[Joint] = dataclasses.field(default_factory=list)
     tree: Tree = dataclasses.field(default_factory=Tree)
+    NDoF: int = dataclasses.field(default_factory=int)
 
     def __post_init__(self):
         self.N = len(self.links)
@@ -80,6 +81,7 @@ class Model:
             frames=frames,
             joints=joints,
             tree=tree,
+            NDoF=len(joints_name_list),
         )
 
     def get_ordered_link_list(self):

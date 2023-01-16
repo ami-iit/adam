@@ -1,10 +1,7 @@
 import dataclasses
-import logging
-import pathlib
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 
-from prettytable import PrettyTable
-from urdf_parser_py.urdf import URDF, Joint, Link
+from urdf_parser_py.urdf import Joint, Link
 
 
 @dataclasses.dataclass
@@ -29,7 +26,7 @@ class Node:
 
 
 @dataclasses.dataclass
-class Tree:
+class Tree(Iterable):
     graph: Dict
     root: str
 
