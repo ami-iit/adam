@@ -3,7 +3,9 @@
 # GNU Lesser General Public License v2.1 or any later version.
 import numpy.typing as npt
 
+from adam.core.model import Model
 from adam.core.spatial_math import SpatialMath
+from adam.core.tree import Node
 from adam.core.urdf_tree import URDFTree
 
 
@@ -28,11 +30,12 @@ class RBDAlgorithms:
         """
 
         urdf_tree = URDFTree(urdfstring, joints_name_list, root_link)
-        self.robot_desc = urdf_tree.robot_desc
+        self.model = Model.load(urdfstring, joints_name_list)
+        self.robot_desc = self.model.urdf_desc
         self.joints_list = urdf_tree.get_joints_info_from_reduced_model(
             joints_name_list
         )
-        self.NDoF = len(self.joints_list)
+        self.NDoF = len(joints_name_list)
         self.root_link = root_link
         self.g = gravity
         self.math = math
@@ -56,12 +59,13 @@ class RBDAlgorithms:
             M (npt.ArrayLike): Mass Matrix
             Jcm (npt.ArrayLike): Centroidal Momentum Matrix
         """
-        Ic = [None] * len(self.tree.links)
-        X_p = [None] * len(self.tree.links)
-        Phi = [None] * len(self.tree.links)
-        M = self.math.zeros(self.NDoF + 6, self.NDoF + 6)
-        for i in range(self.tree.N):
-            link_i, link_pi, joint_i = self.extract_elements_from_tree(i)
+        model_len = self.model.N
+        Ic, X_p, Phi = [None] * model_len, [None] * model_len, [None] * model_len
+
+        M = self.math.zeros(self.model.NDoF + 6, self.model.NDoF + 6)
+        for i, node in enumerate(self.model.tree):
+            node: Node
+            link_i, joint_i, link_pi = node.get_elements()
             Ic[i] = self.math.link_spatial_inertia(link=link_i)
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
@@ -74,28 +78,27 @@ class RBDAlgorithms:
                 X_p[i] = self.math.joint_spatial_transform(joint=joint_i, q=q)
                 Phi[i] = self.math.motion_subspace(joint=joint_i)
 
-        for i in range(self.tree.N - 1, -1, -1):
-            link_i, link_pi, joint_i = self.extract_elements_from_tree(i)
-            if link_pi.name != self.tree.parents[0].name:
-                pi = self.tree.links.index(link_pi)
+        for i, node in reversed(list(enumerate(self.model.tree))):
+            node: Node
+            link_i, joint_i, link_pi = node.get_elements()
+            if link_pi is not None:
+                pi = self.model.tree.get_idx_from_name(link_pi.name)
                 Ic[pi] = Ic[pi] + X_p[i].T @ Ic[i] @ X_p[i]
             F = Ic[i] @ Phi[i]
-            if joint_i.idx is not None:
+            if joint_i is not None and joint_i.idx is not None:
                 M[joint_i.idx + 6, joint_i.idx + 6] = Phi[i].T @ F
             if link_i.name == self.root_link:
                 M[:6, :6] = Phi[i].T @ F
             j = i
-            link_i, link_pi, joint_i = self.extract_elements_from_tree(i)
-            while self.tree.parents[j].name != self.tree.parents[0].name:
+            link_j, joint_j, link_pj = self.model.tree[j].get_elements()
+            while link_j.name != self.root_link:
                 F = X_p[j].T @ F
-                j = self.tree.links.index(self.tree.parents[j])
-                joint_j = self.tree.joints[j]
-                if joint_i.name == self.tree.joints[0].name and joint_j.idx is not None:
+                j = self.model.tree.get_idx_from_name(self.model.tree[j].parent.name)
+                link_j, joint_j, link_pj = self.model.tree[j].get_elements()
+                if link_i.name == self.root_link and joint_j.idx is not None:
                     M[:6, joint_j.idx + 6] = F.T @ Phi[j]
                     M[joint_j.idx + 6, :6] = M[:6, joint_j.idx + 6].T
-                elif (
-                    joint_j.name == self.tree.joints[0].name and joint_i.idx is not None
-                ):
+                elif link_j.name == self.root_link and joint_i.idx is not None:
                     M[joint_i.idx + 6, :6] = F.T @ Phi[j]
                     M[:6, joint_i.idx + 6] = M[joint_i.idx + 6, :6].T
                 elif joint_i.idx is not None and joint_j.idx is not None:
@@ -104,28 +107,26 @@ class RBDAlgorithms:
                         joint_i.idx + 6, joint_j.idx + 6
                     ].T
 
-        X_G = [None] * len(self.tree.links)
+        X_G = [None] * model_len
         O_X_G = self.math.eye(6)
         O_X_G[:3, 3:] = M[:3, 3:6].T / M[0, 0]
-        Jcm = self.math.zeros(6, self.NDoF + 6)
-        for i in range(self.tree.N):
-            link_i = self.tree.links[i]
-            link_pi = self.tree.parents[i]
-            joint_i = self.tree.joints[i]
-            if link_pi.name != self.tree.parents[0].name:
-                pi = self.tree.links.index(link_pi)
+        Jcm = self.math.zeros(6, self.model.NDoF + 6)
+        for i, node in enumerate(self.model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+            if link_i.name != self.root_link:
+                pi = self.model.tree.get_idx_from_name(link_pi.name)
                 pi_X_G = X_G[pi]
             else:
                 pi_X_G = O_X_G
             X_G[i] = X_p[i] @ pi_X_G
-            if link_i.name == self.tree.links[0].name:
+            if link_i.name == self.root_link:
                 Jcm[:, :6] = X_G[i].T @ Ic[i] @ Phi[i]
             elif joint_i.idx is not None:
                 Jcm[:, joint_i.idx + 6] = X_G[i].T @ Ic[i] @ Phi[i]
 
         # Until now the algorithm returns the joint_position quantities in Body Fixed representation
         # Moving to mixed representation...
-        X_to_mixed = self.math.eye(self.NDoF + 6)
+        X_to_mixed = self.math.eye(self.model.NDoF + 6)
         X_to_mixed[:3, :3] = base_transform[:3, :3].T
         X_to_mixed[3:6, 3:6] = base_transform[:3, :3].T
         M = X_to_mixed.T @ M @ X_to_mixed
