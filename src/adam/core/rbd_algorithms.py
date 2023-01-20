@@ -3,6 +3,7 @@
 # GNU Lesser General Public License v2.1 or any later version.
 import numpy.typing as npt
 
+from adam.core.factories.std_model import URDFModelFactory
 from adam.core.model import Model
 from adam.core.spatial_math import SpatialMath
 from adam.core.tree import Node
@@ -30,21 +31,14 @@ class RBDAlgorithms:
         """
 
         urdf_tree = URDFTree(urdfstring, joints_name_list, root_link)
-        self.model = Model.load(urdfstring, joints_name_list)
-        self.robot_desc = self.model.urdf_desc
-        # self.joints_list = urdf_tree.get_joints_info_from_reduced_model(
-        #     joints_name_list
-        # )
+        factory = URDFModelFactory(urdfstring, math)
+        self.model = Model.load(joints_name_list, factory)
+        self.robot_desc = self.model.factory.urdf_desc
         self.NDoF = len(joints_name_list)
         self.root_link = self.model.tree.root
         self.g = gravity
         self.math = math
-        (
-            self.links_with_inertia,
-            frames,
-            self.connecting_joints,
-            self.tree,
-        ) = urdf_tree.load_model()
+        (_, frames, _, self.tree) = urdf_tree.load_model()
 
     def crba(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
@@ -66,7 +60,7 @@ class RBDAlgorithms:
         for i, node in enumerate(self.model.tree):
             node: Node
             link_i, joint_i, link_pi = node.get_elements()
-            Ic[i] = self.math.link_spatial_inertia(link=link_i)
+            Ic[i] = link_i.spatial_inertia()
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.math.spatial_transform(
@@ -75,17 +69,17 @@ class RBDAlgorithms:
                 Phi[i] = self.math.eye(6)
             else:
                 q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
-                X_p[i] = self.math.joint_spatial_transform(joint=joint_i, q=q)
-                Phi[i] = self.math.motion_subspace(joint=joint_i)
+                X_p[i] = joint_i.spatial_transform(q=q)
+                Phi[i] = joint_i.motion_subspace()
 
         for i, node in reversed(list(enumerate(self.model.tree))):
             node: Node
             link_i, joint_i, link_pi = node.get_elements()
-            if link_pi is not None:
+            if link_i.name != self.root_link:
                 pi = self.model.tree.get_idx_from_name(link_pi.name)
                 Ic[pi] = Ic[pi] + X_p[i].T @ Ic[i] @ X_p[i]
             F = Ic[i] @ Phi[i]
-            if joint_i is not None and joint_i.idx is not None:
+            if link_i.name != self.root_link and joint_i.idx is not None:
                 M[joint_i.idx + 6, joint_i.idx + 6] = Phi[i].T @ F
             if link_i.name == self.root_link:
                 M[:6, :6] = Phi[i].T @ F
@@ -150,7 +144,7 @@ class RBDAlgorithms:
         T_fk = T_fk @ base_transform
         for joint in chain:
             q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
-            T_joint = self.math.joint_homogenous(joint=joint, q=q_)
+            T_joint = joint.homogeneous(q=q_)
             T_fk = T_fk @ T_joint
         return T_fk
 
@@ -174,7 +168,7 @@ class RBDAlgorithms:
         P_ee = T_ee[:3, 3]
         for joint in chain:
             q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
-            T_joint = self.math.joint_homogenous(joint=joint, q=q_)
+            T_joint = joint.homogeneous(q=q_)
             T_fk = T_fk @ T_joint
             if joint.type in ["revolute", "continuous"]:
                 p_prev = P_ee - T_fk[:3, 3]
@@ -237,10 +231,7 @@ class RBDAlgorithms:
         for item in self.model.tree:
             link = item.link
             T_fk = self._forward_kinematics(link.name, base_transform, joint_positions)
-            T_link = self.math.H_from_Pos_RPY(
-                link.inertial.origin.xyz,
-                link.inertial.origin.rpy,
-            )
+            T_link = link.homogeneous()
             # Adding the link transform
             T_fk = T_fk @ T_link
             com_pos += T_fk[:3, 3] * link.inertial.mass
@@ -299,11 +290,11 @@ class RBDAlgorithms:
         # reshape g as a vertical vector
         a[0] = -X_to_mixed @ g.reshape(-1, 1) + acc_to_mixed
 
-        for i in range(self.tree.N):
-            link_i, link_pi, joint_i = self.extract_elements_from_tree(i)
-            Ic[i] = self.math.link_spatial_inertia(link=link_i)
-            q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
-            q_dot = joint_velocities[joint_i.idx] if joint_i.idx is not None else 0.0
+        # for i in range(self.tree.N):
+        for i, node in enumerate(self.model.tree):
+            node: Node
+            link_i, joint_i, link_pi = node.get_elements()
+            Ic[i] = link_i.spatial_inertia()
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.math.spatial_transform(
@@ -313,32 +304,32 @@ class RBDAlgorithms:
                 v[i] = X_to_mixed @ base_velocity
                 a[i] = X_p[i] @ a[0]
             else:
-                X_p[i] = self.math.joint_spatial_transform(joint_i, q)
-                Phi[i] = self.math.motion_subspace(joint_i)
-                pi = self.tree.links.index(link_pi)
+                q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
+                q_dot = (
+                    joint_velocities[joint_i.idx] if joint_i.idx is not None else 0.0
+                )
+                X_p[i] = joint_i.spatial_transform(q)
+                Phi[i] = joint_i.motion_subspace()
+                pi = self.model.tree.get_idx_from_name(link_pi.name)
+                # pi = self.tree.links.index(link_pi)
                 v[i] = X_p[i] @ v[pi] + Phi[i] * q_dot
                 a[i] = X_p[i] @ a[pi] + self.math.spatial_skew(v[i]) @ Phi[i] * q_dot
 
             f[i] = Ic[i] @ a[i] + self.math.spatial_skew_star(v[i]) @ Ic[i] @ v[i]
 
-        for i in range(self.tree.N - 1, -1, -1):
-            link_i, link_pi, joint_i = self.extract_elements_from_tree(i)
-            if joint_i.name == self.tree.joints[0].name:
+        for i, node in reversed(list(enumerate(self.model.tree))):
+            node: Node
+            link_i, joint_i, link_pi = node.get_elements()
+            if link_i.name == self.root_link:
                 tau[:6] = Phi[i].T @ f[i]
             elif joint_i.idx is not None:
                 tau[joint_i.idx + 6] = Phi[i].T @ f[i]
-            if link_pi.name != self.tree.parents[0].name:
-                pi = self.tree.links.index(link_pi)
+            if link_i.name != self.root_link:
+                pi = self.model.tree.get_idx_from_name(link_pi.name)
                 f[pi] = f[pi] + X_p[i].T @ f[i]
 
         tau[:6] = X_to_mixed.T @ tau[:6]
         return tau
-
-    def extract_elements_from_tree(self, i):
-        link_i = self.tree.links[i]
-        link_pi = self.tree.parents[i]
-        joint_i = self.tree.joints[i]
-        return link_i, link_pi, joint_i
 
     def aba(self):
         raise NotImplementedError
