@@ -1,7 +1,6 @@
 import abc
 
 import numpy.typing as npt
-from urdf_parser_py.urdf import Inertia, Joint, Link
 
 
 class ArrayLike(abc.ABC):
