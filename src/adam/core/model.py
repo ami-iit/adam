@@ -55,6 +55,10 @@ class Model:
 
         tree = Tree.build_tree(links=links, joints=joints)
 
+        joints: Dict(str, Joint) = {joint.name: joint for joint in joints}
+        links: Dict(str, Link) = {link.name: link for link in links}
+        frames: Dict(str, Link) = {frame.name: frame for frame in frames}
+
         # world_link = Link(name="world_link")
         # world_joint = Joint(
         #     name="world_joint",
@@ -83,6 +87,35 @@ class Model:
             tree=tree,
             NDoF=len(joints_name_list),
         )
+
+    def get_joints_chain(self, root: str, target: str) -> List:
+
+        if target == root:
+            return []
+        chain = []
+        current_node = [
+            joint for joint in self.joints.values() if joint.child == target
+        ][0]
+
+        chain.insert(0, current_node)
+        while current_node.parent != root:
+            current_node = [
+                joint
+                for joint in self.joints.values()
+                if joint.child == current_node.parent
+            ][0]
+            chain.insert(0, current_node)
+        return chain
+        # chain = self.urdf_desc.get_chain(root, target, links=False)
+        # print(chain)
+        # return [self.joints[joint_name] for joint_name in chain]
+
+    def get_total_mass(self):
+        mass = 0.0
+        for item in self.links:
+            link = self.links[item]
+            mass += link.inertial.mass
+        return mass
 
     def get_ordered_link_list(self):
         return self.tree.get_ordered_nodes_list()
@@ -159,6 +192,12 @@ if __name__ == "__main__":
         print(f"{i} \t|| \t{parent_name} \t-> \t{joint_name} \t-> \t{node.name} ")
 
     print(model.tree.ordered_nodes_list)
+
+    # print(model.tree.get_chain("l_upper_leg", "l_foot"))
+
+    chain = model.tree.get_chain("root_link", "l_sole")
+    print([i.name for i in chain])
+    print([i.parent_arc.name for i in chain])
     # print(model.tree[0], "\n")
     # print(model.tree[1], "\n")
     # print(model.tree[2], "\n")
