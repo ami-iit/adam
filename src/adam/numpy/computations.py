@@ -6,7 +6,7 @@ import numpy as np
 
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.model import Model, URDFModelFactory
-from adam.numpy.numpy_like import NumpyLike, SpatialMath
+from adam.numpy.numpy_like import SpatialMath
 
 
 class KinDynComputations:
@@ -30,7 +30,7 @@ class KinDynComputations:
         factory = URDFModelFactory(urdfstring, SpatialMath())
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model)
-        self.NDoF = self.rbdalgos.NDoF
+        self.NDoF = model.NDoF
         self.g = gravity
 
     def mass_matrix(
@@ -76,7 +76,7 @@ class KinDynComputations:
         Returns:
             T_fk (np.ndarray): The fk represented as Homogenous transformation matrix
         """
-        return self.rbdalgos._forward_kinematics(
+        return self.rbdalgos.forward_kinematics(
             frame, base_transform, joint_positions
         ).array.squeeze()
 

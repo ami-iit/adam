@@ -69,7 +69,7 @@ class KinDynComputations:
         """
         s = cs.SX.sym("s", self.NDoF)
         T_b = cs.SX.sym("T_b", 4, 4)
-        T_fk = self.rbdalgos._forward_kinematics(frame, T_b, s)
+        T_fk = self.rbdalgos.forward_kinematics(frame, T_b, s)
         return cs.Function("T_fk", [T_b, s], [T_fk.array], self.f_opts)
 
     def jacobian_fun(self, frame: str) -> cs.Function:
@@ -162,7 +162,7 @@ class KinDynComputations:
             T_fk (casADi function): The fk represented as Homogenous transformation matrix
         """
 
-        return self.rbdalgos._forward_kinematics(frame, T_b, s)
+        return self.rbdalgos.forward_kinematics(frame, T_b, s)
 
     def get_total_mass(self):
         """Returns the total mass of the robot

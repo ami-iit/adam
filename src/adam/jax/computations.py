@@ -88,7 +88,7 @@ class KinDynComputations:
         Returns:
             T_fk (jnp.array): The fk represented as Homogenous transformation matrix
         """
-        return self.rbdalgos._forward_kinematics(
+        return self.rbdalgos.forward_kinematics(
             frame, base_transform, joint_positions
         ).array
 

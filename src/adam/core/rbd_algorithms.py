@@ -111,7 +111,7 @@ class RBDAlgorithms:
         Jcm = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
         return M, Jcm
 
-    def _forward_kinematics(
+    def forward_kinematics(
         self, frame, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
         """Computes the forward kinematics relative to the specified frame
@@ -132,7 +132,7 @@ class RBDAlgorithms:
             T_fk = T_fk @ T_joint
         return T_fk
 
-    def _joints_jacobian(
+    def joints_jacobian(
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
         """Returns the Jacobian relative to the specified frame
@@ -148,7 +148,7 @@ class RBDAlgorithms:
         chain = self.model.get_joints_chain(self.root_link, frame)
         T_fk = self.math.eye(4) @ base_transform
         J = self.math.zeros(6, self.NDoF)
-        T_ee = self._forward_kinematics(frame, base_transform, joint_positions)
+        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
         for joint in chain:
             q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
@@ -173,8 +173,8 @@ class RBDAlgorithms:
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
 
-        J = self._joints_jacobian(frame, base_transform, joint_positions)
-        T_ee = self._forward_kinematics(frame, base_transform, joint_positions)
+        J = self.joints_jacobian(frame, base_transform, joint_positions)
+        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         # Adding the floating base part of the Jacobian, in Mixed representation
         J_tot = self.math.zeros(6, self.NDoF + 6)
         J_tot[:3, :3] = self.math.eye(3)
@@ -197,7 +197,7 @@ class RBDAlgorithms:
             J (npt.ArrayLike): The Jacobian between the root and the frame
         """
         base_transform = self.math.eye(4)
-        return self._joints_jacobian(frame, base_transform, joint_positions)
+        return self.joints_jacobian(frame, base_transform, joint_positions)
 
     def CoM_position(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
@@ -214,7 +214,7 @@ class RBDAlgorithms:
         com_pos = self.math.zeros(3, 1)
         for item in self.model.tree:
             link = item.link
-            T_fk = self._forward_kinematics(link.name, base_transform, joint_positions)
+            T_fk = self.forward_kinematics(link.name, base_transform, joint_positions)
             T_link = link.homogeneous()
             # Adding the link transform
             T_fk = T_fk @ T_link
