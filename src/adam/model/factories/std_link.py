@@ -18,7 +18,18 @@ class StdLink(Link):
         self.origin = link.origin
 
     def spatial_inertia(self):
-        return self.math.link_spatial_inertia(self)
+        """_summary_
+        Args:
+            link (Link): Link
+
+        Returns:
+            npt.ArrayLike: the 6x6 inertia matrix expressed at the origin of the link (with rotation)
+        """
+        I = self.inertial.inertia
+        mass = self.inertial.mass
+        o = self.inertial.origin.xyz
+        rpy = self.inertial.origin.rpy
+        return self.math.spatial_inertia(I, mass, o, rpy)
 
     def homogeneous(self):
         return self.math.H_from_Pos_RPY(

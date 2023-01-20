@@ -20,10 +20,6 @@ class StdJoint(Joint):
         self.axis = joint.axis
         self.origin = joint.origin
         self.limit = joint.limit
-        self.dynamics = joint.dynamics
-        self.safety_controller = joint.safety_controller
-        self.calibration = joint.calibration
-        self.mimic = joint.mimic
         self.idx = idx
 
     def homogeneous(self, q):

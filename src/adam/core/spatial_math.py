@@ -1,7 +1,7 @@
 import abc
 
 import numpy.typing as npt
-from urdf_parser_py.urdf import Joint, Inertia, Link
+from urdf_parser_py.urdf import Inertia, Joint, Link
 
 
 class ArrayLike(abc.ABC):
@@ -297,23 +297,7 @@ class SpatialMath(ArrayLike):
         return X
 
     @classmethod
-    def link_spatial_inertia(cls, link: Link):
-        """_summary_
-
-        Args:
-            link (Link): Link
-
-        Returns:
-            npt.ArrayLike: the 6x6 inertia matrix expressed at the origin of the link (with rotation)
-        """
-        I = link.inertial.inertia
-        mass = link.inertial.mass
-        o = link.inertial.origin.xyz
-        rpy = link.inertial.origin.rpy
-        return cls._spatial_inertia(I, mass, o, rpy)
-
-    @classmethod
-    def _spatial_inertia(
+    def spatial_inertia(
         cls, I: npt.ArrayLike, mass: npt.ArrayLike, c: npt.ArrayLike, rpy: npt.ArrayLike
     ) -> npt.ArrayLike:
         """
@@ -364,89 +348,6 @@ class SpatialMath(ArrayLike):
             npt.ArrayLike: negative spatial skew matrix traspose
         """
         return -cls.spatial_skew(v).T
-
-    @classmethod
-    def joint_spatial_transform(cls, joint: Joint, q: npt.ArrayLike) -> npt.ArrayLike:
-        """
-        Args:
-            joint (Joint): Joint
-            q (npt.ArrayLike): joint motion
-
-        Returns:
-            npt.ArrayLike: spatial transform of the joint given q
-        """
-        if joint.type == "fixed":
-            return cls.X_fixed_joint(joint.origin.xyz, joint.origin.rpy)
-        elif joint.type in ["revolute", "continuous"]:
-            return cls.X_revolute_joint(
-                joint.origin.xyz, joint.origin.rpy, joint.axis, q
-            )
-        elif joint.type in ["prismatic"]:
-            return cls.X_prismatic_joint(
-                joint.origin.xyz,
-                joint.origin.rpy,
-                joint.axis,
-                q,
-            )
-
-    @classmethod
-    def motion_subspace(cls, joint: Joint) -> npt.ArrayLike:
-        """
-        Args:
-            joint (Joint): Joint
-
-        Returns:
-            npt.ArrayLike: motion subspace of the joint
-        """
-        if joint.type == "fixed":
-            return cls.vertcat(0, 0, 0, 0, 0, 0)
-        elif joint.type in ["revolute", "continuous"]:
-            return cls.vertcat(
-                0,
-                0,
-                0,
-                joint.axis[0],
-                joint.axis[1],
-                joint.axis[2],
-            )
-        elif joint.type in ["prismatic"]:
-            return cls.vertcat(
-                joint.axis[0],
-                joint.axis[1],
-                joint.axis[2],
-                0,
-                0,
-                0,
-            )
-
-    @classmethod
-    def joint_homogenous(cls, joint: Joint, q: npt.ArrayLike) -> npt.ArrayLike:
-        """
-        Args:
-            joint (Joint): Joint
-            q (npt.ArrayLike): joint motion
-
-        Returns:
-            npt.ArrayLike: joint homogeneous transform given q
-        """
-        if joint.type == "fixed":
-            xyz = joint.origin.xyz
-            rpy = joint.origin.rpy
-            return cls.H_from_Pos_RPY(xyz, rpy)
-        elif joint.type in ["revolute", "continuous"]:
-            return cls.H_revolute_joint(
-                joint.origin.xyz,
-                joint.origin.rpy,
-                joint.axis,
-                q,
-            )
-        elif joint.type in ["prismatic"]:
-            return cls.H_prismatic_joint(
-                joint.origin.xyz,
-                joint.origin.rpy,
-                joint.axis,
-                q,
-            )
 
     @classmethod
     def adjoint(cls, R: npt.ArrayLike) -> npt.ArrayLike:
