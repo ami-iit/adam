@@ -32,11 +32,11 @@ class RBDAlgorithms:
         urdf_tree = URDFTree(urdfstring, joints_name_list, root_link)
         self.model = Model.load(urdfstring, joints_name_list)
         self.robot_desc = self.model.urdf_desc
-        self.joints_list = urdf_tree.get_joints_info_from_reduced_model(
-            joints_name_list
-        )
+        # self.joints_list = urdf_tree.get_joints_info_from_reduced_model(
+        #     joints_name_list
+        # )
         self.NDoF = len(joints_name_list)
-        self.root_link = root_link
+        self.root_link = self.model.tree.root
         self.g = gravity
         self.math = math
         (
@@ -145,11 +145,10 @@ class RBDAlgorithms:
         Returns:
             T_fk (npt.ArrayLike): The fk represented as Homogenous transformation matrix
         """
-        chain = self.robot_desc.get_chain(self.root_link, frame, links=False)
+        chain = self.model.get_joints_chain(self.root_link, frame)
         T_fk = self.math.eye(4)
         T_fk = T_fk @ base_transform
-        for item in chain:
-            joint = self.robot_desc.joint_map[item]
+        for joint in chain:
             q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
             T_joint = self.math.joint_homogenous(joint=joint, q=q_)
             T_fk = T_fk @ T_joint
@@ -168,13 +167,12 @@ class RBDAlgorithms:
         Returns:
             J (npt.ArrayLike): The Joints Jacobian relative to the frame
         """
-        chain = self.robot_desc.get_chain(self.root_link, frame, links=False)
+        chain = self.model.get_joints_chain(self.root_link, frame)
         T_fk = self.math.eye(4) @ base_transform
         J = self.math.zeros(6, self.NDoF)
         T_ee = self._forward_kinematics(frame, base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
-        for item in chain:
-            joint = self.robot_desc.joint_map[item]
+        for joint in chain:
             q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
             T_joint = self.math.joint_homogenous(joint=joint, q=q_)
             T_fk = T_fk @ T_joint
@@ -236,17 +234,16 @@ class RBDAlgorithms:
             com (T): The CoM position
         """
         com_pos = self.math.zeros(3, 1)
-        for item in self.robot_desc.link_map:
-            link = self.robot_desc.link_map[item]
-            if link.inertial is not None:
-                T_fk = self._forward_kinematics(item, base_transform, joint_positions)
-                T_link = self.math.H_from_Pos_RPY(
-                    link.inertial.origin.xyz,
-                    link.inertial.origin.rpy,
-                )
-                # Adding the link transform
-                T_fk = T_fk @ T_link
-                com_pos += T_fk[:3, 3] * link.inertial.mass
+        for item in self.model.tree:
+            link = item.link
+            T_fk = self._forward_kinematics(link.name, base_transform, joint_positions)
+            T_link = self.math.H_from_Pos_RPY(
+                link.inertial.origin.xyz,
+                link.inertial.origin.rpy,
+            )
+            # Adding the link transform
+            T_fk = T_fk @ T_link
+            com_pos += T_fk[:3, 3] * link.inertial.mass
         com_pos /= self.get_total_mass()
         return com_pos
 
@@ -256,12 +253,7 @@ class RBDAlgorithms:
         Returns:
             mass: The total mass
         """
-        mass = 0.0
-        for item in self.robot_desc.link_map:
-            link = self.robot_desc.link_map[item]
-            if link.inertial is not None:
-                mass += link.inertial.mass
-        return mass
+        return self.model.get_total_mass()
 
     def rnea(
         self,
