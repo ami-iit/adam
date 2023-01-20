@@ -2,8 +2,8 @@ from typing import Union
 
 import numpy.typing as npt
 
-from adam.core.factories.abc_factories import Joint
 from adam.core.spatial_math import SpatialMath
+from adam.model import Joint
 
 
 class StdJoint(Joint):

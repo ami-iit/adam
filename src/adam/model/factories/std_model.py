@@ -2,13 +2,17 @@ import pathlib
 
 from urdf_parser_py.urdf import URDF
 
-from adam.core.factories.abc_factories import ModelFactory
-from adam.core.factories.std_joint import StdJoint
-from adam.core.factories.std_link import StdLink
 from adam.core.spatial_math import SpatialMath
+from adam.model import ModelFactory, StdJoint, StdLink
 
 
 class URDFModelFactory(ModelFactory):
+    """This factory generates robot elements from urdf_parser_py
+
+    Args:
+        ModelFactory: the Model factory
+    """
+
     def __init__(self, path: str, math: SpatialMath):
         self.math = math
         if type(path) is not pathlib.Path:

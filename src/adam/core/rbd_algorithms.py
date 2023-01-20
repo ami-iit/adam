@@ -3,11 +3,7 @@
 # GNU Lesser General Public License v2.1 or any later version.
 import numpy.typing as npt
 
-from adam.core.factories.std_model import URDFModelFactory
-from adam.core.model import Model
-from adam.core.spatial_math import SpatialMath
-from adam.core.tree import Node
-from adam.core.urdf_tree import URDFTree
+from adam.model import Model, Node
 
 
 class RBDAlgorithms:
@@ -17,11 +13,8 @@ class RBDAlgorithms:
 
     def __init__(
         self,
-        urdfstring: str,
-        joints_name_list: list,
-        root_link: str,
+        model: Model,
         gravity: npt.ArrayLike,
-        math: SpatialMath,
     ) -> None:
         """
         Args:
@@ -30,15 +23,11 @@ class RBDAlgorithms:
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
 
-        urdf_tree = URDFTree(urdfstring, joints_name_list, root_link)
-        factory = URDFModelFactory(urdfstring, math)
-        self.model = Model.load(joints_name_list, factory)
-        self.robot_desc = self.model.factory.urdf_desc
-        self.NDoF = len(joints_name_list)
+        self.model = model
+        self.NDoF = model.NDoF
         self.root_link = self.model.tree.root
         self.g = gravity
-        self.math = math
-        (_, frames, _, self.tree) = urdf_tree.load_model()
+        self.math = model.factory.math
 
     def crba(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
@@ -270,12 +259,14 @@ class RBDAlgorithms:
         """
         # TODO: add accelerations
         tau = self.math.zeros(self.NDoF + 6, 1)
-        Ic = [None] * len(self.tree.links)
-        X_p = [None] * len(self.tree.links)
-        Phi = [None] * len(self.tree.links)
-        v = [None] * len(self.tree.links)
-        a = [None] * len(self.tree.links)
-        f = [None] * len(self.tree.links)
+        model_len = self.model.N
+
+        Ic = [None] * model_len
+        X_p = [None] * model_len
+        Phi = [None] * model_len
+        v = [None] * model_len
+        a = [None] * model_len
+        f = [None] * model_len
 
         X_to_mixed = self.math.adjoint(base_transform[:3, :3])
 

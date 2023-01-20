@@ -1,16 +1,12 @@
 import dataclasses
 import logging
 import pathlib
-from typing import Dict, Iterable, List
+from typing import Dict, List
 
 from prettytable import PrettyTable
 
-from adam.core.factories.abc_factories import Joint, Link, ModelFactory
-from adam.core.spatial_math import SpatialMath
-from adam.core.tree import Tree
-
-# from urdf_parser_py.urdf import URDF, Joint, Link
-
+from adam.model.factories.abc_factories import Joint, Link, ModelFactory
+from adam.model.tree import Tree
 
 logging.basicConfig(level=logging.DEBUG)
 logging.debug("Showing the robot tree.")
@@ -38,7 +34,7 @@ class Model:
         )
 
     @staticmethod
-    def build(joints_name_list: list, factory: ModelFactory) -> "Model":
+    def build(factory: ModelFactory, joints_name_list: list) -> "Model":
 
         joints = factory.get_joints()
         links = factory.get_links()
@@ -48,9 +44,6 @@ class Model:
             for joint in joints:
                 if joint.name == joint_str:
                     joint.idx = idx
-
-        # links = [l for l in urdf_desc.links if l.inertial is not None]
-        # frames = [l for l in urdf_desc.links if l.inertial is None]
 
         tree = Tree.build_tree(links=links, joints=joints)
 

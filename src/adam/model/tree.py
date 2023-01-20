@@ -1,7 +1,7 @@
 import dataclasses
 from typing import Dict, Iterable, List, Tuple, Union
 
-from urdf_parser_py.urdf import Joint, Link
+from adam.model.factories.abc_factories import Joint, Link
 
 
 @dataclasses.dataclass

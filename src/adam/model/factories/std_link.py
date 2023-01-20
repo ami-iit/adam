@@ -1,8 +1,10 @@
-from adam.core.factories.abc_factories import Link
 from adam.core.spatial_math import SpatialMath
+from adam.model import Link
 
 
 class StdLink(Link):
+    """Standard Link class"""
+
     from urdf_parser_py.urdf import Link
 
     def __init__(self, link: Link, math: SpatialMath):
