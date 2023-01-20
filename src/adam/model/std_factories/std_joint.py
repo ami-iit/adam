@@ -7,6 +7,8 @@ from adam.model import Joint
 
 
 class StdJoint(Joint):
+    """Standard Joint class"""
+
     from urdf_parser_py.urdf import Joint
 
     def __init__(

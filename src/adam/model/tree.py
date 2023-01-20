@@ -1,7 +1,7 @@
 import dataclasses
 from typing import Dict, Iterable, List, Tuple, Union
 
-from adam.model.factories.abc_factories import Joint, Link
+from adam.model.abc_factories import Joint, Link
 
 
 @dataclasses.dataclass

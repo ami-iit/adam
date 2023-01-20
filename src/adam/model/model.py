@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from prettytable import PrettyTable
 
-from adam.model.factories.abc_factories import Joint, Link, ModelFactory
+from adam.model.abc_factories import Joint, Link, ModelFactory
 from adam.model.tree import Tree
 
 logging.basicConfig(level=logging.DEBUG)
