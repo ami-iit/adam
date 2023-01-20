@@ -4,9 +4,13 @@ import pathlib
 from typing import Dict, Iterable, List
 
 from prettytable import PrettyTable
-from urdf_parser_py.urdf import URDF, Joint, Link
 
-from adam.core.tree import Node, Tree
+from adam.core.factories.abc_factories import Joint, Link, ModelFactory
+from adam.core.spatial_math import SpatialMath
+from adam.core.tree import Tree
+
+# from urdf_parser_py.urdf import URDF, Joint, Link
+
 
 logging.basicConfig(level=logging.DEBUG)
 logging.debug("Showing the robot tree.")
@@ -15,43 +19,38 @@ logging.debug("Showing the robot tree.")
 @dataclasses.dataclass
 class Model:
     name: str
-    urdf_desc: URDF
     links: List[Link] = dataclasses.field(default_factory=list)
     frames: List[Link] = dataclasses.field(default_factory=list)
     joints: List[Joint] = dataclasses.field(default_factory=list)
     tree: Tree = dataclasses.field(default_factory=Tree)
     NDoF: int = dataclasses.field(default_factory=int)
+    factory: ModelFactory = dataclasses.field(default_factory=ModelFactory)
 
     def __post_init__(self):
         self.N = len(self.links)
 
     @staticmethod
-    def load(path: pathlib.Path, joints_name_list: list) -> "Model":
-
-        if type(path) is not pathlib.Path:
-            path = pathlib.Path(path)
-        if not path.exists():
-            raise FileExistsError(path)
-
-        urdf_desc = URDF.from_xml_file(path)
-        print(f"Loading {urdf_desc.name} model")
+    def load(joints_name_list: list, factory) -> "Model":
 
         return Model.build(
-            name=urdf_desc.name, urdf_desc=urdf_desc, joints_name_list=joints_name_list
+            joints_name_list=joints_name_list,
+            factory=factory,
         )
 
     @staticmethod
-    def build(name: str, urdf_desc: URDF, joints_name_list: list) -> "Model":
-        # adding the field idx to the joint list
-        for item in urdf_desc.joint_map:
-            urdf_desc.joint_map[item].idx = None
+    def build(joints_name_list: list, factory: ModelFactory) -> "Model":
+
+        joints = factory.get_joints()
+        links = factory.get_links()
+        frames = factory.get_frames()
+
         for [idx, joint_str] in enumerate(joints_name_list):
-            urdf_desc.joint_map[joint_str].idx = idx
+            for joint in joints:
+                if joint.name == joint_str:
+                    joint.idx = idx
 
-        joints = urdf_desc.joints
-
-        links = [l for l in urdf_desc.links if l.inertial is not None]
-        frames = [l for l in urdf_desc.links if l.inertial is None]
+        # links = [l for l in urdf_desc.links if l.inertial is not None]
+        # frames = [l for l in urdf_desc.links if l.inertial is None]
 
         tree = Tree.build_tree(links=links, joints=joints)
 
@@ -59,36 +58,17 @@ class Model:
         links: Dict(str, Link) = {link.name: link for link in links}
         frames: Dict(str, Link) = {frame.name: frame for frame in frames}
 
-        # world_link = Link(name="world_link")
-        # world_joint = Joint(
-        #     name="world_joint",
-        #     parent=world_link,
-        #     child=tree.root,
-        #     joint_type="universal",
-        # )
-
-        # tree.add_node(
-        #     Node(
-        #         name=world_link.name,
-        #         link=world_link,
-        #         parent=None,
-        #         children=[tree.get_node_from_name(tree.root)],
-        #         parent_arc=None,
-        #         arcs=[world_joint],
-        #     )
-        # )
-
         return Model(
-            name=name,
-            urdf_desc=urdf_desc,
+            name=factory.name,
             links=links,
             frames=frames,
             joints=joints,
             tree=tree,
             NDoF=len(joints_name_list),
+            factory=factory,
         )
 
-    def get_joints_chain(self, root: str, target: str) -> List:
+    def get_joints_chain(self, root: str, target: str) -> List[Joint]:
 
         if target == root:
             return []
@@ -106,9 +86,6 @@ class Model:
             ][0]
             chain.insert(0, current_node)
         return chain
-        # chain = self.urdf_desc.get_chain(root, target, links=False)
-        # print(chain)
-        # return [self.joints[joint_name] for joint_name in chain]
 
     def get_total_mass(self):
         mass = 0.0
