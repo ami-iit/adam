@@ -1,15 +1,9 @@
 import dataclasses
-import logging
 import pathlib
 from typing import Dict, List
 
-from prettytable import PrettyTable
-
 from adam.model.abc_factories import Joint, Link, ModelFactory
 from adam.model.tree import Tree
-
-logging.basicConfig(level=logging.DEBUG)
-logging.debug("Showing the robot tree.")
 
 
 @dataclasses.dataclass
@@ -91,9 +85,22 @@ class Model:
         return self.tree.get_ordered_nodes_list()
 
     def print_table(self):
-        table_joints = PrettyTable(
-            ["Idx", "Parent Link", "Joint name", "Child Link", "Type"]
-        )
+        try:
+            from rich.console import Console
+            from rich.table import Table
+        except Exception:
+            print("rich is not installed!")
+            return
+
+        console = Console()
+
+        console = Console()
+        table = Table(show_header=True, header_style="bold red")
+        table.add_column("Idx")
+        table.add_column("Parent Link")
+        table.add_column("Joint name")
+        table.add_column("Child Link")
+        table.add_column("Type")
 
         nodes = self.tree.graph
 
@@ -101,10 +108,10 @@ class Model:
         for item in nodes:
             if len(nodes[item].children) != 0:
                 for arc in nodes[item].arcs:
-                    table_joints.add_row([j, item, arc.name, arc.child, arc.type])
+                    table.add_row(str(j), item, arc.name, arc.child, arc.type)
                     j += 1
 
-        print(table_joints)
+        console.print(table)
 
 
 if __name__ == "__main__":
