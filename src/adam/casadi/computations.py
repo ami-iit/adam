@@ -6,7 +6,7 @@ import casadi as cs
 import numpy as np
 
 from adam.casadi.casadi_like import SpatialMath
-from adam.core.rbd_algorithms import RBDAlgorithms
+from adam.core import RBDAlgorithms
 from adam.model import Model, URDFModelFactory
 
 
@@ -31,7 +31,7 @@ class KinDynComputations:
         """
         factory = URDFModelFactory(urdfstring, SpatialMath())
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
-        self.rbdalgos = RBDAlgorithms(model=model, gravity=gravity)
+        self.rbdalgos = RBDAlgorithms(model=model)
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
         self.f_opts = f_opts

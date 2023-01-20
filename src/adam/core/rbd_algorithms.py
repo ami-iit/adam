@@ -11,11 +11,7 @@ class RBDAlgorithms:
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
 
-    def __init__(
-        self,
-        model: Model,
-        gravity: npt.ArrayLike,
-    ) -> None:
+    def __init__(self, model: Model) -> None:
         """
         Args:
             urdfstring (str): path of the urdf
@@ -26,7 +22,6 @@ class RBDAlgorithms:
         self.model = model
         self.NDoF = model.NDoF
         self.root_link = self.model.tree.root
-        self.g = gravity
         self.math = model.factory.math
 
     def crba(

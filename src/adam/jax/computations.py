@@ -31,7 +31,7 @@ class KinDynComputations:
         """
         factory = URDFModelFactory(urdfstring, SpatialMath())
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
-        self.rbdalgos = RBDAlgorithms(model=model, gravity=gravity)
+        self.rbdalgos = RBDAlgorithms(model=model)
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
 
