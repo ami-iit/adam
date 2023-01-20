@@ -1,5 +1,5 @@
 import abc
-from typing import Union
+from typing import List, Union
 
 import numpy.typing as npt
 
@@ -42,31 +42,74 @@ class Joint(abc.ABC):
 
 class Link(abc.ABC):
     @abc.abstractmethod
-    def spatial_inertia(self):
+    def spatial_inertia(self) -> npt.ArrayLike:
+        """
+        Args:
+            link (Link): Link
+
+        Returns:
+            npt.ArrayLike: the 6x6 inertia matrix expressed at the origin of the link (with rotation)
+        """
         pass
 
     @abc.abstractmethod
-    def homogeneous(self):
+    def homogeneous(self) -> npt.ArrayLike:
+        """
+        Returns:
+            npt.ArrayLike: the homogeneus transform of the link
+        """
         pass
 
 
 class ModelFactory(abc.ABC):
+    """The abstract class of the model factory.
+
+    The model factory is responsible for creating the model.
+
+    You need to implement all the methods in your concrete implementation
+    """
+
     @abc.abstractmethod
     def __init__(self, path: str, math: SpatialMath) -> None:
         pass
 
     @abc.abstractmethod
-    def build_link(self):
+    def build_link(self) -> Link:
+        """build the single link
+        Returns:
+            Link
+        """
         pass
 
     @abc.abstractmethod
-    def build_joint(self):
+    def build_joint(self) -> Joint:
+        """build the single joint
+
+        Returns:
+            Joint
+        """
         pass
 
     @abc.abstractmethod
-    def get_links(self):
+    def get_links(self) -> List[Link]:
+        """
+        Returns:
+            List[Link]: the list of the link
+        """
         pass
 
     @abc.abstractmethod
-    def get_joints(self):
+    def get_frames(self) -> List[Link]:
+        """
+        Returns:
+            List[Link]: the list of the frames
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_joints(self) -> List[Joint]:
+        """
+        Returns:
+            List[Joint]: the list of the joints
+        """
         pass

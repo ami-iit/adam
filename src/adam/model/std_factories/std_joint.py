@@ -24,7 +24,15 @@ class StdJoint(Joint):
         self.limit = joint.limit
         self.idx = idx
 
-    def homogeneous(self, q):
+    def homogeneous(self, q: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            q (npt.ArrayLike): joint value
+
+        Returns:
+            npt.ArrayLike: the homogenous transform of a joint, given q
+        """
+
         if self.type == "fixed":
             xyz = self.origin.xyz
             rpy = self.origin.rpy

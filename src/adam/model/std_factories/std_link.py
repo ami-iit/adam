@@ -1,3 +1,5 @@
+import numpy.typing as npt
+
 from adam.core.spatial_math import SpatialMath
 from adam.model import Link
 
@@ -17,8 +19,8 @@ class StdLink(Link):
         # self.collision = self.collision
         self.origin = link.origin
 
-    def spatial_inertia(self):
-        """_summary_
+    def spatial_inertia(self) -> npt.ArrayLike:
+        """
         Args:
             link (Link): Link
 
@@ -31,7 +33,11 @@ class StdLink(Link):
         rpy = self.inertial.origin.rpy
         return self.math.spatial_inertia(I, mass, o, rpy)
 
-    def homogeneous(self):
+    def homogeneous(self) -> npt.ArrayLike:
+        """
+        Returns:
+            npt.ArrayLike: the homogeneus transform of the link
+        """
         return self.math.H_from_Pos_RPY(
             self.inertial.origin.xyz,
             self.inertial.origin.rpy,
