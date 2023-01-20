@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Tuple, Union
 
 from urdf_parser_py.urdf import Joint, Link
 
@@ -120,7 +120,8 @@ class Tree(Iterable):
         yield from [self.graph[name] for name in self.ordered_nodes_list]
 
     def __reversed__(self) -> Node:
-        yield from [self.graph[name] for name in reversed(self.ordered_nodes_list)]
+        yield from reversed(self)
+        # yield from [self.graph[name] for name in reversed(self.ordered_nodes_list)]
 
     def __getitem__(self, key) -> Node:
         return self.graph[self.ordered_nodes_list[key]]
