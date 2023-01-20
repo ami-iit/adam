@@ -1,4 +1,5 @@
 import abc
+import dataclasses
 from typing import List
 
 import numpy.typing as npt
@@ -6,7 +7,19 @@ import numpy.typing as npt
 from adam.core.spatial_math import SpatialMath
 
 
+@dataclasses.dataclass
 class Joint(abc.ABC):
+    """Base Joint class. You need to fill at least these fields"""
+
+    math: SpatialMath
+    name: str
+    parent: str
+    child: str
+    type: str
+    axis: List
+    origin: List
+    limit: List
+    idx: int
     """
     Abstract base class for all joints.
     """
@@ -40,7 +53,26 @@ class Joint(abc.ABC):
         pass
 
 
+@dataclasses.dataclass
+class Inertial:
+    """Inertial description"""
+
+    mass: npt.ArrayLike
+    inertia = npt.ArrayLike
+    origin = npt.ArrayLike
+
+
+@dataclasses.dataclass
 class Link(abc.ABC):
+    """Base Link class. You need to fill at least these fields"""
+
+    math: SpatialMath
+    name: str
+    visuals: List
+    inertial: Inertial
+    collisions: List
+    origin: List
+
     @abc.abstractmethod
     def spatial_inertia(self) -> npt.ArrayLike:
         """
@@ -61,6 +93,7 @@ class Link(abc.ABC):
         pass
 
 
+@dataclasses.dataclass
 class ModelFactory(abc.ABC):
     """The abstract class of the model factory.
 
@@ -68,6 +101,9 @@ class ModelFactory(abc.ABC):
 
     You need to implement all the methods in your concrete implementation
     """
+
+    math: SpatialMath
+    name: str
 
     @abc.abstractmethod
     def __init__(self, path: str, math: SpatialMath) -> None:

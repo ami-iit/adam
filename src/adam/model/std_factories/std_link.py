@@ -13,10 +13,8 @@ class StdLink(Link):
         self.math = math
         self.name = link.name
         self.visuals = link.visuals
-        # self.visual = link.visual
         self.inertial = link.inertial
         self.collisions = link.collisions
-        # self.collision = self.collision
         self.origin = link.origin
 
     def spatial_inertia(self) -> npt.ArrayLike:
