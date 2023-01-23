@@ -106,10 +106,6 @@ class ModelFactory(abc.ABC):
     name: str
 
     @abc.abstractmethod
-    def __init__(self, path: str, math: SpatialMath) -> None:
-        pass
-
-    @abc.abstractmethod
     def build_link(self) -> Link:
         """build the single link
         Returns:
