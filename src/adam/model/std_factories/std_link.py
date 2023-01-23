@@ -1,4 +1,5 @@
 import numpy.typing as npt
+import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
 from adam.model import Link
@@ -7,9 +8,7 @@ from adam.model import Link
 class StdLink(Link):
     """Standard Link class"""
 
-    from urdf_parser_py.urdf import Link
-
-    def __init__(self, link: Link, math: SpatialMath):
+    def __init__(self, link: urdf_parser_py.urdf.Link, math: SpatialMath):
         self.math = math
         self.name = link.name
         self.visuals = link.visuals

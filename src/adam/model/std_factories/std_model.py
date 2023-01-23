@@ -1,7 +1,7 @@
 import pathlib
 from typing import List
 
-from urdf_parser_py.urdf import URDF, Joint, Link
+import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
 from adam.model import ModelFactory, StdJoint, StdLink
@@ -21,7 +21,7 @@ class URDFModelFactory(ModelFactory):
         if not path.exists():
             raise FileExistsError(path)
 
-        self.urdf_desc = URDF.from_xml_file(path)
+        self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_file(path)
         self.name = self.urdf_desc.name
 
     def get_joints(self) -> List[StdJoint]:
@@ -47,7 +47,7 @@ class URDFModelFactory(ModelFactory):
         """
         return [self.build_link(l) for l in self.urdf_desc.links if l.inertial is None]
 
-    def build_joint(self, joint: Joint) -> StdJoint:
+    def build_joint(self, joint: urdf_parser_py.urdf.Joint) -> StdJoint:
         """
         Args:
             joint (Joint): the urdf_parser_py joint
@@ -57,7 +57,7 @@ class URDFModelFactory(ModelFactory):
         """
         return StdJoint(joint, self.math)
 
-    def build_link(self, link: Link) -> StdLink:
+    def build_link(self, link: urdf_parser_py.urdf.Link) -> StdLink:
         """
         Args:
             link (Link): the urdf_parser_py link

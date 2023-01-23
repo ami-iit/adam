@@ -1,6 +1,7 @@
 from typing import Union
 
 import numpy.typing as npt
+import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
 from adam.model import Joint
@@ -9,10 +10,11 @@ from adam.model import Joint
 class StdJoint(Joint):
     """Standard Joint class"""
 
-    from urdf_parser_py.urdf import Joint
-
     def __init__(
-        self, joint: Joint, math: SpatialMath, idx: Union[int, None] = None
+        self,
+        joint: urdf_parser_py.urdf.Joint,
+        math: SpatialMath,
+        idx: Union[int, None] = None,
     ) -> None:
         self.math = math
         self.name = joint.name
