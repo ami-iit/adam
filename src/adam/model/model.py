@@ -12,12 +12,12 @@ class Model:
     Model class. It describes the robot using links and frames and their connetivity"""
 
     name: str
-    links: List[Link] = dataclasses.field(default_factory=list)
-    frames: List[Link] = dataclasses.field(default_factory=list)
-    joints: List[Joint] = dataclasses.field(default_factory=list)
-    tree: Tree = dataclasses.field(default_factory=Tree)
-    NDoF: int = dataclasses.field(default_factory=int)
-    factory: ModelFactory = dataclasses.field(default_factory=ModelFactory)
+    links: List[Link]
+    frames: List[Link]
+    joints: List[Joint]
+    tree: Tree
+    NDoF: int
+    factory: ModelFactory
 
     def __post_init__(self):
         """set the "lenght of the model as the number of links"""
@@ -75,6 +75,7 @@ class Model:
 
         if target not in list(self.links) and target not in list(self.frames):
             raise ValueError(f"{target} is not not in the robot model.")
+
         if target == root:
             return []
         chain = []
