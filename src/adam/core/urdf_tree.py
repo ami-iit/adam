@@ -11,8 +11,8 @@ from typing import List
 from prettytable import PrettyTable
 from urdf_parser_py.urdf import URDF
 
-from adam.core.link_parametric import linkParametric
-from adam.core.joint_parametric import jointParametric
+from adam.core.link_parametric import LinkParametric
+from adam.core.joint_parametric import JointParametric
 
 
 @dataclass
@@ -193,7 +193,7 @@ class URDFTree:
             link_name = self.link_parametric_list[idx]
             link_i = self.find_link_by_name(link_name)
             R = self.R_from_RPY(link_i.inertial.origin.rpy)
-            link_i_param = linkParametric(link_i.name, link_i, R, idx)
+            link_i_param = LinkParametric(link_i.name, link_i, R, idx)
             link_i_param.set_external_methods(self.zeros)
             link_parametric_dict.update({link_name: link_i_param})
         self.link_parametric_dict = link_parametric_dict
@@ -222,7 +222,7 @@ class URDFTree:
             parent_i = self.get_parent_link(joint_i)
             if parent_i in self.link_parametric_list:
                 name_parent = parent_i.name
-                joint_i_param = jointParametric(
+                joint_i_param = JointParametric(
                     name_joint, self.link_parametric_dict[name_parent], joint_i
                 )
                 joint_parametric_dict.update({name_joint: joint_i_param})

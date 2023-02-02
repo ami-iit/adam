@@ -1,10 +1,10 @@
-from adam.core.link_parametric import linkParametric
+from adam.core.link_parametric import LinkParametric
 
 
-class jointParametric:
+class JointParametric:
     """Class for joint whose parent is parametric w.r.t. length and density"""
 
-    def __init__(self, joint_name: str, parent_link: linkParametric, joint) -> None:
+    def __init__(self, joint_name: str, parent_link: LinkParametric, joint) -> None:
         self.jointName = joint_name
         self.parent_link_name = parent_link.name
         self.joint = joint

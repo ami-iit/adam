@@ -3,7 +3,7 @@ from adam.core.geometry_parametric import I_parametric
 from adam.core.geometry_parametric import Shape
 
 
-class linkParametric:
+class LinkParametric:
     """Class for link parametric w.r.t. length and density"""
 
     def __init__(self, link_name: str, link, R, index) -> None:
