@@ -30,6 +30,17 @@ class ArrayLike(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def horzcat(x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): elements
+
+        Returns:
+            npt.ArrayLike: horizontal concatenation of elements x
+        """
+        pass
+
+    @abc.abstractmethod
     def eye(x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
@@ -160,7 +171,9 @@ class SpatialMath(ArrayLike):
         T = cls.eye(4)
         R = cls.R_from_RPY(rpy) @ cls.R_from_axis_angle(axis, q)
         T[:3, :3] = R
-        T[:3, 3] = xyz
+        T[0, 3] = xyz[0]
+        T[1, 3] = xyz[1]
+        T[2, 3] = xyz[2]
         return T
 
     @classmethod
@@ -199,7 +212,9 @@ class SpatialMath(ArrayLike):
         """
         T = cls.eye(4)
         T[:3, :3] = cls.R_from_RPY(rpy)
-        T[:3, 3] = xyz
+        T[0, 3] = xyz[0]
+        T[1, 3] = xyz[1]
+        T[2, 3] = xyz[2]
         return T
 
     @classmethod
@@ -309,10 +324,11 @@ class SpatialMath(ArrayLike):
         IO = cls.zeros(6, 6)
         Sc = cls.skew(c)
         R = cls.R_from_RPY(rpy)
-        inertia_matrix = cls.array(
-            [[I.ixx, I.ixy, I.ixz], [I.ixy, I.iyy, I.iyz], [I.ixz, I.iyz, I.izz]]
+        inertia_matrix = cls.vertcat(
+            cls.horzcat(I.ixx, I.ixy, I.ixz),
+            cls.horzcat(I.ixy, I.iyy, I.iyz),
+            cls.horzcat(I.ixz, I.iyz, I.izz),
         )
-
         IO[3:, 3:] = R @ inertia_matrix @ R.T + mass * Sc @ Sc.T
         IO[3:, :3] = mass * Sc
         IO[:3, 3:] = mass * Sc.T

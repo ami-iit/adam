@@ -19,6 +19,7 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         urdfstring: str,
         joints_name_list: list,
         root_link: str = "root_link",
+        link_parametric_list: list = [],
         gravity: np.array = np.array([0.0, 0.0, -9.80665, 0.0, 0.0, 0.0]),
         f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast")),
     ) -> None:
@@ -26,13 +27,15 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Args:
             urdfstring (str): path of the urdf
             joints_name_list (list): list of the actuated joints
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            root_link (str, optional): the first link. Defaults to 'root_link'
+            link_parametric_list (list, optional): list of link parametric w.r.t. length and density
         """
         super().__init__(
             urdfstring=urdfstring,
             joints_name_list=joints_name_list,
             root_link=root_link,
             gravity=gravity,
+            link_parametric_list=link_parametric_list,
         )
         self.f_opts = f_opts
 
@@ -42,6 +45,18 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Returns:
             M (casADi function): Mass Matrix
         """
+        if self.urdf_tree.is_model_parametric():
+            T_b = cs.SX.sym("T_b", 4, 4)
+            s = cs.SX.sym("s", self.NDoF)
+            density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
+            length_multiplier = cs.SX.sym(
+                "length_multiplier", self.urdf_tree.NLinkParametric, 3
+            )
+            [M, _] = super().crba(T_b, s, density, length_multiplier)
+            return cs.Function(
+                "M", [T_b, s, density, length_multiplier], [M.array], self.f_opts
+            )
+
         T_b = cs.SX.sym("T_b", 4, 4)
         s = cs.SX.sym("s", self.NDoF)
         [M, _] = super().crba(T_b, s)
@@ -53,6 +68,18 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Returns:
             Jcc (casADi function): Centroidal Momentum matrix
         """
+        if self.urdf_tree.is_model_parametric():
+            T_b = cs.SX.sym("T_b", 4, 4)
+            s = cs.SX.sym("s", self.NDoF)
+            density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
+            length_multiplier = cs.SX.sym(
+                "length_multiplier", self.urdf_tree.NLinkParametric, 3
+            )
+            [_, Jcm] = super().crba(T_b, s, density, length_multiplier)
+            return cs.Function(
+                "Jcm", [T_b, s, density, length_multiplier], [Jcm.array], self.f_opts
+            )
+
         T_b = cs.SX.sym("T_b", 4, 4)
         s = cs.SX.sym("s", self.NDoF)
         [_, Jcm] = super().crba(T_b, s)
@@ -67,6 +94,18 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Returns:
             T_fk (casADi function): The fk represented as Homogenous transformation matrix
         """
+        if self.urdf_tree.is_model_parametric():
+            s = cs.SX.sym("s", self.NDoF)
+            T_b = cs.SX.sym("T_b", 4, 4)
+            density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
+            length_multiplier = cs.SX.sym(
+                "length_multiplier", self.urdf_tree.NLinkParametric, 3
+            )
+            T_fk = super().forward_kinematics(frame, T_b, s, density, length_multiplier)
+            return cs.Function(
+                "T_fk", [T_b, s, density, length_multiplier], [T_fk.array], self.f_opts
+            )
+
         s = cs.SX.sym("s", self.NDoF)
         T_b = cs.SX.sym("T_b", 4, 4)
         T_fk = super().forward_kinematics(frame, T_b, s)
@@ -81,6 +120,21 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Returns:
             J_tot (casADi function): The Jacobian relative to the frame
         """
+        if self.urdf_tree.is_model_parametric():
+            s = cs.SX.sym("s", self.NDoF)
+            T_b = cs.SX.sym("T_b", 4, 4)
+            density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
+            length_multiplier = cs.SX.sym(
+                "length_multiplier", self.urdf_tree.NLinkParametric, 3
+            )
+            J_tot = super().jacobian(frame, T_b, s, density, length_multiplier)
+            return cs.Function(
+                "J_tot",
+                [T_b, s, density, length_multiplier],
+                [J_tot.array],
+                self.f_opts,
+            )
+
         s = cs.SX.sym("s", self.NDoF)
         T_b = cs.SX.sym("T_b", 4, 4)
         J_tot = super().jacobian(frame, T_b, s)
@@ -95,9 +149,34 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Returns:
             J (casADi function): The Jacobian between the root and the frame
         """
+        if self.urdf_tree.is_model_parametric():
+            s = cs.SX.sym("s", self.NDoF)
+            density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
+            length_multiplier = cs.SX.sym(
+                "length_multiplier", self.urdf_tree.NLinkParametric, 3
+            )
+            J = super().relative_jacobian(frame, s, density, length_multiplier)
+            return cs.Function(
+                "J", [s, density, length_multiplier], [J.array], self.f_opts
+            )
         s = cs.SX.sym("s", self.NDoF)
         J = super().relative_jacobian(frame, s)
         return cs.Function("J", [s], [J.array], self.f_opts)
+
+    def get_total_mass(self):
+        """Returns the total mass of the kinematic chain
+
+        Returns:
+            J (casADi function): The total mass of the kinematic chain
+        """
+        if self.urdf_tree.is_model_parametric():
+            density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
+            length_multiplier = cs.SX.sym(
+                "length_multiplier", self.urdf_tree.NLinkParametric, 3
+            )
+            m = super().get_total_mass(density, length_multiplier)
+            return cs.Function("m", [density, length_multiplier], [m], self.f_opts)
+        return super().get_total_mass()
 
     def CoM_position_fun(self) -> cs.Function:
         """Returns the CoM positon
@@ -105,6 +184,21 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Returns:
             com (casADi function): The CoM position
         """
+        if self.urdf_tree.is_model_parametric():
+            s = cs.SX.sym("s", self.NDoF)
+            T_b = cs.SX.sym("T_b", 4, 4)
+            density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
+            length_multiplier = cs.SX.sym(
+                "length_multiplier", self.urdf_tree.NLinkParametric, 3
+            )
+            com_pos = super().CoM_position(T_b, s, density, length_multiplier)
+            return cs.Function(
+                "CoM_pos",
+                [T_b, s, density, length_multiplier],
+                [com_pos.array],
+                self.f_opts,
+            )
+
         s = cs.SX.sym("s", self.NDoF)
         T_b = cs.SX.sym("T_b", 4, 4)
         com_pos = super().CoM_position(T_b, s)
@@ -117,6 +211,22 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Returns:
             h (casADi function): the bias force
         """
+        if self.urdf_tree.is_model_parametric():
+            T_b = cs.SX.sym("T_b", 4, 4)
+            s = cs.SX.sym("s", self.NDoF)
+            v_b = cs.SX.sym("v_b", 6)
+            s_dot = cs.SX.sym("s_dot", self.NDoF)
+            density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
+            length_multiplier = cs.SX.sym(
+                "length_multiplier", self.urdf_tree.NLinkParametric, 3
+            )
+            h = super().rnea(T_b, s, v_b, s_dot, self.g, density, length_multiplier)
+            return cs.Function(
+                "h",
+                [T_b, s, v_b, s_dot, density, length_multiplier],
+                [h.array],
+                self.f_opts,
+            )
         T_b = cs.SX.sym("T_b", 4, 4)
         s = cs.SX.sym("s", self.NDoF)
         v_b = cs.SX.sym("v_b", 6)
@@ -131,6 +241,25 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Returns:
             C (casADi function): the Coriolis term
         """
+        if self.urdf_tree.is_model_parametric():
+            T_b = cs.SX.sym("T_b", 4, 4)
+            q = cs.SX.sym("q", self.NDoF)
+            v_b = cs.SX.sym("v_b", 6)
+            q_dot = cs.SX.sym("q_dot", self.NDoF)
+            density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
+            length_multiplier = cs.SX.sym(
+                "length_multiplier", self.urdf_tree.NLinkParametric, 3
+            )
+            # set in the bias force computation the gravity term to zero
+            C = super().rnea(
+                T_b, q, v_b, q_dot, np.zeros(6), density, length_multiplier
+            )
+            return cs.Function(
+                "C",
+                [T_b, q, v_b, q_dot, density, length_multiplier],
+                [C.array],
+                self.f_opts,
+            )
         T_b = cs.SX.sym("T_b", 4, 4)
         q = cs.SX.sym("q", self.NDoF)
         v_b = cs.SX.sym("v_b", 6)
@@ -146,6 +275,26 @@ class KinDynComputations(RBDAlgorithms, CasadiLike):
         Returns:
             G (casADi function): the gravity term
         """
+        if self.urdf_tree.is_model_parametric():
+            T_b = cs.SX.sym("T_b", 4, 4)
+            q = cs.SX.sym("q", self.NDoF)
+            density = cs.SX.sym("density", self.urdf_tree.NLinkParametric)
+            lenght_multiplier = cs.SX.sym(
+                "length_multiplier", self.urdf_tree.NLinkParametric, 3
+            )
+            # set in the bias force computation the velocity to zero
+            G = super().rnea(
+                T_b,
+                q,
+                np.zeros(6),
+                np.zeros(self.NDoF),
+                self.g,
+                density,
+                lenght_multiplier,
+            )
+            return cs.Function(
+                "G", [T_b, q, density, lenght_multiplier], [G.array], self.f_opts
+            )
         T_b = cs.SX.sym("T_b", 4, 4)
         q = cs.SX.sym("q", self.NDoF)
         # set in the bias force computation the velocity to zero
