@@ -201,7 +201,7 @@ class KinDynComputations:
             self.g,
         ).array.squeeze()
 
-    def get_total_mass(self):
+    def get_total_mass(self) -> float:
         """Returns the total mass of the robot
 
         Returns:
