@@ -8,12 +8,14 @@ from typing import Union
 import casadi as cs
 import numpy.typing as npt
 
-from adam.core.spatial_math import ArrayLike, SpatialMath
+from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
 from adam.numpy import NumpyLike
 
 
 @dataclass
 class CasadiLike(ArrayLike):
+    """Wrapper class for Casadi types"""
+
     array: Union[cs.SX, cs.DM]
 
     def __matmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
@@ -99,6 +101,8 @@ class CasadiLike(ArrayLike):
         """
         return CasadiLike(self.array.T)
 
+
+class CasadiLikeFactory(ArrayLikeFactory):
     @staticmethod
     def zeros(*x: int) -> "CasadiLike":
         """
@@ -127,7 +131,7 @@ class CasadiLike(ArrayLike):
         return CasadiLike(cs.DM(*x))
 
 
-class SpatialMath(SpatialMath, CasadiLike):
+class SpatialMath(SpatialMath, CasadiLikeFactory):
     @staticmethod
     def skew(x: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """
@@ -191,6 +195,5 @@ class SpatialMath(SpatialMath, CasadiLike):
 
 
 if __name__ == "__main__":
-
     math = SpatialMath()
     print(math.eye(3))
