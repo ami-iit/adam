@@ -9,7 +9,7 @@ from adam.model.tree import Tree
 @dataclasses.dataclass
 class Model:
     """
-    Model class. It describes the robot using links and frames and their connetivity"""
+    Model class. It describes the robot using links and frames and their connectivity"""
 
     name: str
     links: List[Link]
