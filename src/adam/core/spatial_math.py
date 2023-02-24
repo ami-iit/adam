@@ -56,6 +56,10 @@ class ArrayLike(abc.ABC):
     def __truediv__(self, other):
         pass
 
+    @abc.abstractproperty
+    def T(self):
+        pass
+
 
 class ArrayLikeFactory(abc.ABC):
     """Abstract class for a generic Array wrapper. Every method should be implemented for every data type."""
