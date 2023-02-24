@@ -8,7 +8,7 @@ from typing import Union
 import jax.numpy as jnp
 import numpy.typing as npt
 
-from adam.core.spatial_math import ArrayLike, SpatialMath
+from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
 from adam.numpy import NumpyLike
 
 
@@ -109,6 +109,8 @@ class JaxLike(ArrayLike):
         """Overrides - operator"""
         return JaxLike(-self.array)
 
+
+class JaxLikeFactory(ArrayLikeFactory):
     @staticmethod
     def zeros(*x) -> "JaxLike":
         """
@@ -134,7 +136,7 @@ class JaxLike(ArrayLike):
         return JaxLike(jnp.array(x))
 
 
-class SpatialMath(SpatialMath, JaxLike):
+class SpatialMath(SpatialMath, JaxLikeFactory):
     @staticmethod
     def sin(x: npt.ArrayLike) -> "JaxLike":
         """
