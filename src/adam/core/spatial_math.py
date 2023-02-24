@@ -6,6 +6,60 @@ import numpy.typing as npt
 class ArrayLike(abc.ABC):
     """Abstract class for a generic Array wrapper. Every method should be implemented for every data type."""
 
+    """This class has to implemented the following operators: """
+
+    @abc.abstractmethod
+    def __add__(self, other):
+        pass
+
+    @abc.abstractmethod
+    def __radd__(self, other):
+        pass
+
+    @abc.abstractmethod
+    def __sub__(self, other):
+        pass
+
+    @abc.abstractmethod
+    def __rsub__(self, other):
+        pass
+
+    @abc.abstractmethod
+    def __mul__(self, other):
+        pass
+
+    @abc.abstractmethod
+    def __rmul__(self, other):
+        pass
+
+    @abc.abstractmethod
+    def __matmul__(self, other):
+        pass
+
+    @abc.abstractmethod
+    def __rmatmul__(self, other):
+        pass
+
+    @abc.abstractmethod
+    def __neg__(self):
+        pass
+
+    @abc.abstractmethod
+    def __getitem__(self, item):
+        pass
+
+    @abc.abstractmethod
+    def __setitem__(self, key, value):
+        pass
+
+    @abc.abstractmethod
+    def __truediv__(self, other):
+        pass
+
+
+class ArrayLikeFactory(abc.ABC):
+    """Abstract class for a generic Array wrapper. Every method should be implemented for every data type."""
+
     @abc.abstractmethod
     def zeros(x: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -29,7 +83,7 @@ class ArrayLike(abc.ABC):
         pass
 
 
-class SpatialMath(ArrayLike):
+class SpatialMath(ArrayLikeFactory):
     """Class implementing the main geometric functions used for computing rigid-body algorithm
 
     Args:
