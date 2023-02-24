@@ -8,7 +8,7 @@ from typing import Union
 import numpy as np
 import numpy.typing as npt
 
-from adam.core.spatial_math import ArrayLike, SpatialMath
+from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
 
 
 @dataclass
@@ -110,6 +110,8 @@ class NumpyLike(ArrayLike):
         """Overrides - operator"""
         return NumpyLike(-self.array)
 
+
+class NumpyLikeFactory(ArrayLikeFactory):
     @staticmethod
     def zeros(*x) -> "NumpyLike":
         """
@@ -138,7 +140,7 @@ class NumpyLike(ArrayLike):
         return NumpyLike(np.array(x))
 
 
-class SpatialMath(SpatialMath, NumpyLike):
+class SpatialMath(SpatialMath, NumpyLikeFactory):
     @staticmethod
     def sin(x: npt.ArrayLike) -> "NumpyLike":
         """

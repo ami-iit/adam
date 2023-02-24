@@ -8,7 +8,7 @@ from typing import Union
 import numpy.typing as ntp
 import torch
 
-from adam.core.spatial_math import ArrayLike, SpatialMath
+from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
 from adam.numpy import NumpyLike
 
 
@@ -113,6 +113,8 @@ class TorchLike(ArrayLike):
         """Overrides - operator"""
         return TorchLike(-self.array)
 
+
+class TorchLikeFactory(ArrayLikeFactory):
     @staticmethod
     def zeros(*x: int) -> "TorchLike":
         """
@@ -141,7 +143,7 @@ class TorchLike(ArrayLike):
         return TorchLike(torch.FloatTensor(x))
 
 
-class SpatialMath(SpatialMath, TorchLike):
+class SpatialMath(SpatialMath, TorchLikeFactory):
     @staticmethod
     def sin(x: ntp.ArrayLike) -> "TorchLike":
         """
