@@ -1,0 +1,16 @@
+name: adamdev
+channels:
+  - conda-forge
+dependencies:
+  - python >=3.7
+  - numpy
+  - scipy
+  - casadi
+  - prettytable
+  - urdfdom-py
+  - pip
+  - pytest
+  - gym-ignition-models
+  - pytorch
+  - jax
+  - idyntree
