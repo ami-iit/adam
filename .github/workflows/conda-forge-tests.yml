@@ -21,10 +21,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Print used environment (no conda) [Conda]
-      shell: bash
-      run: |
-        env
     - name: Get current week
       id: week
       run: echo "week=$(date +%Y-%U)" >> "${GITHUB_OUTPUT}"
@@ -32,6 +28,12 @@ jobs:
       with:
         environment-file: ci_env.yml
         cache-environment-key: environment-${{ steps.week.outputs.week }}
+        
+    - name: Print packages and environment
+      shell: bash -l {0}
+      run: |
+        env
+        micromamba list
 
     - name: Install ADAM
       shell: bash -l {0}
