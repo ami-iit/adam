@@ -45,7 +45,10 @@ class TorchLike(ArrayLike):
         Returns:
             TorchLike: transpose of array
         """
-        return TorchLike(self.array.T)
+        if len(self.array.shape) != 1:
+            return TorchLike(self.array.mT)
+        x = self.array
+        return TorchLike(x.permute(*torch.arange(x.ndim - 1, -1, -1)))
 
     def __matmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides @ operator"""
