@@ -50,16 +50,16 @@ class TorchLike(ArrayLike):
     def __matmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides @ operator"""
         if type(self) is type(other):
-            return TorchLike(self.array @ other.array)
+            return TorchLike(self.array @ other.array.float())
         else:
-            return TorchLike(self.array @ torch.FloatTensor(other))
+            return TorchLike(self.array @ other.float())
 
     def __rmatmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides @ operator"""
         if type(self) is type(other):
             return TorchLike(other.array @ self.array)
         else:
-            return TorchLike(torch.FloatTensor(other) @ self.array)
+            return TorchLike(other.float() @ self.array)
 
     def __mul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides * operator"""
