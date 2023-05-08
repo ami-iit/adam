@@ -9,9 +9,12 @@ import idyntree.swig as idyntree
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from jax import config
 
 from adam.geometry import utils
 from adam.jax import KinDynComputations
+
+config.update("jax_enable_x64", True)
 
 model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
 

@@ -13,6 +13,8 @@ import torch
 from adam.geometry import utils
 from adam.pytorch import KinDynComputations
 
+torch.set_default_dtype(torch.float64)
+
 model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
 
 joints_name_list = [
