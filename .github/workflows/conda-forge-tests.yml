@@ -26,6 +26,21 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Setup environment [CentOS]
+      shell: bash -l {0}
+      if: contains(matrix.docker_image, 'cos7')
+      run: |
+          # conda-forge's iDynTree requires GL.so at runtime
+          yum install -y mesa-libGL libselinux libXdamage libXxf86vm libXext
+
+    - name: Setup environment [Debian-based]
+      shell: bash -l {0}
+      if: contains(matrix.docker_image, 'ubuntu')
+      run: |
+          # mamba requires ca-certificats
+          # conda-forge's iDynTree requires GL.so at runtime
+          apt install -y bzip2 ca-certificates curl libgl1
+
     - name: Get current week
       id: week
       run: echo "week=$(date +%Y-%U)" >> "${GITHUB_OUTPUT}"
@@ -39,21 +54,6 @@ jobs:
       run: |
         env
         micromamba list
-
-    - name: Setup environment [CentOS]
-      shell: bash -l {0}
-      if: contains(matrix.os, 'cos7')
-      run: |
-          # conda-forge's iDynTree requires GL.so at runtime
-          yum install -y mesa-libGL libselinux libXdamage libXxf86vm libXext
-
-    - name: Setup environment [Debian-based]
-      shell: bash -l {0}
-      if: contains(matrix.os, 'ubuntu')
-      run: |
-          # mamba requires ca-certificats
-          # conda-forge's iDynTree requires GL.so at runtime
-          apt install -y bzip2 ca-certificates curl libgl1
 
     - name: Install ADAM
       shell: bash -l {0}
