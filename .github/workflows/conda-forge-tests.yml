@@ -40,6 +40,21 @@ jobs:
         env
         micromamba list
 
+    - name: Setup environment [CentOS]
+      shell: bash -l {0}
+      if: contains(matrix.os, 'cos7')
+      run: |
+          # conda-forge's iDynTree requires GL.so at runtime
+          yum install -y mesa-libGL libselinux libXdamage libXxf86vm libXext
+
+    - name: Setup environment [Debian-based]
+      shell: bash -l {0}
+      if: contains(matrix.os, 'ubuntu')
+      run: |
+          # mamba requires ca-certificats
+          # conda-forge's iDynTree requires GL.so at runtime
+          apt install -y bzip2 ca-certificates curl libgl1
+
     - name: Install ADAM
       shell: bash -l {0}
       run: |
