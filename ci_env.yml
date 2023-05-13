@@ -9,6 +9,7 @@ dependencies:
   - prettytable
   - urdfdom-py
   - pip
+  - setuptools_scm
   - pytest
   - gym-ignition-models
   - pytorch
