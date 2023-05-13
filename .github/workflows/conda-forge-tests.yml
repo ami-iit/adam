@@ -19,8 +19,8 @@ jobs:
         os: [ubuntu-latest]
         docker_image:
           - "quay.io/condaforge/linux-anvil-cos7-x86_64"
-    container:
-      image: ${{ matrix.docker_image }}
+    #container:
+    #  image: ${{ matrix.docker_image }}
 
     steps:
     - uses: actions/checkout@v3
