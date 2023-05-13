@@ -17,6 +17,10 @@ jobs:
       matrix:
         build_type: [Release]
         os: [ubuntu-latest, macos-latest]
+        docker_image:
+          - "quay.io/condaforge/linux-anvil-cos7-x86_64"
+    container:
+      image: ${{ matrix.docker_image }}
 
     steps:
     - uses: actions/checkout@v3
@@ -27,7 +31,7 @@ jobs:
     - uses: mamba-org/setup-micromamba@v1
       with:
         environment-file: ci_env.yml
-        cache-environment-key: environment-${{ steps.week.outputs.week }}
+        cache-environment-key: environment-${{ steps.week.outputs.week }}-${{ matrix.docker_image }}
         
     - name: Print packages and environment
       shell: bash -l {0}
