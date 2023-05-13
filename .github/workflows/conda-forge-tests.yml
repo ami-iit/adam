@@ -42,6 +42,8 @@ jobs:
     - name: Install ADAM
       shell: bash -l {0}
       run: |
+          # conda-forge's iDynTree requires GL.so at runtime
+          yum install -y mesa-libGL libselinux libXdamage libXxf86vm libXext
           # SETUPTOOLS_SCM_PRETEND_VERSION used as a workaround for 
           # https://github.com/pypa/setuptools_scm#usage-from-docker
           SETUPTOOLS_SCM_PRETEND_VERSION=1 pip install --no-deps .
