@@ -19,6 +19,9 @@ jobs:
         os: [ubuntu-latest]
         docker_image:
           - "quay.io/condaforge/linux-anvil-cos7-x86_64"
+          - "ubuntu:16.04"
+          - "ubuntu:18.04"
+          - "ubuntu:20.04"
           - "ubuntu:22.04"
     container:
       image: ${{ matrix.docker_image }}
@@ -39,7 +42,8 @@ jobs:
       run: |
           # mamba requires ca-certificats
           # conda-forge's iDynTree requires GL.so at runtime
-          apt install -y bzip2 ca-certificates curl libgl1
+          apt-get update -y
+          apt-get install -y bzip2 ca-certificates curl libgl1
 
     - name: Get current week
       id: week
