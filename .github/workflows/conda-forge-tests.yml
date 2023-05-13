@@ -42,7 +42,7 @@ jobs:
     - name: Install ADAM
       shell: bash -l {0}
       run: |
-          pip install --no-deps .
+          SETUPTOOLS_SCM_DEBUG=1 pip install --no-deps .
 
     - name: Test with pytest
       shell: bash -l {0}
