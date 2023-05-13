@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-with-conda-forge-dependencies:
-    name: '[conda-forge:${{ matrix.os }}]'
+    name: '[conda-forge:${{ matrix.os }}:${{ matrix.docker_image }}]'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -19,6 +19,7 @@ jobs:
         os: [ubuntu-latest]
         docker_image:
           - "quay.io/condaforge/linux-anvil-cos7-x86_64"
+          - "ubuntu:22.04"
     container:
       image: ${{ matrix.docker_image }}
 
