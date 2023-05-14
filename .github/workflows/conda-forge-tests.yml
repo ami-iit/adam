@@ -50,7 +50,7 @@ jobs:
     - name: Install ADAM
       shell: bash -l {0}
       run: |
-         pip install --no-deps .
+         SETUPTOOLS_SCM_PRETEND_VERSION=1 pip install --no-deps .
 
     - name: Test with pytest [macOS and Linux]
       shell: bash -l {0}
