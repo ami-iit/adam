@@ -16,40 +16,11 @@ jobs:
       fail-fast: false
       matrix:
         build_type: [Release]
-        os: [ubuntu-latest]
-        docker_image:
-          - "quay.io/condaforge/linux-anvil-cos7-x86_64"
-          - "centos:7"
-          - "fedora:24" 
-          - "fedora:25"
-          - "fedora:26" 
-          - "fedora:27"
-          - "fedora:28" 
-          - "fedora:29"
-          - "ubuntu:16.04"
-          - "ubuntu:18.04"
-          - "ubuntu:20.04"
-          - "ubuntu:22.04"
+        os: [ubuntu-latest,macos-latest]
     container:
       image: ${{ matrix.docker_image }}
 
     steps:
-    - name: Setup environment [CentOS/Fedora]
-      shell: bash -l {0}
-      if: contains(matrix.docker_image, 'cos7') || contains(matrix.docker_image, 'centos') || contains(matrix.docker_image, 'fedora')
-      run: |
-          # conda-forge's iDynTree requires GL.so at runtime
-          yum install -y mesa-libGL libselinux libXdamage libXxf86vm libXext libstdc++
-
-    - name: Setup environment [Debian-based]
-      shell: bash -l {0}
-      if: contains(matrix.docker_image, 'ubuntu')
-      run: |
-          # mamba requires ca-certificats
-          # conda-forge's iDynTree requires GL.so at runtime
-          apt-get update -y
-          apt-get install -y bzip2 ca-certificates curl libgl1
-
     - uses: actions/checkout@v3
 
     - name: Get current week
@@ -58,7 +29,7 @@ jobs:
     - uses: mamba-org/setup-micromamba@v1
       with:
         environment-file: ci_env.yml
-        cache-environment-key: environment-${{ steps.week.outputs.week }}-${{ matrix.docker_image }}
+        cache-environment-key: environment-${{ steps.week.outputs.week }}-${{ matrix.os }}
         
     - name: Print packages and environment
       shell: bash -l {0}
@@ -70,11 +41,7 @@ jobs:
     - name: Install ADAM
       shell: bash -l {0}
       run: |
-          # conda-forge's iDynTree requires GL.so at runtime
-          yum install -y mesa-libGL libselinux libXdamage libXxf86vm libXext
-          # SETUPTOOLS_SCM_PRETEND_VERSION used as a workaround for 
-          # https://github.com/pypa/setuptools_scm#usage-from-docker
-          SETUPTOOLS_SCM_PRETEND_VERSION=1 pip install --no-deps .
+         pip install --no-deps .
 
     - name: Test with pytest
       shell: bash -l {0}
