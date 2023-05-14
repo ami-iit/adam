@@ -25,7 +25,6 @@ jobs:
 
     - name: Setup environment [Debian-based]
       shell: bash -l {0}
-      if: contains(matrix.docker_image, 'ubuntu')
       run: |
           # mamba requires ca-certificats
           # conda-forge's iDynTree requires GL.so at runtime
