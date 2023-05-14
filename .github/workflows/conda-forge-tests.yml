@@ -23,6 +23,15 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Setup environment [Debian-based]
+      shell: bash -l {0}
+      if: contains(matrix.docker_image, 'ubuntu')
+      run: |
+          # mamba requires ca-certificats
+          # conda-forge's iDynTree requires GL.so at runtime
+          apt-get update -y
+          apt-get install -y bzip2 ca-certificates curl libgl1
+
     - name: Get current week
       shell: bash -l {0}
       id: week
