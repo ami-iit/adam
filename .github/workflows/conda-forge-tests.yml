@@ -16,7 +16,9 @@ jobs:
       fail-fast: false
       matrix:
         build_type: [Release]
-        os: [ubuntu-latest,macos-latest,windows-latest]
+        os: [ubuntu-latest]
+    container:
+      image: "ubuntu:16.04"   
 
     steps:
     - uses: actions/checkout@v3
