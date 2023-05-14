@@ -44,6 +44,7 @@ jobs:
 
     - name: Test with pytest [macOS and Linux]
       shell: bash -l {0}
+      if: contains(matrix.os, 'macos') || contains(matrix.os, 'ubuntu')
       run: |
           # Add additional dependencies not available on Windows
           micromamba install jax pytorch
@@ -51,6 +52,7 @@ jobs:
 
     - name: Test with pytest [Windows]
       shell: bash -l {0}
+      if: contains(matrix.os, 'windows')
       run: |
           # Skip additional dependencies not available on Windows
           pytest -v --ignore-glob=*Jax* --ignore-glob=*pytorch*
