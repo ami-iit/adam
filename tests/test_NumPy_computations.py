@@ -75,7 +75,7 @@ joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
 
 # set iDynTree kinDyn
 H_b_idyn = H_from_Pos_RPY_idyn(xyz, rpy)
-vb = idyntree.Twist()
+vb = idyntree.Twist.Zero()
 [vb.setVal(i, base_vel[i]) for i in range(6)]
 
 s = idyntree.VectorDynSize(n_dofs)
@@ -184,7 +184,7 @@ def test_gravity_term():
     kinDyn2.loadRobotModel(robot_iDyn.model())
     kinDyn2.setFloatingBase(root_link)
     kinDyn2.setFrameVelocityRepresentation(idyntree.MIXED_REPRESENTATION)
-    vb0 = idyntree.Twist()
+    vb0 = idyntree.Twist.Zero()
     s_dot0 = idyntree.VectorDynSize(n_dofs)
     kinDyn2.setRobotState(H_b_idyn, s, vb0, s_dot0, g)
     G_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn2.model())
