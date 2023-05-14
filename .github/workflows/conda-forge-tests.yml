@@ -20,10 +20,9 @@ jobs:
         docker_image:
           - "quay.io/condaforge/linux-anvil-cos7-x86_64"
           - "centos:7"
+          - "fedora:26" 
+          - "fedora:27"
           - "ubuntu:16.04"
-          - "ubuntu:16.10"
-          - "ubuntu:17.04"
-          - "ubuntu:17.10"
           - "ubuntu:18.04"
           - "ubuntu:20.04"
           - "ubuntu:22.04"
@@ -33,9 +32,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Setup environment [CentOS]
+    - name: Setup environment [CentOS/Fedora]
       shell: bash -l {0}
-      if: contains(matrix.docker_image, 'cos7') || contains(matrix.docker_image, 'centos')
+      if: contains(matrix.docker_image, 'cos7') || contains(matrix.docker_image, 'centos') || contains(matrix.docker_image, 'fedora')
       run: |
           # conda-forge's iDynTree requires GL.so at runtime
           yum install -y mesa-libGL libselinux libXdamage libXxf86vm libXext
