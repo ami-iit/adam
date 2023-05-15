@@ -282,7 +282,6 @@ class RBDAlgorithms(SpatialMath):
     def jacobian(
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-
         J = self.joints_jacobian(frame, base_transform, joint_positions)
         T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         # Adding the floating base part of the Jacobian, in Mixed representation
