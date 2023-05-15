@@ -1,0 +1,58 @@
+name: Test ADAM with conda-forge dependencies
+
+on:
+  push:
+  pull_request:
+  schedule:
+  # * is a special character in YAML so you have to quote this string
+  # Execute a "nightly" build at 2 AM UTC
+  - cron:  '0 2 * * *'
+
+jobs:
+  build-with-conda-forge-dependencies:
+    name: '[conda-forge:${{ matrix.os }}]'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Release]
+        os: [ubuntu-latest,macos-latest,windows-latest]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Get current week
+      shell: bash -l {0}
+      id: week
+      run: echo "week=$(date +%Y-%U)" >> "${GITHUB_OUTPUT}"
+    - uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: ci_env.yml
+        cache-environment-key: environment-${{ steps.week.outputs.week }}-${{ matrix.os }}
+        
+    - name: Print packages and environment
+      shell: bash -l {0}
+      run: |
+        env
+        uname -r
+        micromamba list
+
+    - name: Install ADAM
+      shell: bash -l {0}
+      run: |
+         pip install --no-deps .
+
+    - name: Test with pytest [macOS and Linux]
+      shell: bash -l {0}
+      if: contains(matrix.os, 'macos') || contains(matrix.os, 'ubuntu')
+      run: |
+          # Add additional dependencies not available on Windows
+          micromamba install jax pytorch
+          pytest
+
+    - name: Test with pytest [Windows]
+      shell: bash -l {0}
+      if: contains(matrix.os, 'windows')
+      run: |
+          # Skip additional dependencies not available on Windows
+          pytest --count=100 -v --ignore-glob=*Jax* --ignore-glob=*pytorch*
