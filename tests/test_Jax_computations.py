@@ -14,6 +14,7 @@ from jax import config
 from adam.geometry import utils
 from adam.jax import KinDynComputations
 
+np.random.seed(42)
 config.update("jax_enable_x64", True)
 
 model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
