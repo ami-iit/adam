@@ -12,6 +12,8 @@ import pytest
 from adam.geometry import utils
 from adam.numpy import KinDynComputations
 
+np.random.seed(42)
+
 model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
 
 joints_name_list = [
