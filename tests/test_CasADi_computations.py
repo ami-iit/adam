@@ -13,6 +13,8 @@ import pytest
 from adam.casadi import KinDynComputations
 from adam.geometry import utils
 
+np.random.seed(42)
+
 model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
 
 joints_name_list = [
@@ -76,7 +78,7 @@ joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
 
 # set iDynTree kinDyn
 H_b_idyn = H_from_Pos_RPY_idyn(xyz, rpy)
-vb = idyntree.Twist()
+vb = idyntree.Twist.Zero()
 [vb.setVal(i, base_vel[i]) for i in range(6)]
 
 s = idyntree.VectorDynSize(n_dofs)
@@ -190,7 +192,7 @@ def test_coriolis_term():
 
 
 def test_gravity_term():
-    vb0 = idyntree.Twist()
+    vb0 = idyntree.Twist.Zero()
     s_dot0 = idyntree.VectorDynSize(n_dofs)
     kinDyn.setRobotState(H_b_idyn, s, vb0, s_dot0, g)
     G_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
