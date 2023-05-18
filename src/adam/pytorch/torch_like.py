@@ -21,11 +21,7 @@ class TorchLike(ArrayLike):
     def __setitem__(self, idx, value: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides set item operator"""
         if type(self) is type(value):
-            value.array = torch.squeeze(value.array)
-            try:
-                self.array[idx] = value.array
-            except Exception:
-                self.array[idx] = value.array.reshape(-1, 1)
+            self.array[idx] = value.array.reshape(self.array[idx].shape)
         else:
             self.array[idx] = torch.FloatTensor(value)
 

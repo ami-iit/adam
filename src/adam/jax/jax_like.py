@@ -21,11 +21,7 @@ class JaxLike(ArrayLike):
     def __setitem__(self, idx, value: Union["JaxLike", npt.ArrayLike]):
         """Overrides set item operator"""
         if type(self) is type(value):
-            value.array = jnp.squeeze(value.array)
-            try:
-                self.array = self.array.at[idx].set(value.array)
-            except Exception:
-                self.array = self.array.at[idx].set(value.array.reshape(-1, 1))
+            self.array[idx] = value.array.reshape(self.array[idx].shape)
         else:
             self.array = self.array.at[idx].set(value)
 

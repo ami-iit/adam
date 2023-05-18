@@ -20,11 +20,7 @@ class NumpyLike(ArrayLike):
     def __setitem__(self, idx, value: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
         """Overrides set item operator"""
         if type(self) is type(value):
-            value.array = np.squeeze(value.array)
-            try:
-                self.array[idx] = value.array
-            except Exception:
-                self.array[idx] = value.array.reshape(-1, 1)
+            self.array[idx] = value.array.reshape(self.array[idx].shape)
         else:
             self.array[idx] = value
 
