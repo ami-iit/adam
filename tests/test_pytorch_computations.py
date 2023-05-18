@@ -4,7 +4,7 @@
 
 import logging
 
-import gym_ignition_models
+import icub_models
 import idyntree.swig as idyntree
 import numpy as np
 import pytest
@@ -16,7 +16,7 @@ from adam.pytorch import KinDynComputations
 np.random.seed(42)
 torch.set_default_dtype(torch.float64)
 
-model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
+model_path = str(icub_models.get_model_file("iCubGazeboV2_5"))
 
 joints_name_list = [
     "torso_pitch",
