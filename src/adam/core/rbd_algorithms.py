@@ -7,7 +7,7 @@ from adam.model import Model, Node
 
 
 class RBDAlgorithms:
-    """This is a small abstract class that implements Rigid body algorithms retrieving robot quantities represented
+    """This is a small class that implements Rigid body algorithms retrieving robot quantities represented
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
 
