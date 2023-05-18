@@ -59,8 +59,7 @@ class ArrayLike(abc.ABC):
     @abc.abstractproperty
     def T(self):
         """
-        Returns:
-            Transpose of the array"""
+        Returns: Transpose of the array
         """
         pass
 
