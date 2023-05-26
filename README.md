@@ -101,37 +101,47 @@ pip install .[selected-interface]
 
 ### Installation with conda
 
+#### Installation from conda-forge package
+
+```bash
+mamba create -n adamenv -c conda-forge adam-robotics
+```
+
+If you want to use `jax` or `pytorch`, just install the corresponding package as well.
+
+#### Installation from repo
+
 Install in a conda environment the required dependencies:
 
 - **Jax** interface dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge -c robostack jax numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
+  mamba create -n adamenv -c conda-forge jax numpy lxml prettytable matplotlib urdfdom-py
   ```
 
 - **CasADi** interface dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge -c robostack casadi numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
+  mamba create -n adamenv -c conda-forge casadi numpy lxml prettytable matplotlib urdfdom-py
   ```
 
 - **PyTorch** interface dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge -c robostack pytorch numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
+  mamba create -n adamenv -c conda-forge pytorch numpy lxml prettytable matplotlib urdfdom-py
   ```
 
 - **ALL** interfaces dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge -c robostack jax casadi pytorch numpy lxml prettytable matplotlib ros-noetic-urdfdom-py
+  mamba create -n adamenv -c conda-forge jax casadi pytorch numpy lxml prettytable matplotlib urdfdom-py
   ```
 
 Activate the environment, clone the repo and install the library:
 
 ```bash
 mamba activate adamenv
-git clone https://github.com/dic-iit/ADAM.git
+git clone https://github.com/ami-iit/ADAM.git
 cd ADAM
 pip install --no-deps .
 ```
