@@ -92,13 +92,20 @@ class ArrayLikeFactory(abc.ABC):
         pass
 
 
-class SpatialMath(ArrayLikeFactory):
+class SpatialMath:
     """Class implementing the main geometric functions used for computing rigid-body algorithm
 
     Args:
         ArrayLike: abstract class describing a generic Array wrapper. It needs to be implemented for every data type
 
     """
+
+    def __init__(self, factory: ArrayLikeFactory):
+        self._factory = factory
+
+    @property
+    def factory(self) -> ArrayLikeFactory:
+        return self._factory
 
     @abc.abstractmethod
     def vertcat(x: npt.ArrayLike) -> npt.ArrayLike:
@@ -137,8 +144,7 @@ class SpatialMath(ArrayLikeFactory):
     def skew(x):
         pass
 
-    @classmethod
-    def R_from_axis_angle(cls, axis: npt.ArrayLike, q: npt.ArrayLike) -> npt.ArrayLike:
+    def R_from_axis_angle(self, axis: npt.ArrayLike, q: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             axis (npt.ArrayLike): axis vector
@@ -147,15 +153,14 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: rotation matrix from axis-angle representation
         """
-        cq, sq = cls.cos(q), cls.sin(q)
+        cq, sq = self.cos(q), self.sin(q)
         return (
-            cq * (cls.eye(3) - cls.outer(axis, axis))
-            + sq * cls.skew(axis)
-            + cls.outer(axis, axis)
+            cq * (self.factory.eye(3) - self.outer(axis, axis))
+            + sq * self.skew(axis)
+            + self.outer(axis, axis)
         )
 
-    @classmethod
-    def Rx(cls, q: npt.ArrayLike) -> npt.ArrayLike:
+    def Rx(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             q (npt.ArrayLike): angle value
@@ -163,16 +168,15 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: rotation matrix around x axis
         """
-        R = cls.eye(3)
-        cq, sq = cls.cos(q), cls.sin(q)
+        R = self.factory.eye(3)
+        cq, sq = self.cos(q), self.sin(q)
         R[1, 1] = cq
         R[1, 2] = -sq
         R[2, 1] = sq
         R[2, 2] = cq
         return R
 
-    @classmethod
-    def Ry(cls, q: npt.ArrayLike) -> npt.ArrayLike:
+    def Ry(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             q (npt.ArrayLike): angle value
@@ -180,16 +184,15 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: rotation matrix around y axis
         """
-        R = cls.eye(3)
-        cq, sq = cls.cos(q), cls.sin(q)
+        R = self.factory.eye(3)
+        cq, sq = self.cos(q), self.sin(q)
         R[0, 0] = cq
         R[0, 2] = sq
         R[2, 0] = -sq
         R[2, 2] = cq
         return R
 
-    @classmethod
-    def Rz(cls, q: npt.ArrayLike) -> npt.ArrayLike:
+    def Rz(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             q (npt.ArrayLike): angle value
@@ -197,17 +200,16 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: rotation matrix around z axis
         """
-        R = cls.eye(3)
-        cq, sq = cls.cos(q), cls.sin(q)
+        R = self.factory.eye(3)
+        cq, sq = self.cos(q), self.sin(q)
         R[0, 0] = cq
         R[0, 1] = -sq
         R[1, 0] = sq
         R[1, 1] = cq
         return R
 
-    @classmethod
     def H_revolute_joint(
-        cls,
+        self,
         xyz: npt.ArrayLike,
         rpy: npt.ArrayLike,
         axis: npt.ArrayLike,
@@ -223,15 +225,14 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: Homogeneous transform
         """
-        T = cls.eye(4)
-        R = cls.R_from_RPY(rpy) @ cls.R_from_axis_angle(axis, q)
+        T = self.factory.eye(4)
+        R = self.R_from_RPY(rpy) @ self.R_from_axis_angle(axis, q)
         T[:3, :3] = R
         T[:3, 3] = xyz
         return T
 
-    @classmethod
     def H_prismatic_joint(
-        cls,
+        self,
         xyz: npt.ArrayLike,
         rpy: npt.ArrayLike,
         axis: npt.ArrayLike,
@@ -247,14 +248,13 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: Homogeneous transform
         """
-        T = cls.eye(4)
-        R = cls.R_from_RPY(rpy)
+        T = self.factory.eye(4)
+        R = self.R_from_RPY(rpy)
         T[:3, :3] = R
-        T[:3, 3] = xyz + q * cls.array(axis)
+        T[:3, 3] = xyz + q * self.factory.array(axis)
         return T
 
-    @classmethod
-    def H_from_Pos_RPY(cls, xyz: npt.ArrayLike, rpy: npt.ArrayLike) -> npt.ArrayLike:
+    def H_from_Pos_RPY(self, xyz: npt.ArrayLike, rpy: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             xyz (npt.ArrayLike): translation vector
@@ -263,13 +263,12 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: Homegeneous transform
         """
-        T = cls.eye(4)
-        T[:3, :3] = cls.R_from_RPY(rpy)
+        T = self.factory.eye(4)
+        T[:3, :3] = self.R_from_RPY(rpy)
         T[:3, 3] = xyz
         return T
 
-    @classmethod
-    def R_from_RPY(cls, rpy: npt.ArrayLike) -> npt.ArrayLike:
+    def R_from_RPY(self, rpy: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
            rpy (npt.ArrayLike): rotation as rpy angles
@@ -277,11 +276,10 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: Rotation matrix
         """
-        return cls.Rz(rpy[2]) @ cls.Ry(rpy[1]) @ cls.Rx(rpy[0])
+        return self.Rz(rpy[2]) @ self.Ry(rpy[1]) @ self.Rx(rpy[0])
 
-    @classmethod
     def X_revolute_joint(
-        cls,
+        self,
         xyz: npt.ArrayLike,
         rpy: npt.ArrayLike,
         axis: npt.ArrayLike,
@@ -298,14 +296,13 @@ class SpatialMath(ArrayLikeFactory):
             npt.ArrayLike: Spatial transform of a revolute joint given its rotation angle
         """
         # TODO: give Featherstone reference
-        T = cls.H_revolute_joint(xyz, rpy, axis, q)
+        T = self.H_revolute_joint(xyz, rpy, axis, q)
         R = T[:3, :3].T
         p = -T[:3, :3].T @ T[:3, 3]
-        return cls.spatial_transform(R, p)
+        return self.spatial_transform(R, p)
 
-    @classmethod
     def X_prismatic_joint(
-        cls,
+        self,
         xyz: npt.ArrayLike,
         rpy: npt.ArrayLike,
         axis: npt.ArrayLike,
@@ -321,13 +318,12 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: Spatial transform of a prismatic joint given its increment
         """
-        T = cls.H_prismatic_joint(xyz, rpy, axis, q)
+        T = self.H_prismatic_joint(xyz, rpy, axis, q)
         R = T[:3, :3].T
         p = -T[:3, :3].T @ T[:3, 3]
-        return cls.spatial_transform(R, p)
+        return self.spatial_transform(R, p)
 
-    @classmethod
-    def X_fixed_joint(cls, xyz: npt.ArrayLike, rpy: npt.ArrayLike) -> npt.ArrayLike:
+    def X_fixed_joint(self, xyz: npt.ArrayLike, rpy: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             xyz (npt.ArrayLike): joint origin in the urdf
@@ -336,13 +332,12 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: Spatial transform of a fixed joint
         """
-        T = cls.H_from_Pos_RPY(xyz, rpy)
+        T = self.H_from_Pos_RPY(xyz, rpy)
         R = T[:3, :3].T
         p = -T[:3, :3].T @ T[:3, 3]
-        return cls.spatial_transform(R, p)
+        return self.spatial_transform(R, p)
 
-    @classmethod
-    def spatial_transform(cls, R: npt.ArrayLike, p: npt.ArrayLike) -> npt.ArrayLike:
+    def spatial_transform(self, R: npt.ArrayLike, p: npt.ArrayLike) -> npt.ArrayLike:
         """_summary_
 
         Args:
@@ -352,15 +347,18 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: spatial transform
         """
-        X = cls.zeros(6, 6)
+        X = self.factory.zeros(6, 6)
         X[:3, :3] = R
         X[3:, 3:] = R
-        X[:3, 3:] = cls.skew(p) @ R
+        X[:3, 3:] = self.skew(p) @ R
         return X
 
-    @classmethod
     def spatial_inertia(
-        cls, I: npt.ArrayLike, mass: npt.ArrayLike, c: npt.ArrayLike, rpy: npt.ArrayLike
+        self,
+        I: npt.ArrayLike,
+        mass: npt.ArrayLike,
+        c: npt.ArrayLike,
+        rpy: npt.ArrayLike,
     ) -> npt.ArrayLike:
         """
         Args:
@@ -372,21 +370,20 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: the 6x6 inertia matrix expressed at the origin of the link (with rotation)
         """
-        IO = cls.zeros(6, 6)
-        Sc = cls.skew(c)
-        R = cls.R_from_RPY(rpy)
-        inertia_matrix = cls.array(
+        IO = self.factory.zeros(6, 6)
+        Sc = self.skew(c)
+        R = self.R_from_RPY(rpy)
+        inertia_matrix = self.factory.array(
             [[I.ixx, I.ixy, I.ixz], [I.ixy, I.iyy, I.iyz], [I.ixz, I.iyz, I.izz]]
         )
 
         IO[3:, 3:] = R @ inertia_matrix @ R.T + mass * Sc @ Sc.T
         IO[3:, :3] = mass * Sc
         IO[:3, 3:] = mass * Sc.T
-        IO[:3, :3] = cls.eye(3) * mass
+        IO[:3, :3] = self.factory.eye(3) * mass
         return IO
 
-    @classmethod
-    def spatial_skew(cls, v: npt.ArrayLike) -> npt.ArrayLike:
+    def spatial_skew(self, v: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             v (npt.ArrayLike): 6D vector
@@ -394,14 +391,13 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: spatial skew matrix
         """
-        X = cls.zeros(6, 6)
-        X[:3, :3] = cls.skew(v[3:])
-        X[:3, 3:] = cls.skew(v[:3])
-        X[3:, 3:] = cls.skew(v[3:])
+        X = self.factory.zeros(6, 6)
+        X[:3, :3] = self.skew(v[3:])
+        X[:3, 3:] = self.skew(v[:3])
+        X[3:, 3:] = self.skew(v[3:])
         return X
 
-    @classmethod
-    def spatial_skew_star(cls, v: npt.ArrayLike) -> npt.ArrayLike:
+    def spatial_skew_star(self, v: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             v (npt.ArrayLike): 6D vector
@@ -409,17 +405,16 @@ class SpatialMath(ArrayLikeFactory):
         Returns:
             npt.ArrayLike: negative spatial skew matrix traspose
         """
-        return -cls.spatial_skew(v).T
+        return -self.spatial_skew(v).T
 
-    @classmethod
-    def adjoint(cls, R: npt.ArrayLike) -> npt.ArrayLike:
+    def adjoint(self, R: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             R (npt.ArrayLike): Rotation matrix
         Returns:
             npt.ArrayLike: adjoint matrix
         """
-        X = cls.eye(6)
+        X = self.factory.eye(6)
         X[:3, :3] = R.T
         X[3:6, 3:6] = R.T
         return X
