@@ -134,7 +134,10 @@ class JaxLikeFactory(ArrayLikeFactory):
         return JaxLike(jnp.array(x))
 
 
-class SpatialMath(SpatialMath, JaxLikeFactory):
+class SpatialMath(SpatialMath):
+    def __init__(self):
+        super().__init__(JaxLikeFactory())
+
     @staticmethod
     def sin(x: npt.ArrayLike) -> "JaxLike":
         """

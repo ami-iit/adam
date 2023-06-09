@@ -131,7 +131,10 @@ class CasadiLikeFactory(ArrayLikeFactory):
         return CasadiLike(cs.DM(*x))
 
 
-class SpatialMath(SpatialMath, CasadiLikeFactory):
+class SpatialMath(SpatialMath):
+    def __init__(self):
+        super().__init__(CasadiLikeFactory)
+
     @staticmethod
     def skew(x: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """

@@ -136,7 +136,10 @@ class NumpyLikeFactory(ArrayLikeFactory):
         return NumpyLike(np.array(x))
 
 
-class SpatialMath(SpatialMath, NumpyLikeFactory):
+class SpatialMath(SpatialMath):
+    def __init__(self):
+        super().__init__(NumpyLikeFactory())
+
     @staticmethod
     def sin(x: npt.ArrayLike) -> "NumpyLike":
         """

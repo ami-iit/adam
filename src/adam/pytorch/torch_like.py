@@ -142,7 +142,10 @@ class TorchLikeFactory(ArrayLikeFactory):
         return TorchLike(torch.FloatTensor(x))
 
 
-class SpatialMath(SpatialMath, TorchLikeFactory):
+class SpatialMath(SpatialMath):
+    def __init__(self):
+        super().__init__(TorchLikeFactory())
+
     @staticmethod
     def sin(x: ntp.ArrayLike) -> "TorchLike":
         """
