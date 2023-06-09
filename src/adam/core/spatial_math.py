@@ -338,8 +338,7 @@ class SpatialMath:
         return self.spatial_transform(R, p)
 
     def spatial_transform(self, R: npt.ArrayLike, p: npt.ArrayLike) -> npt.ArrayLike:
-        """_summary_
-
+        """
         Args:
             R (npt.ArrayLike): Rotation matrix
             p (npt.ArrayLike): translation vector
