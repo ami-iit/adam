@@ -7,7 +7,8 @@ import numpy as np
 
 from adam.casadi.casadi_like import SpatialMath
 from adam.core import RBDAlgorithms
-from adam.model import Model, URDFModelFactory
+from adam.model import Model
+from adam.parametric import ParametricModelFactory
 
 
 class KinDynComputations:
@@ -164,7 +165,7 @@ class KinDynComputations:
 
         return self.rbdalgos.forward_kinematics(frame, T_b, s)
 
-    def get_total_mass(self) -> float:
+    def get_total_mass(self):
         """Returns the total mass of the robot
 
         Returns:
