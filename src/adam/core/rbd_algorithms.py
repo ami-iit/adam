@@ -40,7 +40,7 @@ class RBDAlgorithms:
         model_len = self.model.N
         Ic, X_p, Phi = [None] * model_len, [None] * model_len, [None] * model_len
 
-        M = self.math.zeros(self.model.NDoF + 6, self.model.NDoF + 6)
+        M = self.math.factory.zeros(self.model.NDoF + 6, self.model.NDoF + 6)
         for i, node in enumerate(self.model.tree):
             node: Node
             link_i, joint_i, link_pi = node.get_elements()
@@ -48,9 +48,9 @@ class RBDAlgorithms:
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.math.spatial_transform(
-                    self.math.eye(3), self.math.zeros(3, 1)
+                    self.math.factory.eye(3), self.math.factory.zeros(3, 1)
                 )
-                Phi[i] = self.math.eye(6)
+                Phi[i] = self.math.factory.eye(6)
             else:
                 q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
                 X_p[i] = joint_i.spatial_transform(q=q)
@@ -86,9 +86,9 @@ class RBDAlgorithms:
                     ].T
 
         X_G = [None] * model_len
-        O_X_G = self.math.eye(6)
+        O_X_G = self.math.factory.eye(6)
         O_X_G[:3, 3:] = M[:3, 3:6].T / M[0, 0]
-        Jcm = self.math.zeros(6, self.model.NDoF + 6)
+        Jcm = self.math.factory.zeros(6, self.model.NDoF + 6)
         for i, node in enumerate(self.model.tree):
             link_i, joint_i, link_pi = node.get_elements()
             if link_i.name != self.root_link:
@@ -104,7 +104,7 @@ class RBDAlgorithms:
 
         # Until now the algorithm returns the joint_position quantities in Body Fixed representation
         # Moving to mixed representation...
-        X_to_mixed = self.math.eye(self.model.NDoF + 6)
+        X_to_mixed = self.math.factory.eye(self.model.NDoF + 6)
         X_to_mixed[:3, :3] = base_transform[:3, :3].T
         X_to_mixed[3:6, 3:6] = base_transform[:3, :3].T
         M = X_to_mixed.T @ M @ X_to_mixed
@@ -124,7 +124,7 @@ class RBDAlgorithms:
             T_fk (npt.ArrayLike): The fk represented as Homogenous transformation matrix
         """
         chain = self.model.get_joints_chain(self.root_link, frame)
-        T_fk = self.math.eye(4)
+        T_fk = self.math.factory.eye(4)
         T_fk = T_fk @ base_transform
         for joint in chain:
             q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
@@ -146,8 +146,8 @@ class RBDAlgorithms:
             J (npt.ArrayLike): The Joints Jacobian relative to the frame
         """
         chain = self.model.get_joints_chain(self.root_link, frame)
-        T_fk = self.math.eye(4) @ base_transform
-        J = self.math.zeros(6, self.NDoF)
+        T_fk = self.math.factory.eye(4) @ base_transform
+        J = self.math.factory.zeros(6, self.NDoF)
         T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         P_ee = T_ee[:3, 3]
         for joint in chain:
@@ -162,7 +162,7 @@ class RBDAlgorithms:
             elif joint.type in ["prismatic"]:
                 z_prev = T_fk[:3, :3] @ joint.axis
                 J_lin = z_prev
-                J_ang = self.math.zeros(3)
+                J_ang = self.math.factory.zeros(3)
 
             if joint.idx is not None:
                 J[:, joint.idx] = self.math.vertcat(J_lin, J_ang)
@@ -175,11 +175,11 @@ class RBDAlgorithms:
         J = self.joints_jacobian(frame, base_transform, joint_positions)
         T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
         # Adding the floating base part of the Jacobian, in Mixed representation
-        J_tot = self.math.zeros(6, self.NDoF + 6)
-        J_tot[:3, :3] = self.math.eye(3)
+        J_tot = self.math.factory.zeros(6, self.NDoF + 6)
+        J_tot[:3, :3] = self.math.factory.eye(3)
         J_tot[:3, 3:6] = -self.math.skew((T_ee[:3, 3] - base_transform[:3, 3]))
         J_tot[:3, 6:] = J[:3, :]
-        J_tot[3:, 3:6] = self.math.eye(3)
+        J_tot[3:, 3:6] = self.math.factory.eye(3)
         J_tot[3:, 6:] = J[3:, :]
         return J_tot
 
@@ -195,7 +195,7 @@ class RBDAlgorithms:
         Returns:
             J (npt.ArrayLike): The Jacobian between the root and the frame
         """
-        base_transform = self.math.eye(4)
+        base_transform = self.math.factory.eye(4)
         return self.joints_jacobian(frame, base_transform, joint_positions)
 
     def CoM_position(
@@ -210,7 +210,7 @@ class RBDAlgorithms:
         Returns:
             com (T): The CoM position
         """
-        com_pos = self.math.zeros(3, 1)
+        com_pos = self.math.factory.zeros(3, 1)
         for item in self.model.tree:
             link = item.link
             T_fk = self.forward_kinematics(link.name, base_transform, joint_positions)
@@ -252,7 +252,7 @@ class RBDAlgorithms:
             tau (T): generalized force variables
         """
         # TODO: add accelerations
-        tau = self.math.zeros(self.NDoF + 6, 1)
+        tau = self.math.factory.zeros(self.NDoF + 6, 1)
         model_len = self.model.N
 
         Ic = [None] * model_len
@@ -264,7 +264,7 @@ class RBDAlgorithms:
 
         X_to_mixed = self.math.adjoint(base_transform[:3, :3])
 
-        acc_to_mixed = self.math.zeros(6, 1)
+        acc_to_mixed = self.math.factory.zeros(6, 1)
         acc_to_mixed[:3] = (
             -X_to_mixed[:3, :3] @ self.math.skew(base_velocity[3:]) @ base_velocity[:3]
         )
@@ -283,9 +283,9 @@ class RBDAlgorithms:
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.math.spatial_transform(
-                    self.math.eye(3), self.math.zeros(3, 1)
+                    self.math.factory.eye(3), self.math.factory.zeros(3, 1)
                 )
-                Phi[i] = self.math.eye(6)
+                Phi[i] = self.math.factory.eye(6)
                 v[i] = X_to_mixed @ base_velocity
                 a[i] = X_p[i] @ a[0]
             else:
