@@ -17,7 +17,6 @@ class Model:
     joints: List[Joint]
     tree: Tree
     NDoF: int
-    factory: ModelFactory
 
     def __post_init__(self):
         """set the "lenght of the model as the number of links"""
@@ -59,7 +58,6 @@ class Model:
             joints=joints,
             tree=tree,
             NDoF=len(joints_name_list),
-            factory=factory,
         )
 
     def get_joints_chain(self, root: str, target: str) -> List[Joint]:
