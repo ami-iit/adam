@@ -5,10 +5,11 @@
 import numpy as np
 
 from adam.core.rbd_algorithms import RBDAlgorithms
-from adam.numpy.numpy_like import NumpyLike
+from adam.model import Model, URDFModelFactory
+from adam.numpy.numpy_like import SpatialMath
 
 
-class KinDynComputations(RBDAlgorithms, NumpyLike):
+class KinDynComputations:
     """This is a small class that retrieves robot quantities using NumPy
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
@@ -26,12 +27,12 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
-        super().__init__(
-            urdfstring=urdfstring,
-            joints_name_list=joints_name_list,
-            root_link=root_link,
-            gravity=gravity,
-        )
+        math = SpatialMath()
+        factory = URDFModelFactory(path=urdfstring, math=math)
+        model = Model.build(factory=factory, joints_name_list=joints_name_list)
+        self.rbdalgos = RBDAlgorithms(model=model, math=math)
+        self.NDoF = model.NDoF
+        self.g = gravity
 
     def mass_matrix(
         self, base_transform: np.ndarray, joint_positions: np.ndarray
@@ -45,7 +46,7 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             M (np.ndarray): Mass Matrix
         """
-        [M, _] = super().crba(base_transform, joint_positions)
+        [M, _] = self.rbdalgos.crba(base_transform, joint_positions)
         return M.array
 
     def centroidal_momentum_matrix(
@@ -60,7 +61,7 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             Jcc (np.ndarray): Centroidal Momentum matrix
         """
-        [_, Jcm] = super().crba(base_transform, s)
+        [_, Jcm] = self.rbdalgos.crba(base_transform, s)
         return Jcm.array
 
     def forward_kinematics(
@@ -76,11 +77,9 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             T_fk (np.ndarray): The fk represented as Homogenous transformation matrix
         """
-        return (
-            super()
-            .forward_kinematics(frame, base_transform, joint_positions)
-            .array.squeeze()
-        )
+        return self.rbdalgos.forward_kinematics(
+            frame, base_transform, joint_positions
+        ).array.squeeze()
 
     def jacobian(
         self, frame: str, base_transform: np.ndarray, joint_positions: np.ndarray
@@ -95,7 +94,9 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             J_tot (np.ndarray): The Jacobian relative to the frame
         """
-        return super().jacobian(frame, base_transform, joint_positions).array.squeeze()
+        return self.rbdalgos.jacobian(
+            frame, base_transform, joint_positions
+        ).array.squeeze()
 
     def relative_jacobian(self, frame: str, joint_positions: np.ndarray) -> np.ndarray:
         """Returns the Jacobian between the root link and a specified frame frames
@@ -107,7 +108,7 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             J (np.ndarray): The Jacobian between the root and the frame
         """
-        return super().relative_jacobian(frame, joint_positions).array
+        return self.rbdalgos.relative_jacobian(frame, joint_positions).array
 
     def CoM_position(
         self, base_transform: np.ndarray, joint_positions: np.ndarray
@@ -121,7 +122,9 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             CoM (np.ndarray): The CoM position
         """
-        return super().CoM_position(base_transform, joint_positions).array.squeeze()
+        return self.rbdalgos.CoM_position(
+            base_transform, joint_positions
+        ).array.squeeze()
 
     def bias_force(
         self,
@@ -142,17 +145,13 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             h (np.ndarray): the bias force
         """
-        return (
-            super()
-            .rnea(
-                base_transform,
-                joint_positions,
-                base_velocity.reshape(6, 1),
-                joint_velocities,
-                self.g,
-            )
-            .array.squeeze()
-        )
+        return self.rbdalgos.rnea(
+            base_transform,
+            joint_positions,
+            base_velocity.reshape(6, 1),
+            joint_velocities,
+            self.g,
+        ).array.squeeze()
 
     def coriolis_term(
         self,
@@ -174,17 +173,13 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
             C (np.ndarray): the Coriolis term
         """
         # set in the bias force computation the gravity term to zero
-        return (
-            super()
-            .rnea(
-                base_transform,
-                joint_positions,
-                base_velocity.reshape(6, 1),
-                joint_velocities,
-                np.zeros(6),
-            )
-            .array.squeeze()
-        )
+        return self.rbdalgos.rnea(
+            base_transform,
+            joint_positions,
+            base_velocity.reshape(6, 1),
+            joint_velocities,
+            np.zeros(6),
+        ).array.squeeze()
 
     def gravity_term(
         self, base_transform: np.ndarray, joint_positions: np.ndarray
@@ -199,14 +194,18 @@ class KinDynComputations(RBDAlgorithms, NumpyLike):
         Returns:
             G (np.ndarray): the gravity term
         """
-        return (
-            super()
-            .rnea(
-                base_transform,
-                joint_positions,
-                np.zeros(6).reshape(6, 1),
-                np.zeros(self.NDoF),
-                self.g,
-            )
-            .array.squeeze()
-        )
+        return self.rbdalgos.rnea(
+            base_transform,
+            joint_positions,
+            np.zeros(6).reshape(6, 1),
+            np.zeros(self.NDoF),
+            self.g,
+        ).array.squeeze()
+
+    def get_total_mass(self) -> float:
+        """Returns the total mass of the robot
+
+        Returns:
+            mass: The total mass
+        """
+        return self.rbdalgos.get_total_mass()

@@ -3,3 +3,4 @@
 # GNU Lesser General Public License v2.1 or any later version.
 
 from .computations import KinDynComputations
+from .torch_like import TorchLike

@@ -8,7 +8,7 @@ from typing import Union
 import numpy as np
 import numpy.typing as npt
 
-from adam.core.spatial_math import ArrayLike
+from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
 
 
 @dataclass
@@ -20,11 +20,7 @@ class NumpyLike(ArrayLike):
     def __setitem__(self, idx, value: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
         """Overrides set item operator"""
         if type(self) is type(value):
-            value.array = np.squeeze(value.array)
-            try:
-                self.array[idx] = value.array
-            except:
-                self.array[idx] = value.array.reshape(-1, 1)
+            self.array[idx] = value.array.reshape(self.array[idx].shape)
         else:
             self.array[idx] = value
 
@@ -103,13 +99,15 @@ class NumpyLike(ArrayLike):
     def __rsub__(self, other: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
         """Overrides - operator"""
         if type(self) is not type(other):
-            return NumpyLike(self.array.squeeze() - other.squeeze())
-        return NumpyLike(self.array.squeeze() - other.array.squeeze())
+            return NumpyLike(other.squeeze() - self.array.squeeze())
+        return NumpyLike(other.array.squeeze() - self.array.squeeze())
 
     def __neg__(self):
         """Overrides - operator"""
         return NumpyLike(-self.array)
 
+
+class NumpyLikeFactory(ArrayLikeFactory):
     @staticmethod
     def zeros(*x) -> "NumpyLike":
         """
@@ -117,18 +115,6 @@ class NumpyLike(ArrayLike):
             NumpyLike: zero matrix of dimension x
         """
         return NumpyLike(np.zeros(x))
-
-    @staticmethod
-    def vertcat(*x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
-        """
-        Returns:
-            NumpyLike: vertical concatenation of x
-        """
-        if isinstance(x[0], NumpyLike):
-            v = np.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
-        else:
-            v = np.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
-        return NumpyLike(v)
 
     @staticmethod
     def eye(x: int) -> "NumpyLike":
@@ -142,26 +128,17 @@ class NumpyLike(ArrayLike):
         return NumpyLike(np.eye(x))
 
     @staticmethod
-    def skew(x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
-        """
-        Args:
-            x (Union[NumpyLike, npt.ArrayLike]): vector
-
-        Returns:
-            NumpyLike:  the skew symmetric matrix from x
-        """
-        if not isinstance(x, NumpyLike):
-            return -np.cross(np.array(x), np.eye(3), axisa=0, axisb=0)
-        x = x.array
-        return NumpyLike(-np.cross(np.array(x), np.eye(3), axisa=0, axisb=0))
-
-    @staticmethod
     def array(*x) -> "NumpyLike":
         """
         Returns:
             NumpyLike: Vector wrapping *x
         """
         return NumpyLike(np.array(x))
+
+
+class SpatialMath(SpatialMath):
+    def __init__(self):
+        super().__init__(NumpyLikeFactory())
 
     @staticmethod
     def sin(x: npt.ArrayLike) -> "NumpyLike":
@@ -198,3 +175,29 @@ class NumpyLike(ArrayLike):
         x = np.array(x)
         y = np.array(y)
         return NumpyLike(np.outer(x, y))
+
+    @staticmethod
+    def vertcat(*x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
+        """
+        Returns:
+            NumpyLike: vertical concatenation of x
+        """
+        if isinstance(x[0], NumpyLike):
+            v = np.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+        else:
+            v = np.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
+        return NumpyLike(v)
+
+    @staticmethod
+    def skew(x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
+        """
+        Args:
+            x (Union[NumpyLike, npt.ArrayLike]): vector
+
+        Returns:
+            NumpyLike:  the skew symmetric matrix from x
+        """
+        if not isinstance(x, NumpyLike):
+            return -np.cross(np.array(x), np.eye(3), axisa=0, axisb=0)
+        x = x.array
+        return NumpyLike(-np.cross(np.array(x), np.eye(3), axisa=0, axisb=0))

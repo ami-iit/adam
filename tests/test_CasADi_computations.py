@@ -15,7 +15,7 @@ from adam.geometry import utils
 
 np.random.seed(42)
 
-model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
+model_path = str(gym_ignition_models.get_model_file("iCubGazeboV2_5"))
 
 joints_name_list = [
     "torso_pitch",

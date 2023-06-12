@@ -2,4 +2,5 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
-from . import rbd_algorithms, spatial_math, urdf_tree
+from .rbd_algorithms import RBDAlgorithms
+from .spatial_math import SpatialMath

@@ -8,7 +8,8 @@ from typing import Union
 import jax.numpy as jnp
 import numpy.typing as npt
 
-from adam.core.spatial_math import ArrayLike
+from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
+from adam.numpy import NumpyLike
 
 
 @dataclass
@@ -20,11 +21,9 @@ class JaxLike(ArrayLike):
     def __setitem__(self, idx, value: Union["JaxLike", npt.ArrayLike]):
         """Overrides set item operator"""
         if type(self) is type(value):
-            value.array = jnp.squeeze(value.array)
-            try:
-                self.array = self.array.at[idx].set(value.array)
-            except:
-                self.array = self.array.at[idx].set(value.array.reshape(-1, 1))
+            self.array = self.array.at[idx].set(
+                value.array.reshape(self.array[idx].shape)
+            )
         else:
             self.array = self.array.at[idx].set(value)
 
@@ -49,15 +48,17 @@ class JaxLike(ArrayLike):
 
     def __matmul__(self, other: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
         """Overrides @ operator"""
-        if type(self) is not type(other):
+        if type(other) in [JaxLike, NumpyLike]:
+            return JaxLike(self.array @ other.array)
+        else:
             return JaxLike(self.array @ jnp.array(other))
-        return JaxLike(self.array @ other.array)
 
     def __rmatmul__(self, other: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
         """Overrides @ operator"""
-        if type(self) is not type(other):
-            return JaxLike(jnp.array(other) @ self.array)
-        return JaxLike(other.array @ self.array)
+        if type(other) in [JaxLike, NumpyLike]:
+            return JaxLike(other.array * self.array)
+        else:
+            return JaxLike(jnp.array(other) * self.array)
 
     def __mul__(self, other: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
         """Overrides * operator"""
@@ -91,6 +92,7 @@ class JaxLike(ArrayLike):
 
     def __sub__(self, other: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
         """Overrides - operator"""
+
         if type(self) is not type(other):
             return JaxLike(self.array.squeeze() - other.squeeze())
         return JaxLike(self.array.squeeze() - other.array.squeeze())
@@ -98,13 +100,15 @@ class JaxLike(ArrayLike):
     def __rsub__(self, other: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
         """Overrides - operator"""
         if type(self) is not type(other):
-            return JaxLike(self.array.squeeze() - other.squeeze())
-        return JaxLike(self.array.squeeze() - other.array.squeeze())
+            return JaxLike(other.squeeze() - self.array.squeeze())
+        return JaxLike(other.array.squeeze() - self.array.squeeze())
 
     def __neg__(self) -> "JaxLike":
         """Overrides - operator"""
         return JaxLike(-self.array)
 
+
+class JaxLikeFactory(ArrayLikeFactory):
     @staticmethod
     def zeros(*x) -> "JaxLike":
         """
@@ -112,18 +116,6 @@ class JaxLike(ArrayLike):
             JaxLike: Matrix of zeros of dim *x
         """
         return JaxLike(jnp.zeros(x))
-
-    @staticmethod
-    def vertcat(*x) -> "JaxLike":
-        """
-        Returns:
-            JaxLike: Vertical concatenation of elements
-        """
-        if isinstance(x[0], JaxLike):
-            v = jnp.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
-        else:
-            v = jnp.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
-        return JaxLike(v)
 
     @staticmethod
     def eye(x) -> "JaxLike":
@@ -134,26 +126,17 @@ class JaxLike(ArrayLike):
         return JaxLike(jnp.eye(x))
 
     @staticmethod
-    def skew(x: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
-        """
-        Args:
-            x (Union[JaxLike, npt.ArrayLike]): vector
-
-        Returns:
-            JaxLike: the skew symmetric matrix from x
-        """
-        if not isinstance(x, JaxLike):
-            return -jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0)
-        x = x.array
-        return JaxLike(-jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0))
-
-    @staticmethod
     def array(*x) -> "JaxLike":
         """
         Returns:
             JaxLike: Vector wrapping *x
         """
         return JaxLike(jnp.array(x))
+
+
+class SpatialMath(SpatialMath):
+    def __init__(self):
+        super().__init__(JaxLikeFactory())
 
     @staticmethod
     def sin(x: npt.ArrayLike) -> "JaxLike":
@@ -190,3 +173,29 @@ class JaxLike(ArrayLike):
         x = jnp.array(x)
         y = jnp.array(y)
         return JaxLike(jnp.outer(x, y))
+
+    @staticmethod
+    def skew(x: Union["JaxLike", npt.ArrayLike]) -> "JaxLike":
+        """
+        Args:
+            x (Union[JaxLike, npt.ArrayLike]): vector
+
+        Returns:
+            JaxLike: the skew symmetric matrix from x
+        """
+        if not isinstance(x, JaxLike):
+            return -jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0)
+        x = x.array
+        return JaxLike(-jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0))
+
+    @staticmethod
+    def vertcat(*x) -> "JaxLike":
+        """
+        Returns:
+            JaxLike: Vertical concatenation of elements
+        """
+        if isinstance(x[0], JaxLike):
+            v = jnp.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+        else:
+            v = jnp.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
+        return JaxLike(v)

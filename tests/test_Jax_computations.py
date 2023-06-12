@@ -17,7 +17,7 @@ from adam.jax import KinDynComputations
 np.random.seed(42)
 config.update("jax_enable_x64", True)
 
-model_path = gym_ignition_models.get_model_file("iCubGazeboV2_5")
+model_path = str(gym_ignition_models.get_model_file("iCubGazeboV2_5"))
 
 joints_name_list = [
     "torso_pitch",
@@ -99,12 +99,12 @@ s_ = joints_val
 s_dot_ = joints_dot_val
 
 
-def test_mass_matrix():
-    mass_mx = idyntree.MatrixDynSize()
-    kinDyn.getFreeFloatingMassMatrix(mass_mx)
-    mass_mxNumpy = mass_mx.toNumPy()
-    mass_test = comp.mass_matrix(H_b, s_)
-    assert np.asarray(mass_test) - mass_mxNumpy == pytest.approx(0.0, abs=1e-5)
+# def test_mass_matrix():
+mass_mx = idyntree.MatrixDynSize()
+kinDyn.getFreeFloatingMassMatrix(mass_mx)
+mass_mxNumpy = mass_mx.toNumPy()
+mass_test = comp.mass_matrix(H_b, s_)
+assert np.asarray(mass_test) - mass_mxNumpy == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CMM():

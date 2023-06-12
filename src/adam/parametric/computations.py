@@ -7,7 +7,8 @@ import numpy as np
 
 from adam.casadi.casadi_like import SpatialMath
 from adam.core import RBDAlgorithms
-from adam.model import Model, URDFModelFactory
+from adam.model import Model
+from adam.parametric import ParametricModelFactory
 
 
 class KinDynComputations:
@@ -29,10 +30,9 @@ class KinDynComputations:
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
-        math = SpatialMath()
-        factory = URDFModelFactory(path=urdfstring, math=math)
+        factory = URDFModelFactory(urdfstring, SpatialMath())
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
-        self.rbdalgos = RBDAlgorithms(model=model, math=math)
+        self.rbdalgos = RBDAlgorithms(model=model)
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
         self.f_opts = f_opts
@@ -165,7 +165,7 @@ class KinDynComputations:
 
         return self.rbdalgos.forward_kinematics(frame, T_b, s)
 
-    def get_total_mass(self) -> float:
+    def get_total_mass(self):
         """Returns the total mass of the robot
 
         Returns:
