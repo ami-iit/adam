@@ -4,7 +4,7 @@
 
 import logging
 
-import icub_models
+import gym_ignition_models
 import idyntree.swig as idyntree
 import numpy as np
 import pytest
@@ -14,7 +14,7 @@ from adam.numpy import KinDynComputations
 
 np.random.seed(42)
 
-model_path = str(icub_models.get_model_file("iCubGazeboV2_5"))
+model_path = str(gym_ignition_models.get_model_file("iCubGazeboV2_5"))
 
 joints_name_list = [
     "torso_pitch",
