@@ -4,6 +4,7 @@
 import numpy.typing as npt
 
 from adam.model import Model, Node
+from adam.core.spatial_math import SpatialMath
 
 
 class RBDAlgorithms:
@@ -11,7 +12,7 @@ class RBDAlgorithms:
     in mixed representation, for Floating Base systems - as humanoid robots.
     """
 
-    def __init__(self, model: Model) -> None:
+    def __init__(self, model: Model, math: SpatialMath) -> None:
         """
         Args:
             urdfstring (str): path of the urdf
@@ -22,7 +23,7 @@ class RBDAlgorithms:
         self.model = model
         self.NDoF = model.NDoF
         self.root_link = self.model.tree.root
-        self.math = model.factory.math
+        self.math = math
 
     def crba(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
