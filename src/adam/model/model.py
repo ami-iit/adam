@@ -19,7 +19,7 @@ class Model:
     NDoF: int
 
     def __post_init__(self):
-        """set the "lenght of the model as the number of links"""
+        """set the "length of the model as the number of links"""
         self.N = len(self.links)
 
     @staticmethod
