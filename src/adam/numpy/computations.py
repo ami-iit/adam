@@ -27,9 +27,10 @@ class KinDynComputations:
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
-        factory = URDFModelFactory(urdfstring, SpatialMath())
+        math = SpatialMath()
+        factory = URDFModelFactory(path=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
-        self.rbdalgos = RBDAlgorithms(model=model, math=SpatialMath())
+        self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = model.NDoF
         self.g = gravity
 
