@@ -16,6 +16,11 @@ class StdLink(Link):
         self.collisions = link.collisions
         self.origin = link.origin
 
+        # if the link has inertial properties, but the origin is None, let's add it
+        if link.inertial is not None and link.inertial.origin is None:
+            link.inertial.origin.xyz = [0, 0, 0]
+            link.inertial.origin.rpy = [0, 0, 0]
+
     def spatial_inertia(self) -> npt.ArrayLike:
         """
         Args:
