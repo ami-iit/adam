@@ -14,5 +14,5 @@ dependencies:
   - setuptools_scm
   - pytest
   - pytest-repeat
-  - gym-ignition-models
+  - icub-models
   - idyntree

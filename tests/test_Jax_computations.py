@@ -4,7 +4,7 @@
 
 import logging
 
-import gym_ignition_models
+import icub_models
 import idyntree.swig as idyntree
 import jax.numpy as jnp
 import numpy as np
@@ -17,7 +17,7 @@ from adam.jax import KinDynComputations
 np.random.seed(42)
 config.update("jax_enable_x64", True)
 
-model_path = str(gym_ignition_models.get_model_file("iCubGazeboV2_5"))
+model_path = str(icub_models.get_model_file("iCubGazeboV2_5"))
 
 joints_name_list = [
     "torso_pitch",
