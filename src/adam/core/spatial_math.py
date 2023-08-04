@@ -404,13 +404,57 @@ class SpatialMath:
         """
         return -self.spatial_skew(v).T
 
-    def adjoint(self, R: npt.ArrayLike) -> npt.ArrayLike:
+    def adjoint(self, H: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
-            R (npt.ArrayLike): Rotation matrix
+            H (npt.ArrayLike): Homogeneous transform
         Returns:
             npt.ArrayLike: adjoint matrix
         """
+        R = H[:3, :3]
+        p = H[:3, 3]
+        X = self.factory.eye(6)
+        X[:3, :3] = R
+        X[3:6, 3:6] = R
+        X[:3, 3:6] = self.skew(p) @ R
+        return X
+
+    def adjoint_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            H (npt.ArrayLike): Homogeneous transform
+        Returns:
+            npt.ArrayLike: adjoint matrix
+        """
+        R = H[:3, :3]
+        p = H[:3, 3]
+        X = self.factory.eye(6)
+        X[:3, :3] = R.T
+        X[3:6, 3:6] = R.T
+        X[:3, 3:6] = -R.T @ self.skew(p)
+        return X
+
+    def adjoint_mixed(self, H: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            H (npt.ArrayLike): Homogeneous transform
+        Returns:
+            npt.ArrayLike: adjoint matrix
+        """
+        R = H[:3, :3]
+        X = self.factory.eye(6)
+        X[:3, :3] = R
+        X[3:6, 3:6] = R
+        return X
+
+    def adjoint_mixed_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            H (npt.ArrayLike): Homogeneous transform
+        Returns:
+            npt.ArrayLike: adjoint matrix
+        """
+        R = H[:3, :3]
         X = self.factory.eye(6)
         X[:3, :3] = R.T
         X[3:6, 3:6] = R.T
