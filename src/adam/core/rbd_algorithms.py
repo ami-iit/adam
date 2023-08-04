@@ -103,14 +103,20 @@ class RBDAlgorithms:
             elif joint_i.idx is not None:
                 Jcm[:, joint_i.idx + 6] = X_G[i].T @ Ic[i] @ Phi[i]
 
-        # Until now the algorithm returns the joint_position quantities in Body Fixed representation
-        # Moving to mixed representation...
-        X_to_mixed = self.math.factory.eye(self.model.NDoF + 6)
-        X_to_mixed[:3, :3] = base_transform[:3, :3].T
-        X_to_mixed[3:6, 3:6] = base_transform[:3, :3].T
-        M = X_to_mixed.T @ M @ X_to_mixed
-        Jcm = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
-        return M, Jcm
+        if (
+            self.frame_velocity_representation
+            == Representations.BODY_FIXED_REPRESENTATION
+        ):
+            return M, Jcm
+
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            # Until now the algorithm returns the joint_position quantities in Body Fixed representation
+            # Moving to mixed representation...
+            X_to_mixed = self.math.factory.eye(self.model.NDoF + 6)
+            X_to_mixed[:6, :6] = self.math.adjoint_mixed_inverse(base_transform)
+            M = X_to_mixed.T @ M @ X_to_mixed
+            Jcm = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
+            return M, Jcm
 
     def forward_kinematics(
         self, frame, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
