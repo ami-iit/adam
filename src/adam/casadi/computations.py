@@ -7,6 +7,7 @@ import numpy as np
 
 from adam.casadi.casadi_like import SpatialMath
 from adam.core import RBDAlgorithms
+from adam.core.constants import Representations
 from adam.model import Model, URDFModelFactory
 
 
@@ -36,6 +37,16 @@ class KinDynComputations:
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
         self.f_opts = f_opts
+
+    def set_frame_velocity_representation(
+        self, representation: Representations
+    ) -> None:
+        """Sets the representation of the velocity of the frames
+
+        Args:
+            representation (Representations): The representation of the velocity
+        """
+        self.rbdalgos.set_frame_velocity_representation(representation)
 
     def mass_matrix_fun(self) -> cs.Function:
         """Returns the Mass Matrix functions computed the CRBA

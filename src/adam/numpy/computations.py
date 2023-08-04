@@ -4,6 +4,7 @@
 
 import numpy as np
 
+from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.model import Model, URDFModelFactory
 from adam.numpy.numpy_like import SpatialMath
@@ -33,6 +34,16 @@ class KinDynComputations:
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = model.NDoF
         self.g = gravity
+
+    def set_frame_velocity_representation(
+        self, representation: Representations
+    ) -> None:
+        """Sets the representation of the velocity of the frames
+
+        Args:
+            representation (Representations): The representation of the velocity
+        """
+        self.rbdalgos.set_frame_velocity_representation(representation)
 
     def mass_matrix(
         self, base_transform: np.ndarray, joint_positions: np.ndarray
