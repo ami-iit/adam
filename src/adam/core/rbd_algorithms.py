@@ -302,20 +302,33 @@ class RBDAlgorithms:
         a = [None] * model_len
         f = [None] * model_len
 
-        X_to_mixed = self.math.adjoint(base_transform[:3, :3])
+        transformed_acceleration = self.math.factory.zeros(6, 1)
+        gravity_transform = self.math.adjoint_mixed_inverse(base_transform)
+        if (
+            self.frame_velocity_representation
+            == Representations.BODY_FIXED_REPRESENTATION
+        ):
+            B_X_BI = self.math.factory.eye(6)
 
-        acc_to_mixed = self.math.factory.zeros(6, 1)
-        acc_to_mixed[:3] = (
-            -X_to_mixed[:3, :3] @ self.math.skew(base_velocity[3:]) @ base_velocity[:3]
-        )
-        acc_to_mixed[3:] = (
-            -X_to_mixed[:3, :3] @ self.math.skew(base_velocity[3:]) @ base_velocity[3:]
-        )
+        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            B_X_BI = self.math.adjoint_mixed_inverse(base_transform)
+            transformed_acceleration[:3] = (
+                -B_X_BI[:3, :3] @ self.math.skew(base_velocity[3:]) @ base_velocity[:3]
+            )
+            # transformed_acceleration[3:] = (
+            #     -X_to_mixed[:3, :3]
+            #     @ self.math.skew(base_velocity[3:])
+            #     @ base_velocity[3:]
+            # )
+        else:
+            raise NotImplementedError(
+                "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
+            )
+
         # set initial acceleration (rotated gravity + apparent acceleration)
         # reshape g as a vertical vector
-        a[0] = -X_to_mixed @ g.reshape(-1, 1) + acc_to_mixed
+        a[0] = -gravity_transform @ g.reshape(6, 1) + transformed_acceleration
 
-        # for i in range(self.tree.N):
         for i, node in enumerate(self.model.tree):
             node: Node
             link_i, joint_i, link_pi = node.get_elements()
@@ -326,7 +339,7 @@ class RBDAlgorithms:
                     self.math.factory.eye(3), self.math.factory.zeros(3, 1)
                 )
                 Phi[i] = self.math.factory.eye(6)
-                v[i] = X_to_mixed @ base_velocity
+                v[i] = B_X_BI @ base_velocity
                 a[i] = X_p[i] @ a[0]
             else:
                 q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
@@ -353,7 +366,7 @@ class RBDAlgorithms:
                 pi = self.model.tree.get_idx_from_name(link_pi.name)
                 f[pi] = f[pi] + X_p[i].T @ f[i]
 
-        tau[:6] = X_to_mixed.T @ tau[:6]
+        tau[:6] = B_X_BI.T @ tau[:6]
         return tau
 
     def aba(self):
