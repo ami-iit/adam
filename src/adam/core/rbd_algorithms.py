@@ -221,8 +221,22 @@ class RBDAlgorithms:
         Returns:
             J (npt.ArrayLike): The Jacobian between the root and the frame
         """
-        base_transform = self.math.factory.eye(4)
-        return self.joints_jacobian(frame, base_transform, joint_positions)
+        eye = self.math.factory.eye(4)
+        T_ee = self.forward_kinematics(frame, eye, joint_positions)
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            return self.joints_jacobian(frame, eye, joint_positions)
+
+        elif (
+            self.frame_velocity_representation
+            == Representations.BODY_FIXED_REPRESENTATION
+        ):
+            return self.math.adjoint_mixed_inverse(T_ee) @ self.joints_jacobian(
+                frame, eye, joint_positions
+            )  # J for now is B_J_L, we need L_J_L, so we need to multiply by L_R_B
+        else:
+            raise NotImplementedError(
+                "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
+            )
 
     def CoM_position(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
