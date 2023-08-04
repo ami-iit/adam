@@ -3,8 +3,9 @@
 # GNU Lesser General Public License v2.1 or any later version.
 import numpy.typing as npt
 
-from adam.model import Model, Node
+from adam.core.constants import Representations
 from adam.core.spatial_math import SpatialMath
+from adam.model import Model, Node
 
 
 class RBDAlgorithms:
@@ -24,6 +25,17 @@ class RBDAlgorithms:
         self.NDoF = model.NDoF
         self.root_link = self.model.tree.root
         self.math = math
+        self.frame_velocity_representation = (
+            Representations.MIXED_REPRESENTATION
+        )  # default
+
+    def set_frame_velocity_representation(self, representation: Representations):
+        """Sets the frame velocity representation
+
+        Args:
+            representation (str): The representation of the frame velocity
+        """
+        self.frame_velocity_representation = representation
 
     def crba(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
