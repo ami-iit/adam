@@ -179,16 +179,35 @@ class RBDAlgorithms:
     def jacobian(
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-        J = self.joints_jacobian(frame, base_transform, joint_positions)
-        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
-        # Adding the floating base part of the Jacobian, in Mixed representation
+        eye = self.math.factory.eye(4)
+        J = self.joints_jacobian(frame, eye, joint_positions)
+        T_ee = self.forward_kinematics(frame, eye, joint_positions)
+        X = self.math.factory.zeros(6, 6)
+        L_X_B = self.math.adjoint_inverse(T_ee)
+        J = (
+            self.math.adjoint_mixed_inverse(T_ee) @ J
+        )  # J for now is B_J_L, we need L_J_L, so we need to multiply by L_R_B
         J_tot = self.math.factory.zeros(6, self.NDoF + 6)
-        J_tot[:3, :3] = self.math.factory.eye(3)
-        J_tot[:3, 3:6] = -self.math.skew((T_ee[:3, 3] - base_transform[:3, 3]))
-        J_tot[:3, 6:] = J[:3, :]
-        J_tot[3:, 3:6] = self.math.factory.eye(3)
-        J_tot[3:, 6:] = J[3:, :]
-        return J_tot
+        J_tot[:6, :6] = L_X_B
+        J_tot[:, 6:] = J
+
+        if (
+            self.frame_velocity_representation
+            == Representations.BODY_FIXED_REPRESENTATION
+        ):
+            return J_tot
+        # let's move to mixed representation
+        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            w_H_L = base_transform @ T_ee.array
+            LI_X_L = self.math.adjoint_mixed(w_H_L)
+            X = self.math.factory.eye(6 + self.NDoF)
+            X[:6, :6] = self.math.adjoint_mixed_inverse(base_transform)
+            J_tot = LI_X_L @ J_tot @ X
+            return J_tot
+        else:
+            raise NotImplementedError(
+                "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
+            )
 
     def relative_jacobian(
         self, frame: str, joint_positions: npt.ArrayLike
