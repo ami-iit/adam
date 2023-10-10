@@ -309,11 +309,11 @@ class RBDAlgorithms:
         com_pos = self.math.factory.zeros(3, 1)
         for item in self.model.tree:
             link = item.link
-            T_fk = self.forward_kinematics(link.name, base_transform, joint_positions)
-            T_link = link.homogeneous()
+            I_H_l = self.forward_kinematics(link.name, base_transform, joint_positions)
+            H_link = link.homogeneous()
             # Adding the link transform
-            T_fk = T_fk @ T_link
-            com_pos += T_fk[:3, 3] * link.inertial.mass
+            I_H_l = I_H_l @ H_link
+            com_pos += I_H_l[:3, 3] * link.inertial.mass
         com_pos /= self.get_total_mass()
         return com_pos
 
