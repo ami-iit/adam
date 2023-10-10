@@ -152,7 +152,7 @@ class RBDAlgorithms:
         return I_H_ee
 
     def joints_jacobian(
-        self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+        self, frame: str, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
         """Returns the Jacobian relative to the specified frame
 
@@ -165,40 +165,27 @@ class RBDAlgorithms:
             J (npt.ArrayLike): The Joints Jacobian relative to the frame
         """
         chain = self.model.get_joints_chain(self.root_link, frame)
-        T_fk = self.math.factory.eye(4) @ base_transform
+        eye = self.math.factory.eye(4)
+        B_H_l = eye
         J = self.math.factory.zeros(6, self.NDoF)
-        T_ee = self.forward_kinematics(frame, base_transform, joint_positions)
-        P_ee = T_ee[:3, 3]
+        B_H_ee = self.forward_kinematics(frame, eye, joint_positions)
+        ee_H_B = self.math.homogeneous_inverse(B_H_ee)
         for joint in chain:
-            q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
-            T_joint = joint.homogeneous(q=q_)
-            T_fk = T_fk @ T_joint
-            if joint.type in ["revolute", "continuous"]:
-                p_prev = P_ee - T_fk[:3, 3]
-                z_prev = T_fk[:3, :3] @ joint.axis
-                J_lin = self.math.skew(z_prev) @ p_prev
-                J_ang = z_prev
-            elif joint.type in ["prismatic"]:
-                z_prev = T_fk[:3, :3] @ joint.axis
-                J_lin = z_prev
-                J_ang = self.math.factory.zeros(3)
-
+            q = joint_positions[joint.idx] if joint.idx is not None else 0.0
+            H_j = joint.homogeneous(q=q)
+            B_H_l = B_H_l @ H_j
+            ee_H_l = ee_H_B @ B_H_l
             if joint.idx is not None:
-                J[:, joint.idx] = self.math.vertcat(J_lin, J_ang)
-
+                J[:, joint.idx] = self.math.adjoint(ee_H_l) @ joint.motion_subspace()
         return J
 
     def jacobian(
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
         eye = self.math.factory.eye(4)
-        J = self.joints_jacobian(frame, eye, joint_positions)
-        T_ee = self.forward_kinematics(frame, eye, joint_positions)
-        X = self.math.factory.zeros(6, 6)
-        L_X_B = self.math.adjoint_inverse(T_ee)
-        J = (
-            self.math.adjoint_mixed_inverse(T_ee) @ J
-        )  # J for now is B_J_L, we need L_J_L, so we need to multiply by L_R_B
+        J = self.joints_jacobian(frame, joint_positions)
+        B_H_ee = self.forward_kinematics(frame, eye, joint_positions)
+        L_X_B = self.math.adjoint_inverse(B_H_ee)
         J_tot = self.math.factory.zeros(6, self.NDoF + 6)
         J_tot[:6, :6] = L_X_B
         J_tot[:, 6:] = J
@@ -210,7 +197,7 @@ class RBDAlgorithms:
             return J_tot
         # let's move to mixed representation
         elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            w_H_L = base_transform @ T_ee.array
+            w_H_L = base_transform @ B_H_ee.array
             LI_X_L = self.math.adjoint_mixed(w_H_L)
             X = self.math.factory.eye(6 + self.NDoF)
             X[:6, :6] = self.math.adjoint_mixed_inverse(base_transform)
@@ -233,6 +220,7 @@ class RBDAlgorithms:
         Returns:
             J (npt.ArrayLike): The Jacobian between the root and the frame
         """
+        return self.joints_jacobian(frame, joint_positions)
         eye = self.math.factory.eye(4)
         T_ee = self.forward_kinematics(frame, eye, joint_positions)
         if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
