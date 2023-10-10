@@ -140,16 +140,16 @@ class RBDAlgorithms:
             base_transform (npt.ArrayLike): The homogenous transform from base to world frame
             joint_positions (npt.ArrayLike): The joints position
         Returns:
-            T_fk (npt.ArrayLike): The fk represented as Homogenous transformation matrix
+            I_H_ee (npt.ArrayLike): The fk represented as Homogenous transformation matrix
         """
         chain = self.model.get_joints_chain(self.root_link, frame)
-        T_fk = self.math.factory.eye(4)
-        T_fk = T_fk @ base_transform
+        I_H_ee = self.math.factory.eye(4)
+        I_H_ee = I_H_ee @ base_transform
         for joint in chain:
             q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
-            T_joint = joint.homogeneous(q=q_)
-            T_fk = T_fk @ T_joint
-        return T_fk
+            H_joint = joint.homogeneous(q=q_)
+            I_H_ee = I_H_ee @ H_joint
+        return I_H_ee
 
     def joints_jacobian(
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
