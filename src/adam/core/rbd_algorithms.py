@@ -221,18 +221,74 @@ class RBDAlgorithms:
             J (npt.ArrayLike): The Jacobian between the root and the frame
         """
         return self.joints_jacobian(frame, joint_positions)
-        eye = self.math.factory.eye(4)
-        T_ee = self.forward_kinematics(frame, eye, joint_positions)
-        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            return self.joints_jacobian(frame, eye, joint_positions)
 
-        elif (
+    def jacobian_dot(
+        self,
+        frame: str,
+        base_transform: npt.ArrayLike,
+        joint_positions: npt.ArrayLike,
+        base_velocity: npt.ArrayLike,
+        joint_velocities: npt.ArrayLike,
+    ) -> npt.ArrayLike:
+        """Returns the Jacobian derivative relative to the specified frame
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+            base_velocity (npt.ArrayLike): The base velocity in mixed representation
+            joint_velocities (npt.ArrayLike): The joints velocity
+
+        Returns:
+            J_dot (npt.ArrayLike): The Jacobian derivative relative to the frame
+        """
+        chain = self.model.get_joints_chain(self.root_link, frame)
+        eye = self.math.factory.eye(4)
+        B_H_l = eye
+        J = self.math.factory.zeros(6, self.NDoF + 6)
+        J_dot = self.math.factory.zeros(6, self.NDoF + 6)
+        B_H_ee = self.forward_kinematics(frame, eye, joint_positions)
+        ee_H_B = self.math.homogeneous_inverse(B_H_ee)
+        v = self.math.adjoint(ee_H_B) @ base_velocity
+        a = self.math.adjoint_derivative(ee_H_B, v) @ base_velocity
+        J[:, :6] = self.math.adjoint(ee_H_B)
+        J_dot[:, :6] = self.math.adjoint_derivative(ee_H_B, v)
+        for joint in chain:
+            q = joint_positions[joint.idx] if joint.idx is not None else 0.0
+            q_dot = joint_velocities[joint.idx] if joint.idx is not None else 0.0
+            H_j = joint.homogeneous(q=q)
+            B_H_l = B_H_l @ H_j
+            ee_H_l = ee_H_B @ B_H_l
+            J_j = self.math.adjoint(ee_H_l) @ joint.motion_subspace()
+            J_dot_j = self.math.adjoint_derivative(ee_H_l, v) @ joint.motion_subspace()
+            v += J_j * q_dot
+            a += J_dot_j * q_dot
+            if joint.idx is not None:
+                J[:, joint.idx + 6] = J_j
+                J_dot[:, joint.idx + 6] = J_dot_j
+
+        if (
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
         ):
-            return self.math.adjoint_mixed_inverse(T_ee) @ self.joints_jacobian(
-                frame, eye, joint_positions
-            )  # J for now is B_J_L, we need L_J_L, so we need to multiply by L_R_B
+            return J_dot
+        # let's move to mixed representation
+        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            w_H_l = base_transform @ B_H_l.array
+            LI_X_l = self.math.adjoint_mixed(w_H_l)
+            X = self.math.factory.eye(6 + self.NDoF)
+            X[:6, :6] = self.math.adjoint_mixed_inverse(base_transform)
+            LI_X_l_dot = self.math.adjoint_mixed_derivative(w_H_l, v.array)
+
+            X_dot = self.math.factory.zeros(6 + self.NDoF, 6 + self.NDoF)
+            X_dot[:6, :6] = self.math.adjoint_mixed_inverse_derivative(
+                base_transform, base_velocity
+            )
+            derivative_1 = LI_X_l_dot @ J @ X
+            derivative_2 = LI_X_l @ J_dot @ X
+            derivative_3 = LI_X_l @ J @ X_dot
+            J_dot = derivative_1 + derivative_2 + derivative_3
+            return J_dot
         else:
             raise NotImplementedError(
                 "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
