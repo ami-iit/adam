@@ -12,6 +12,7 @@ import pytest
 
 from adam.casadi import KinDynComputations
 from adam.geometry import utils
+from adam import Representations
 
 np.random.seed(42)
 
@@ -59,6 +60,7 @@ logging.debug("Showing the robot tree.")
 
 root_link = "root_link"
 comp = KinDynComputations(model_path, joints_name_list, root_link)
+comp.set_frame_velocity_representation(Representations.MIXED_REPRESENTATION)
 robot_iDyn = idyntree.ModelLoader()
 robot_iDyn.loadReducedModelFromFile(model_path, joints_name_list)
 
@@ -146,6 +148,15 @@ def test_jacobian_non_actuated():
     assert iDynNumpyJ_ - J_test == pytest.approx(0.0, abs=1e-5)
 
 
+def test_jacobian_dot():
+    J_dot_fun = comp.jacobian_dot_fun("l_sole")
+    J_dot = J_dot_fun(H_b, s_, vb_, s_dot_)
+    Jdotnu = kinDyn.getFrameBiasAcc("l_sole")
+    Jdot_nu = Jdotnu.toNumPy()
+    J_dot_nu_test = J_dot @ cs.vertcat(vb_, s_dot_)
+    assert Jdot_nu - J_dot_nu_test == pytest.approx(0.0, abs=1e-5)
+
+
 def test_fk():
     H_idyntree = kinDyn.getWorldTransform("l_sole")
     p_idy2np = H_idyntree.getPosition().toNumPy()
@@ -205,11 +216,17 @@ def test_gravity_term():
     assert G_iDyn_np - G_test == pytest.approx(0.0, abs=1e-4)
 
 
-def test_relative_jacobian():
-    kinDyn.setRobotState(H_from_Pos_RPY_idyn(np.zeros(3), np.zeros(3)), s, vb, s_dot, g)
-    iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
-    kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
-    iDynNumpyRelativeJ = (iDyntreeJ_.toNumPy())[:, 6:]
-    J = comp.relative_jacobian_fun("l_sole")
-    J_test = cs.DM(J(s_))
-    assert iDynNumpyRelativeJ - np.array(J_test) == pytest.approx(0.0, abs=1e-4)
+# def test_relative_jacobian():
+kinDyn.setRobotState(H_from_Pos_RPY_idyn(np.zeros(3), np.zeros(3)), s, vb, s_dot, g)
+iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
+kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
+iDynNumpyRelativeJ = (iDyntreeJ_.toNumPy())[:, 6:]
+J = comp.relative_jacobian_fun("l_sole")
+# J = comp.jacobian_fun("l_sole")
+# J_test = cs.DM(J(np.eye(4), s_))[:, 6:]
+J_test = cs.DM(J(s_))
+
+print("iDynNumpyRelativeJ", iDynNumpyRelativeJ[0, :])
+print("J_test", J_test[0, :])
+
+assert iDynNumpyRelativeJ - np.array(J_test) == pytest.approx(0.0, abs=1e-4)

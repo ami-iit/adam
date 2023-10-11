@@ -142,6 +142,14 @@ def test_jacobian_non_actuated():
     assert iDynNumpyJ_ - np.array(J_test) == pytest.approx(0.0, abs=1e-4)
 
 
+def test_jacobian_dot():
+    J_dot = comp.jacobian_dot("l_sole", H_b, s_, vb_, s_dot_)
+    Jdotnu = kinDyn.getFrameBiasAcc("l_sole")
+    Jdot_nu = Jdotnu.toNumPy()
+    J_dot_nu_test = J_dot @ np.concatenate((vb_, s_dot_))
+    assert Jdot_nu - np.array(J_dot_nu_test) == pytest.approx(0.0, abs=1e-5)
+
+
 def test_fk():
     H_idyntree = kinDyn.getWorldTransform("l_sole")
     p_idy2np = H_idyntree.getPosition().toNumPy()

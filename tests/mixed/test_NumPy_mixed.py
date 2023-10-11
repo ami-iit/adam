@@ -9,6 +9,7 @@ import idyntree.swig as idyntree
 import numpy as np
 import pytest
 
+from adam import Representations
 from adam.geometry import utils
 from adam.numpy import KinDynComputations
 
@@ -138,6 +139,14 @@ def test_jacobian_non_actuated():
     iDynNumpyJ_ = iDyntreeJ_.toNumPy()
     J_test = comp.jacobian("head", H_b, s_)
     assert iDynNumpyJ_ - J_test == pytest.approx(0.0, abs=1e-5)
+
+
+def test_jacobian_dot():
+    J_dot = comp.jacobian_dot("l_sole", H_b, s_, vb_, s_dot_)
+    Jdotnu = kinDyn.getFrameBiasAcc("l_sole")
+    Jdot_nu = Jdotnu.toNumPy()
+    J_dot_nu_test = J_dot @ np.concatenate((vb_, s_dot_))
+    assert Jdot_nu - J_dot_nu_test == pytest.approx(0.0, abs=1e-5)
 
 
 def test_fk():
