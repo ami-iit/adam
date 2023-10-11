@@ -510,7 +510,7 @@ class SpatialMath:
             npt.ArrayLike: adjoint matrix derivative
         """
         R = H[:3, :3]
-        R_dot = R @ self.skew(v[3:])
+        R_dot = self.skew(v[3:]) @ R
         X = self.factory.zeros(6, 6)
         X[:3, :3] = R_dot
         X[3:6, 3:6] = R_dot
@@ -527,7 +527,7 @@ class SpatialMath:
             npt.ArrayLike: adjoint matrix derivative
         """
         R = H[:3, :3]
-        R_dot = R @ self.skew(v[3:])
+        R_dot = self.skew(v[3:]) @ R
         X = self.factory.zeros(6, 6)
         X[:3, :3] = R_dot.T
         X[3:6, 3:6] = R_dot.T
