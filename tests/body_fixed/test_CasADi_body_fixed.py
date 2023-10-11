@@ -224,4 +224,4 @@ def test_relative_jacobian():
     iDynNumpyRelativeJ = (iDyntreeJ_.toNumPy())[:, 6:]
     J_fun = comp.relative_jacobian_fun("l_sole")
     J_test = cs.DM(J_fun(s_))
-    assert iDynNumpyRelativeJ - np.array(J_test) == pytest.approx(0.0, abs=1e-4)
+    assert iDynNumpyRelativeJ - J_test == pytest.approx(0.0, abs=1e-4)

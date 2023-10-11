@@ -216,17 +216,11 @@ def test_gravity_term():
     assert G_iDyn_np - G_test == pytest.approx(0.0, abs=1e-4)
 
 
-# def test_relative_jacobian():
-kinDyn.setRobotState(H_from_Pos_RPY_idyn(np.zeros(3), np.zeros(3)), s, vb, s_dot, g)
-iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
-kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
-iDynNumpyRelativeJ = (iDyntreeJ_.toNumPy())[:, 6:]
-J = comp.relative_jacobian_fun("l_sole")
-# J = comp.jacobian_fun("l_sole")
-# J_test = cs.DM(J(np.eye(4), s_))[:, 6:]
-J_test = cs.DM(J(s_))
-
-print("iDynNumpyRelativeJ", iDynNumpyRelativeJ[0, :])
-print("J_test", J_test[0, :])
-
-assert iDynNumpyRelativeJ - np.array(J_test) == pytest.approx(0.0, abs=1e-4)
+def test_relative_jacobian():
+    kinDyn.setRobotState(H_from_Pos_RPY_idyn(np.zeros(3), np.zeros(3)), s, vb, s_dot, g)
+    iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
+    kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
+    iDynNumpyRelativeJ = (iDyntreeJ_.toNumPy())[:, 6:]
+    J_fun = comp.relative_jacobian_fun("l_sole")
+    J_test = cs.DM(J_fun(s_))
+    assert iDynNumpyRelativeJ - J_test == pytest.approx(0.0, abs=1e-4)
