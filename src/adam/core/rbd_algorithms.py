@@ -211,16 +211,28 @@ class RBDAlgorithms:
     def relative_jacobian(
         self, frame: str, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-        """Returns the Jacobian between the root link and a specified frame frames
-
+        """Returns the Jacobian between the root link and a specified frame
         Args:
             frame (str): The tip of the chain
             joint_positions (npt.ArrayLike): The joints position
 
         Returns:
-            J (npt.ArrayLike): The Jacobian between the root and the frame
+            J (npt.ArrayLike): The 6 x NDoF Jacobian between the root and the frame
         """
-        return self.joints_jacobian(frame, joint_positions)
+        if (
+            self.frame_velocity_representation
+            == Representations.BODY_FIXED_REPRESENTATION
+        ):
+            return self.joints_jacobian(frame, joint_positions)
+        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            eye = self.math.factory.eye(4)
+            B_H_L = self.forward_kinematics(frame, eye, joint_positions)
+            LI_X_L = self.math.adjoint_mixed(B_H_L)
+            return LI_X_L @ self.joints_jacobian(frame, joint_positions)
+        else:
+            raise NotImplementedError(
+                "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
+            )
 
     def jacobian_dot(
         self,
