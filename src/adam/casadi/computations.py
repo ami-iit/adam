@@ -111,6 +111,22 @@ class KinDynComputations:
         J = self.rbdalgos.relative_jacobian(frame, s)
         return cs.Function("J", [s], [J.array], self.f_opts)
 
+    def jacobian_dot_fun(self, frame: str) -> cs.Function:
+        """Returns the Jacobian derivative relative to the specified frame
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+
+        Returns:
+            J_dot (casADi function): The Jacobian derivative relative to the frame
+        """
+        T_b = cs.SX.sym("T_b", 4, 4)
+        s = cs.SX.sym("s", self.NDoF)
+        v_b = cs.SX.sym("v_b", 6)
+        s_dot = cs.SX.sym("s_dot", self.NDoF)
+        J_dot = self.rbdalgos.jacobian_dot(frame, T_b, s, v_b, s_dot)
+        return cs.Function("J_dot", [T_b, s, v_b, s_dot], [J_dot.array], self.f_opts)
+
     def CoM_position_fun(self) -> cs.Function:
         """Returns the CoM positon
 
