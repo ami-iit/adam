@@ -122,6 +122,30 @@ class KinDynComputations:
         """
         return self.rbdalgos.relative_jacobian(frame, joint_positions).array
 
+    def jacobian_dot(
+        self,
+        frame: str,
+        base_transform: torch.Tensor,
+        joint_positions: torch.Tensor,
+        base_velocity: torch.Tensor,
+        joint_velocities: torch.Tensor,
+    ) -> torch.Tensor:
+        """Returns the Jacobian derivative relative to the specified frame
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+            base_transform (torch.Tensor): The homogenous transform from base to world frame
+            joint_positions (torch.Tensor): The joints position
+            base_velocity (torch.Tensor): The base velocity in mixed representation
+            joint_velocities (torch.Tensor): The joint velocities
+
+        Returns:
+            Jdot (torch.Tensor): The Jacobian derivative relative to the frame
+        """
+        return self.rbdalgos.jacobian_dot(
+            frame, base_transform, joint_positions, base_velocity, joint_velocities
+        ).array
+
     def CoM_position(
         self, base_transform: torch.Tensor, joint_positions: torch.Tensor
     ) -> torch.Tensor:

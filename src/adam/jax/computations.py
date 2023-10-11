@@ -87,6 +87,30 @@ class KinDynComputations:
         """
         return self.rbdalgos.relative_jacobian(frame, joint_positions).array
 
+    def jacobian_dot(
+        self,
+        frame: str,
+        base_transform: jnp.array,
+        joint_positions: jnp.array,
+        base_velocity: jnp.array,
+        joint_velocities: jnp.array,
+    ) -> jnp.array:
+        """Returns the Jacobian derivative relative to the specified frame
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            joint_positions (jnp.array): The joints position
+            base_velocity (jnp.array): The base velocity in mixed representation
+            joint_velocities (jnp.array): The joint velocities
+
+        Returns:
+            Jdot (jnp.array): The Jacobian derivative relative to the frame
+        """
+        return self.rbdalgos.jacobian_dot(
+            frame, base_transform, joint_positions, base_velocity, joint_velocities
+        ).array
+
     def forward_kinematics(
         self, frame: str, base_transform: jnp.array, joint_positions: jnp.array
     ):
