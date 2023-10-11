@@ -5,7 +5,7 @@
 
 **Automatic Differentiation for rigid-body-dynamics AlgorithMs**
 
-ADAM implements a collection of algorithms for calculating rigid-body dynamics for **floating-base** robots, in _mixed representation_ (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)) using:
+ADAM implements a collection of algorithms for calculating rigid-body dynamics for **floating-base** robots, in _mixed_ and _base fixed representations_, also called _left trivialized_ representation (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)) using:
 
 - [Jax](https://github.com/google/jax)
 - [CasADi](https://web.casadi.org/)
@@ -43,7 +43,7 @@ They will be installed in the installation step!
 
 The installation can be done either using the Python provided by apt (on Debian-based distros) or via conda (on Linux and macOS).
 
-### Installation with pip
+### 🐍 Installation with pip
 
 Install `python3`, if not installed (in **Ubuntu 20.04**):
 
@@ -99,7 +99,7 @@ cd ADAM
 pip install .[selected-interface]
 ```
 
-### Installation with conda
+### 📦 Installation with conda
 
 #### Installation from conda-forge package
 
@@ -109,7 +109,7 @@ mamba create -n adamenv -c conda-forge adam-robotics
 
 If you want to use `jax` or `pytorch`, just install the corresponding package as well.
 
-#### Installation from repo
+### 🔨 Installation from repo
 
 Install in a conda environment the required dependencies:
 
@@ -154,6 +154,7 @@ Have also a look at te `tests` folder.
 ### Jax interface
 
 ```python
+import adam
 from adam.jax import KinDynComputations
 import icub_models
 import numpy as np
@@ -171,6 +172,10 @@ joints_name_list = [
 # Specify the root link
 root_link = 'root_link'
 kinDyn = KinDynComputations(model_path, joints_name_list, root_link)
+# choose the representation you want to use the body fixed representation
+kinDyn.set_frame_velocity_representation(adam.Representations.BODY_FIXED_REPRESENTATION)
+# or, if you want to use the mixed representation (that is the default)
+kinDyn.set_frame_velocity_representation(adam.Representations.MIXED_REPRESENTATION)
 w_H_b = np.eye(4)
 joints = np.ones(len(joints_name_list))
 M = kinDyn.mass_matrix(w_H_b, joints)
@@ -180,6 +185,7 @@ print(M)
 ### CasADi interface
 
 ```python
+import adam
 from adam.casadi import KinDynComputations
 import icub_models
 import numpy as np
@@ -197,6 +203,10 @@ joints_name_list = [
 # Specify the root link
 root_link = 'root_link'
 kinDyn = KinDynComputations(model_path, joints_name_list, root_link)
+# choose the representation you want to use the body fixed representation
+kinDyn.set_frame_velocity_representation(adam.Representations.BODY_FIXED_REPRESENTATION)
+# or, if you want to use the mixed representation (that is the default)
+kinDyn.set_frame_velocity_representation(adam.Representations.MIXED_REPRESENTATION)
 w_H_b = np.eye(4)
 joints = np.ones(len(joints_name_list))
 M = kinDyn.mass_matrix_fun()
@@ -206,6 +216,7 @@ print(M(w_H_b, joints))
 ### PyTorch interface
 
 ```python
+import adam
 from adam.pytorch import KinDynComputations
 import icub_models
 import numpy as np
@@ -223,6 +234,10 @@ joints_name_list = [
 # Specify the root link
 root_link = 'root_link'
 kinDyn = KinDynComputations(model_path, joints_name_list, root_link)
+# choose the representation you want to use the body fixed representation
+kinDyn.set_frame_velocity_representation(adam.Representations.BODY_FIXED_REPRESENTATION)
+# or, if you want to use the mixed representation (that is the default)
+kinDyn.set_frame_velocity_representation(adam.Representations.MIXED_REPRESENTATION)
 w_H_b = np.eye(4)
 joints = np.ones(len(joints_name_list))
 M = kinDyn.mass_matrix(w_H_b, joints)
