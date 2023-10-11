@@ -82,13 +82,13 @@ class KinDynComputations:
             frame (str): The frame to which the fk will be computed
 
         Returns:
-            T_fk (casADi function): The fk represented as Homogenous transformation matrix
+            H (casADi function): The fk represented as Homogenous transformation matrix
         """
         joint_positions = cs.SX.sym("s", self.NDoF)
         base_transform = cs.SX.sym("H", 4, 4)
-        T_fk = self.rbdalgos.forward_kinematics(frame, base_transform, joint_positions)
+        H = self.rbdalgos.forward_kinematics(frame, base_transform, joint_positions)
         return cs.Function(
-            "T_fk", [base_transform, joint_positions], [T_fk.array], self.f_opts
+            "H", [base_transform, joint_positions], [H.array], self.f_opts
         )
 
     def jacobian_fun(self, frame: str) -> cs.Function:
@@ -308,7 +308,7 @@ class KinDynComputations:
             joint_positions (Union[cs.SX, cs.DM]): The joints position
 
         Returns:
-            T_fk (Union[cs.SX, cs.DM]): The fk represented as Homogenous transformation matrix
+            H (Union[cs.SX, cs.DM]): The fk represented as Homogenous transformation matrix
         """
         return self.rbdalgos.forward_kinematics(
             frame, base_transform, joint_positions

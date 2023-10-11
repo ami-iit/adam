@@ -47,56 +47,61 @@ class KinDynComputations:
         self.rbdalgos.set_frame_velocity_representation(representation)
 
     def mass_matrix(
-        self, base_transform: torch.Tensor, s: torch.Tensor
+        self, base_transform: torch.Tensor, joint_position: torch.Tensor
     ) -> torch.Tensor:
         """Returns the Mass Matrix functions computed the CRBA
 
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
-            s (torch.tensor): The joints position
+            joint_positions (torch.tensor): The joints position
 
         Returns:
             M (torch.tensor): Mass Matrix
         """
-        [M, _] = self.rbdalgos.crba(base_transform, s)
+        [M, _] = self.rbdalgos.crba(base_transform, joint_position)
         return M.array
 
     def centroidal_momentum_matrix(
-        self, base_transform: torch.Tensor, s: torch.Tensor
+        self, base_transform: torch.Tensor, joint_position: torch.Tensor
     ) -> torch.Tensor:
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
-            s (torch.tensor): The joints position
+            joint_positions (torch.tensor): The joints position
 
         Returns:
             Jcc (torch.tensor): Centroidal Momentum matrix
         """
-        [_, Jcm] = self.rbdalgos.crba(base_transform, s)
+        [_, Jcm] = self.rbdalgos.crba(base_transform, joint_position)
         return Jcm.array
 
     def forward_kinematics(
-        self, frame, base_transform: torch.Tensor, s: torch.Tensor
+        self, frame, base_transform: torch.Tensor, joint_position: torch.Tensor
     ) -> torch.Tensor:
         """Computes the forward kinematics relative to the specified frame
 
         Args:
             frame (str): The frame to which the fk will be computed
             base_transform (torch.tensor): The homogenous transform from base to world frame
-            s (torch.tensor): The joints position
+            joint_positions (torch.tensor): The joints position
 
         Returns:
-            T_fk (torch.tensor): The fk represented as Homogenous transformation matrix
+            H (torch.tensor): The fk represented as Homogenous transformation matrix
         """
         return (
             self.rbdalgos.forward_kinematics(
-                frame, torch.FloatTensor(base_transform), torch.FloatTensor(s)
+                frame,
+                torch.FloatTensor(base_transform),
+                torch.FloatTensor(joint_position),
             )
         ).array
 
     def jacobian(
-        self, frame: str, base_transform: torch.Tensor, joint_positions: torch.Tensor
+        self,
+        frame: str,
+        base_transform: torch.Tensor,
+        joint_positions: torch.Tensor,
     ) -> torch.Tensor:
         """Returns the Jacobian relative to the specified frame
 
@@ -156,7 +161,7 @@ class KinDynComputations:
             joint_positions (torch.tensor): The joints position
 
         Returns:
-            com (torch.tensor): The CoM position
+            CoM (torch.tensor): The CoM position
         """
         return self.rbdalgos.CoM_position(
             base_transform, joint_positions
@@ -165,7 +170,7 @@ class KinDynComputations:
     def bias_force(
         self,
         base_transform: torch.Tensor,
-        s: torch.Tensor,
+        joint_positions: torch.Tensor,
         base_velocity: torch.Tensor,
         joint_velocities: torch.Tensor,
     ) -> torch.Tensor:
@@ -174,7 +179,7 @@ class KinDynComputations:
 
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
-            s (torch.tensor): The joints position
+            joint_positions (torch.tensor): The joints position
             base_velocity (torch.tensor): The base velocity in mixed representation
             joint_velocities (torch.tensor): The joints velocity
 
@@ -183,7 +188,7 @@ class KinDynComputations:
         """
         return self.rbdalgos.rnea(
             base_transform,
-            s,
+            joint_positions,
             base_velocity.reshape(6, 1),
             joint_velocities,
             self.g,
@@ -218,21 +223,21 @@ class KinDynComputations:
         ).array.squeeze()
 
     def gravity_term(
-        self, base_transform: torch.Tensor, base_positions: torch.Tensor
+        self, base_transform: torch.Tensor, joint_positions: torch.Tensor
     ) -> torch.Tensor:
         """Returns the gravity term of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
-            base_positions (torch.tensor): The joints position
+            joint_positions (torch.tensor): The joints positions
 
         Returns:
             G (torch.tensor): the gravity term
         """
         return self.rbdalgos.rnea(
             base_transform,
-            base_positions,
+            joint_positions,
             torch.zeros(6).reshape(6, 1),
             torch.zeros(self.NDoF),
             torch.FloatTensor(self.g),

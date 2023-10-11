@@ -86,7 +86,7 @@ class KinDynComputations:
             joint_positions (np.ndarray): The joints position
 
         Returns:
-            T_fk (np.ndarray): The fk represented as Homogenous transformation matrix
+            H (np.ndarray): The fk represented as Homogenous transformation matrix
         """
         return self.rbdalgos.forward_kinematics(
             frame, base_transform, joint_positions
