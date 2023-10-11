@@ -106,7 +106,9 @@ def test_mass_matrix():
     kinDyn.getFreeFloatingMassMatrix(mass_mx)
     mass_mxNumpy = mass_mx.toNumPy()
     mass_test = cs.DM(M(H_b, s_))
+    mass_test2 = cs.DM(comp.mass_matrix(H_b, s_))
     assert mass_test - mass_mxNumpy == pytest.approx(0.0, abs=1e-5)
+    assert mass_test2 - mass_mxNumpy == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CMM():
@@ -115,14 +117,18 @@ def test_CMM():
     kinDyn.getCentroidalTotalMomentumJacobian(cmm_idyntree)
     cmm_idyntreeNumpy = cmm_idyntree.toNumPy()
     Jcm_test = cs.DM(Jcm(H_b, s_))
+    Jcm_test2 = cs.DM(comp.centroidal_momentum_matrix(H_b, s_))
     assert Jcm_test - cmm_idyntreeNumpy == pytest.approx(0.0, abs=1e-5)
+    assert Jcm_test2 - cmm_idyntreeNumpy == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CoM_pos():
     com_f = comp.CoM_position_fun()
-    CoM_cs = cs.DM(com_f(H_b, s_))
+    CoM_test = cs.DM(com_f(H_b, s_))
     CoM_iDynTree = kinDyn.getCenterOfMassPosition().toNumPy()
-    assert CoM_cs - CoM_iDynTree == pytest.approx(0.0, abs=1e-5)
+    CoM_test2 = cs.DM(comp.CoM_position(H_b, s_))
+    assert CoM_test - CoM_iDynTree == pytest.approx(0.0, abs=1e-5)
+    assert CoM_test2 - CoM_iDynTree == pytest.approx(0.0, abs=1e-5)
 
 
 def test_total_mass():
@@ -137,7 +143,9 @@ def test_jacobian():
     kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
     iDynNumpyJ_ = iDyntreeJ_.toNumPy()
     J_test = cs.DM(J_tot(H_b, s_))
+    J_test2 = cs.DM(comp.jacobian("l_sole", H_b, s_))
     assert iDynNumpyJ_ - J_test == pytest.approx(0.0, abs=1e-5)
+    assert iDynNumpyJ_ - J_test2 == pytest.approx(0.0, abs=1e-5)
 
 
 def test_jacobian_non_actuated():
@@ -146,7 +154,9 @@ def test_jacobian_non_actuated():
     kinDyn.getFrameFreeFloatingJacobian("head", iDyntreeJ_)
     iDynNumpyJ_ = iDyntreeJ_.toNumPy()
     J_test = cs.DM(J_tot(H_b, s_))
+    J_test2 = cs.DM(comp.jacobian("head", H_b, s_))
     assert iDynNumpyJ_ - J_test == pytest.approx(0.0, abs=1e-5)
+    assert iDynNumpyJ_ - J_test2 == pytest.approx(0.0, abs=1e-5)
 
 
 def test_jacobian_dot():
@@ -154,7 +164,11 @@ def test_jacobian_dot():
     Jdotnu = kinDyn.getFrameBiasAcc("l_sole")
     Jdot_nu = Jdotnu.toNumPy()
     J_dot_nu_test = J_dot(H_b, s_, vb_, s_dot_) @ np.concatenate((vb_, s_dot_))
+    J_dot_nu_test2 = cs.DM(
+        comp.jacobian_dot("l_sole", H_b, s_, vb_, s_dot_)
+    ) @ np.concatenate((vb_, s_dot_))
     assert Jdot_nu - J_dot_nu_test == pytest.approx(0.0, abs=1e-5)
+    assert Jdot_nu - J_dot_nu_test2 == pytest.approx(0.0, abs=1e-5)
 
 
 def test_fk():
@@ -163,8 +177,11 @@ def test_fk():
     R_idy2np = H_idyntree.getRotation().toNumPy()
     T = comp.forward_kinematics_fun("l_sole")
     H_test = cs.DM(T(H_b, s_))
+    H_test2 = cs.DM(comp.forward_kinematics("l_sole", H_b, s_))
     assert R_idy2np - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert p_idy2np - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
+    assert R_idy2np - H_test2[:3, :3] == pytest.approx(0.0, abs=1e-5)
+    assert p_idy2np - H_test2[:3, 3] == pytest.approx(0.0, abs=1e-5)
 
 
 def test_fk_non_actuated():
@@ -173,8 +190,11 @@ def test_fk_non_actuated():
     R_idy2np = H_idyntree.getRotation().toNumPy()
     T = comp.forward_kinematics_fun("head")
     H_test = cs.DM(T(H_b, s_))
+    H_test2 = cs.DM(comp.forward_kinematics("head", H_b, s_))
     assert R_idy2np - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert p_idy2np - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
+    assert R_idy2np - H_test2[:3, :3] == pytest.approx(0.0, abs=1e-5)
+    assert p_idy2np - H_test2[:3, 3] == pytest.approx(0.0, abs=1e-5)
 
 
 def test_bias_force():
@@ -185,7 +205,9 @@ def test_bias_force():
     )
     h = comp.bias_force_fun()
     h_test = cs.DM(h(H_b, s_, vb_, s_dot_))
+    h_test2 = cs.DM(comp.bias_force(H_b, s_, vb_, s_dot_))
     assert h_iDyn_np - h_test == pytest.approx(0.0, abs=1e-4)
+    assert h_iDyn_np - h_test2 == pytest.approx(0.0, abs=1e-4)
 
 
 def test_coriolis_term():
@@ -199,7 +221,9 @@ def test_coriolis_term():
     )
     C = comp.coriolis_term_fun()
     C_test = cs.DM(C(H_b, s_, vb_, s_dot_))
+    C_test2 = cs.DM(comp.coriolis_term(H_b, s_, vb_, s_dot_))
     assert C_iDyn_np - C_test == pytest.approx(0.0, abs=1e-4)
+    assert C_iDyn_np - C_test2 == pytest.approx(0.0, abs=1e-4)
 
 
 def test_gravity_term():
@@ -214,7 +238,9 @@ def test_gravity_term():
     )
     G = comp.gravity_term_fun()
     G_test = cs.DM(G(H_b, s_))
+    G_test2 = cs.DM(comp.gravity_term(H_b, s_))
     assert G_iDyn_np - G_test == pytest.approx(0.0, abs=1e-4)
+    assert G_iDyn_np - G_test2 == pytest.approx(0.0, abs=1e-4)
 
 
 def test_relative_jacobian():
@@ -224,4 +250,6 @@ def test_relative_jacobian():
     iDynNumpyRelativeJ = (iDyntreeJ_.toNumPy())[:, 6:]
     J_fun = comp.relative_jacobian_fun("l_sole")
     J_test = cs.DM(J_fun(s_))
+    J_test2 = cs.DM(comp.relative_jacobian("l_sole", s_))
     assert iDynNumpyRelativeJ - J_test == pytest.approx(0.0, abs=1e-4)
+    assert iDynNumpyRelativeJ - J_test2 == pytest.approx(0.0, abs=1e-4)
