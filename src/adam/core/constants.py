@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class Representations(Enum):
-    BODY_FIXED_REPRESENTATION = 0
-    MIXED_REPRESENTATION = 1
+class Representations(IntEnum):
+    BODY_FIXED_REPRESENTATION = enum.auto()
+    MIXED_REPRESENTATION = enum.auto()
