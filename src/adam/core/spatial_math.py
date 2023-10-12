@@ -56,7 +56,8 @@ class ArrayLike(abc.ABC):
     def __truediv__(self, other):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def T(self):
         """
         Returns: Transpose of the array
