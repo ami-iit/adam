@@ -4,7 +4,6 @@
 
 import jax.numpy as jnp
 import numpy as np
-from jax import grad, jit, vmap
 
 from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
