@@ -147,7 +147,7 @@ class KinDynComputations:
         """Returns the CoM positon
 
         Returns:
-            com (casADi function): The CoM position
+            CoM (casADi function): The CoM position
         """
         joint_positions = cs.SX.sym("s", self.NDoF)
         base_transform = cs.SX.sym("H", 4, 4)
@@ -408,6 +408,6 @@ class KinDynComputations:
             joint_positions (Union[cs.SX, cs.DM]): The joints position
 
         Returns:
-            com (Union[cs.SX, cs.DM]): The CoM position
+            CoM (Union[cs.SX, cs.DM]): The CoM position
         """
         return self.rbdalgos.CoM_position(base_transform, joint_positions).array

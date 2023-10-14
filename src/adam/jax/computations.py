@@ -121,7 +121,7 @@ class KinDynComputations:
             joint_positions (jnp.array): The joints position
 
         Returns:
-            T_fk (jnp.array): The fk represented as Homogenous transformation matrix
+            H (jnp.array): The fk represented as Homogenous transformation matrix
         """
         return self.rbdalgos.forward_kinematics(
             frame, base_transform, joint_positions
@@ -226,7 +226,7 @@ class KinDynComputations:
             joint_positions (jnp.array): The joints position
 
         Returns:
-            com (jnp.array): The CoM position
+            CoM (jnp.array): The CoM position
         """
         return self.rbdalgos.CoM_position(
             base_transform, joint_positions
