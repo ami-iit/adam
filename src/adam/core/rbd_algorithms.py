@@ -197,7 +197,9 @@ class RBDAlgorithms:
             return J_tot
         # let's move to mixed representation
         elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            w_H_L = base_transform @ B_H_L.array
+            if type(base_transform) != type(B_H_L):
+                base_transform = self.math.factory.array(base_transform)
+            w_H_L = base_transform @ B_H_L
             LI_X_L = self.math.adjoint_mixed(w_H_L)
             X = self.math.factory.eye(6 + self.NDoF)
             X[:6, :6] = self.math.adjoint_mixed_inverse(base_transform)
@@ -302,7 +304,9 @@ class RBDAlgorithms:
             return J_dot
         # let's move to mixed representation
         elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            I_H_L = base_transform @ B_H_j.array
+            if type(base_transform) != type(B_H_L):
+                base_transform = self.math.factory.array(base_transform)
+            I_H_L = base_transform @ B_H_j
             LI_X_L = self.math.adjoint_mixed(I_H_L)
             X = self.math.factory.eye(6 + self.NDoF)
             X[:6, :6] = self.math.adjoint_mixed_inverse(base_transform)
