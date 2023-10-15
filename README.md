@@ -172,7 +172,7 @@ joints_name_list = [
 # Specify the root link
 root_link = 'root_link'
 kinDyn = KinDynComputations(model_path, joints_name_list, root_link)
-# choose the representation you want to use the body fixed representation
+# choose the representation, if you want to use the body fixed representation
 kinDyn.set_frame_velocity_representation(adam.Representations.BODY_FIXED_REPRESENTATION)
 # or, if you want to use the mixed representation (that is the default)
 kinDyn.set_frame_velocity_representation(adam.Representations.MIXED_REPRESENTATION)
