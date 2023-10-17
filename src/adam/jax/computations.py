@@ -4,8 +4,8 @@
 
 import jax.numpy as jnp
 import numpy as np
-from jax import grad, jit, vmap
 
+from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.jax.jax_like import SpatialMath
 from adam.model import Model, URDFModelFactory
@@ -35,6 +35,16 @@ class KinDynComputations:
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
+
+    def set_frame_velocity_representation(
+        self, representation: Representations
+    ) -> None:
+        """Sets the representation of the velocity of the frames
+
+        Args:
+            representation (Representations): The representation of the velocity
+        """
+        self.rbdalgos.set_frame_velocity_representation(representation)
 
     def mass_matrix(self, base_transform: jnp.array, joint_positions: jnp.array):
         """Returns the Mass Matrix functions computed the CRBA
@@ -76,6 +86,30 @@ class KinDynComputations:
         """
         return self.rbdalgos.relative_jacobian(frame, joint_positions).array
 
+    def jacobian_dot(
+        self,
+        frame: str,
+        base_transform: jnp.array,
+        joint_positions: jnp.array,
+        base_velocity: jnp.array,
+        joint_velocities: jnp.array,
+    ) -> jnp.array:
+        """Returns the Jacobian derivative relative to the specified frame
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            joint_positions (jnp.array): The joints position
+            base_velocity (jnp.array): The base velocity in mixed representation
+            joint_velocities (jnp.array): The joint velocities
+
+        Returns:
+            Jdot (jnp.array): The Jacobian derivative relative to the frame
+        """
+        return self.rbdalgos.jacobian_dot(
+            frame, base_transform, joint_positions, base_velocity, joint_velocities
+        ).array
+
     def forward_kinematics(
         self, frame: str, base_transform: jnp.array, joint_positions: jnp.array
     ):
@@ -87,7 +121,7 @@ class KinDynComputations:
             joint_positions (jnp.array): The joints position
 
         Returns:
-            T_fk (jnp.array): The fk represented as Homogenous transformation matrix
+            H (jnp.array): The fk represented as Homogenous transformation matrix
         """
         return self.rbdalgos.forward_kinematics(
             frame, base_transform, joint_positions
@@ -116,22 +150,22 @@ class KinDynComputations:
         base_transform: jnp.array,
         joint_positions: jnp.array,
         base_velocity: jnp.array,
-        s_dot: jnp.array,
+        joint_velocities: jnp.array,
     ) -> jnp.array:
-        """Returns the bias force of the floating-base dynamics ejoint_positionsuation,
+        """Returns the bias force of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
             base_velocity (jnp.array): The base velocity in mixed representation
-            s_dot (jnp.array): The joints velocity
+            joint_velocities (jnp.array): The joints velocity
 
         Returns:
             h (jnp.array): the bias force
         """
         return self.rbdalgos.rnea(
-            base_transform, joint_positions, base_velocity, s_dot, self.g
+            base_transform, joint_positions, base_velocity, joint_velocities, self.g
         ).array.squeeze()
 
     def coriolis_term(
@@ -139,16 +173,16 @@ class KinDynComputations:
         base_transform: jnp.array,
         joint_positions: jnp.array,
         base_velocity: jnp.array,
-        s_dot: jnp.array,
+        joint_velocities: jnp.array,
     ) -> jnp.array:
-        """Returns the coriolis term of the floating-base dynamics ejoint_positionsuation,
+        """Returns the coriolis term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
             base_velocity (jnp.array): The base velocity in mixed representation
-            s_dot (jnp.array): The joints velocity
+            joint_velocities (jnp.array): The joints velocity
 
         Returns:
             C (jnp.array): the Coriolis term
@@ -157,14 +191,14 @@ class KinDynComputations:
             base_transform,
             joint_positions,
             base_velocity.reshape(6, 1),
-            s_dot,
+            joint_velocities,
             np.zeros(6),
         ).array.squeeze()
 
     def gravity_term(
         self, base_transform: jnp.array, joint_positions: jnp.array
     ) -> jnp.array:
-        """Returns the gravity term of the floating-base dynamics ejoint_positionsuation,
+        """Returns the gravity term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
@@ -192,7 +226,7 @@ class KinDynComputations:
             joint_positions (jnp.array): The joints position
 
         Returns:
-            com (jnp.array): The CoM position
+            CoM (jnp.array): The CoM position
         """
         return self.rbdalgos.CoM_position(
             base_transform, joint_positions

@@ -4,6 +4,7 @@
 
 import numpy as np
 
+from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.model import Model, URDFModelFactory
 from adam.numpy.numpy_like import SpatialMath
@@ -33,6 +34,16 @@ class KinDynComputations:
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = model.NDoF
         self.g = gravity
+
+    def set_frame_velocity_representation(
+        self, representation: Representations
+    ) -> None:
+        """Sets the representation of the velocity of the frames
+
+        Args:
+            representation (Representations): The representation of the velocity
+        """
+        self.rbdalgos.set_frame_velocity_representation(representation)
 
     def mass_matrix(
         self, base_transform: np.ndarray, joint_positions: np.ndarray
@@ -75,7 +86,7 @@ class KinDynComputations:
             joint_positions (np.ndarray): The joints position
 
         Returns:
-            T_fk (np.ndarray): The fk represented as Homogenous transformation matrix
+            H (np.ndarray): The fk represented as Homogenous transformation matrix
         """
         return self.rbdalgos.forward_kinematics(
             frame, base_transform, joint_positions
@@ -109,6 +120,30 @@ class KinDynComputations:
             J (np.ndarray): The Jacobian between the root and the frame
         """
         return self.rbdalgos.relative_jacobian(frame, joint_positions).array
+
+    def jacobian_dot(
+        self,
+        frame: str,
+        base_transform: np.ndarray,
+        joint_positions: np.ndarray,
+        base_velocity: np.ndarray,
+        joint_velocities: np.ndarray,
+    ) -> np.ndarray:
+        """Returns the Jacobian derivative relative to the specified frame
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+            base_transform (np.ndarray): The homogenous transform from base to world frame
+            joint_positions (np.ndarray): The joints position
+            base_velocity (np.ndarray): The base velocity in mixed representation
+            joint_velocities (np.ndarray): The joint velocities
+
+        Returns:
+            Jdot (np.ndarray): The Jacobian derivative relative to the frame
+        """
+        return self.rbdalgos.jacobian_dot(
+            frame, base_transform, joint_positions, base_velocity, joint_velocities
+        ).array.squeeze()
 
     def CoM_position(
         self, base_transform: np.ndarray, joint_positions: np.ndarray

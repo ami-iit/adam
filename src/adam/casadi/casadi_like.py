@@ -128,7 +128,7 @@ class CasadiLikeFactory(ArrayLikeFactory):
         Returns:
             CasadiLike: Vector wrapping *x
         """
-        return CasadiLike(cs.DM(*x))
+        return CasadiLike(cs.SX(*x))
 
 
 class SpatialMath(SpatialMath):

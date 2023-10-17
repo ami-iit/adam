@@ -126,7 +126,7 @@ class JaxLikeFactory(ArrayLikeFactory):
         return JaxLike(jnp.eye(x))
 
     @staticmethod
-    def array(*x) -> "JaxLike":
+    def array(x) -> "JaxLike":
         """
         Returns:
             JaxLike: Vector wrapping *x

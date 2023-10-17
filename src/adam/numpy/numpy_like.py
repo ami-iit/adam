@@ -128,7 +128,7 @@ class NumpyLikeFactory(ArrayLikeFactory):
         return NumpyLike(np.eye(x))
 
     @staticmethod
-    def array(*x) -> "NumpyLike":
+    def array(x) -> "NumpyLike":
         """
         Returns:
             NumpyLike: Vector wrapping *x

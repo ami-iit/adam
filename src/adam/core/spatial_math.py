@@ -56,7 +56,8 @@ class ArrayLike(abc.ABC):
     def __truediv__(self, other):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def T(self):
         """
         Returns: Transpose of the array
@@ -404,14 +405,145 @@ class SpatialMath:
         """
         return -self.spatial_skew(v).T
 
-    def adjoint(self, R: npt.ArrayLike) -> npt.ArrayLike:
+    def adjoint(self, H: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
-            R (npt.ArrayLike): Rotation matrix
+            H (npt.ArrayLike): Homogeneous transform
         Returns:
             npt.ArrayLike: adjoint matrix
         """
+        R = H[:3, :3]
+        p = H[:3, 3]
+        X = self.factory.eye(6)
+        X[:3, :3] = R
+        X[3:6, 3:6] = R
+        X[:3, 3:6] = self.skew(p) @ R
+        return X
+
+    def adjoint_derivative(self, H: npt.ArrayLike, v: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            H (npt.ArrayLike): Homogeneous transform
+            v (npt.ArrayLike): 6D twist
+        Returns:
+            npt.ArrayLike: adjoint matrix derivative
+        """
+
+        R = H[:3, :3]
+        p = H[:3, 3]
+        R_dot = self.skew(v[3:]) @ R
+        p_dot = v[:3] - self.skew(p) @ v[3:]
+        X = self.factory.zeros(6, 6)
+        X[:3, :3] = R_dot
+        X[3:6, 3:6] = R_dot
+        X[:3, 3:6] = self.skew(p_dot) @ R + self.skew(p) @ R_dot
+        return X
+
+    def adjoint_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            H (npt.ArrayLike): Homogeneous transform
+        Returns:
+            npt.ArrayLike: adjoint matrix
+        """
+        R = H[:3, :3]
+        p = H[:3, 3]
+        X = self.factory.eye(6)
+        X[:3, :3] = R.T
+        X[3:6, 3:6] = R.T
+        X[:3, 3:6] = -R.T @ self.skew(p)
+        return X
+
+    def adjoint_inverse_derivative(
+        self, H: npt.ArrayLike, v: npt.ArrayLike
+    ) -> npt.ArrayLike:
+        """
+        Args:
+            H (npt.ArrayLike): Homogeneous transform
+            v (npt.ArrayLike): 6D twist
+        Returns:
+            npt.ArrayLike: adjoint matrix derivative
+        """
+        R = H[:3, :3]
+        p = H[:3, 3]
+        R_dot = self.skew(v[3:]) @ R
+        p_dot = v[:3] - self.skew(p) @ v[3:]
+        X = self.factory.zeros(6, 6)
+        X[:3, :3] = R_dot.T
+        X[3:6, 3:6] = R_dot.T
+        X[:3, 3:6] = -R_dot.T @ self.skew(p) - R.T @ self.skew(p_dot)
+        return X
+
+    def adjoint_mixed(self, H: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            H (npt.ArrayLike): Homogeneous transform
+        Returns:
+            npt.ArrayLike: adjoint matrix
+        """
+        R = H[:3, :3]
+        X = self.factory.eye(6)
+        X[:3, :3] = R
+        X[3:6, 3:6] = R
+        return X
+
+    def adjoint_mixed_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            H (npt.ArrayLike): Homogeneous transform
+        Returns:
+            npt.ArrayLike: adjoint matrix
+        """
+        R = H[:3, :3]
         X = self.factory.eye(6)
         X[:3, :3] = R.T
         X[3:6, 3:6] = R.T
         return X
+
+    def adjoint_mixed_derivative(
+        self, H: npt.ArrayLike, v: npt.ArrayLike
+    ) -> npt.ArrayLike:
+        """
+        Args:
+            H (npt.ArrayLike): Homogeneous transform
+            v (npt.ArrayLike): 6D twist
+        Returns:
+            npt.ArrayLike: adjoint matrix derivative
+        """
+        R = H[:3, :3]
+        R_dot = self.skew(v[3:]) @ R
+        X = self.factory.zeros(6, 6)
+        X[:3, :3] = R_dot
+        X[3:6, 3:6] = R_dot
+        return X
+
+    def adjoint_mixed_inverse_derivative(
+        self, H: npt.ArrayLike, v: npt.ArrayLike
+    ) -> npt.ArrayLike:
+        """
+        Args:
+            H (npt.ArrayLike): Homogeneous transform
+            v (npt.ArrayLike): 6D twist
+        Returns:
+            npt.ArrayLike: adjoint matrix derivative
+        """
+        R = H[:3, :3]
+        R_dot = self.skew(v[3:]) @ R
+        X = self.factory.zeros(6, 6)
+        X[:3, :3] = R_dot.T
+        X[3:6, 3:6] = R_dot.T
+        return X
+
+    def homogeneous_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            H (npt.ArrayLike): Homogeneous transform
+        Returns:
+            npt.ArrayLike: inverse of the homogeneous transform
+        """
+        R = H[:3, :3]
+        p = H[:3, 3]
+        T = self.factory.eye(4)
+        T[:3, :3] = R.T
+        T[:3, 3] = -R.T @ p
+        return T

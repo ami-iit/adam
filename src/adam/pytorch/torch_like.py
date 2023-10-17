@@ -134,7 +134,7 @@ class TorchLikeFactory(ArrayLikeFactory):
         return TorchLike(torch.eye(x).float())
 
     @staticmethod
-    def array(*x: ntp.ArrayLike) -> "TorchLike":
+    def array(x: ntp.ArrayLike) -> "TorchLike":
         """
         Returns:
             TorchLike: vector wrapping x
