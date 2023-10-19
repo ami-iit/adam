@@ -19,21 +19,22 @@ class ParmetricJoint(Joint):
     ) -> None:
         self.math = math
         self.name = joint.name
-        self.parent = parent_link
+        self.parent = parent_link.link
+        self.parent_parametric = parent_link
         self.child = joint.child
         self.type = joint.joint_type
         self.axis = joint.axis
         self.limit = joint.limit
         self.idx = idx
         self.joint = joint
-        joint_offset = self.parent.compute_joint_offset(joint, self.parent.link_offset)
+        joint_offset = self.parent_parametric.compute_joint_offset(joint, self.parent_parametric.link_offset)
         self.offset = joint_offset
-        self.origin = self.modify(self.parent.link_offset)
+        self.origin = self.modify(self.parent_parametric.link_offset)
 
     def modify(self, parent_joint_offset):
-        length = self.parent.get_principal_lenght_parametric()
+        length = self.parent_parametric.get_principal_lenght_parametric()
         # Ack for avoiding depending on casadi 
-        vo = self.parent.origin[2]
+        vo = self.parent_parametric.origin[2]
         xyz_rpy = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         xyz_rpy[0] = self.joint.origin.xyz[0]
         xyz_rpy[1] = self.joint.origin.xyz[1]
