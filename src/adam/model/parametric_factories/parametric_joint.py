@@ -5,7 +5,7 @@ import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
 from adam.model import Joint
-from adam.model.parametric_factories import link_parametric
+from adam.model.parametric_factories.parametric_link import ParametricLink
 
 class ParmetricJoint(Joint):
     """Parametric Joint class"""
@@ -14,34 +14,33 @@ class ParmetricJoint(Joint):
         self,
         joint: urdf_parser_py.urdf.Joint,
         math: SpatialMath,
-        parent_link:link_parametric,
+        parent_link:ParametricLink,
         idx: Union[int, None] = None,
     ) -> None:
         self.math = math
         self.name = joint.name
-        self.parent = jparent_link
+        self.parent = parent_link
         self.child = joint.child
         self.type = joint.joint_type
         self.axis = joint.axis
         self.limit = joint.limit
         self.idx = idx
-
-        joint_offset = self.parent_link.compute_joint_offset(joint, self.parent_link.offset)
+        self.joint = joint
+        joint_offset = self.parent.compute_joint_offset(joint, self.parent.link_offset)
         self.offset = joint_offset
-        self.origin = self.modify(self.parent_link.offset)
+        self.origin = self.modify(self.parent.link_offset)
 
     def modify(self, parent_joint_offset):
-        length = self.parent_link.get_principal_lenght_parametric()
+        length = self.parent.get_principal_lenght_parametric()
         # Ack for avoiding depending on casadi 
-        vo = self.parent_link.origin[2]
+        vo = self.parent.origin[2]
         xyz_rpy = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        xyz_rpy[0] = self.joint.origin[0,3]
-        xyz_rpy[1] = self.joint.origin[1,3]
-        xyz_rpy[2] = self.joint.origin[2,3]
-        xyz_rpy_temp=  matrix_to_xyz_rpy(self.joint.origin)
-        xyz_rpy[3] = xyz_rpy_temp[3]
-        xyz_rpy[4] = xyz_rpy_temp[4]
-        xyz_rpy[5] = xyz_rpy_temp[5]
+        xyz_rpy[0] = self.joint.origin.xyz[0]
+        xyz_rpy[1] = self.joint.origin.xyz[1]
+        xyz_rpy[2] = self.joint.origin.xyz[2]
+        xyz_rpy[3] = self.joint.origin.rpy[0]
+        xyz_rpy[4] = self.joint.origin.rpy[1]
+        xyz_rpy[5] = self.joint.origin.rpy[2]
         
         if(xyz_rpy[2]<0): 
             xyz_rpy[2] = -length +parent_joint_offset - self.offset   
