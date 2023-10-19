@@ -4,7 +4,8 @@ from typing import List
 import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
-from adam.model import ModelFactory, StdJoint, StdLink, Link, Joint, LinkParametric, JointParametric
+from adam.model import ModelFactory, StdJoint, StdLink, Link, Joint
+from adam.model import ParmetricJoint, ParametricLink
 
 
 class URDFParametricModelFactory(ModelFactory):
@@ -20,7 +21,7 @@ class URDFParametricModelFactory(ModelFactory):
             path = pathlib.Path(path)
         if not path.exists():
             raise FileExistsError(path)
-        self.link_parametric_list = list
+        self.link_parametric_list = link_parametric_list
         self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_file(path)
         self.name = self.urdf_desc.name
         self.lenght_multiplier = lenght_multiplier
@@ -60,8 +61,8 @@ class URDFParametricModelFactory(ModelFactory):
         if(joint.parent in self.link_parametric_list): 
             index_link = self.link_parametric_list.index(joint.parent)
             link_parent = self.get_element_by_name(joint.parent)
-            parent_link_parametric = LinkParametric(link_parent, self.math,self.lenght_multiplier[index_link], self.density[index_link]) 
-            return JointParametric(joint, self.math, parent_link_parametric)
+            parent_link_parametric = ParametricLink(link_parent, self.math,self.lenght_multiplier[index_link], self.density[index_link]) 
+            return ParmetricJoint(joint, self.math, parent_link_parametric)
 
         return StdJoint(joint, self.math)
 
@@ -75,7 +76,7 @@ class URDFParametricModelFactory(ModelFactory):
         """
         if(link.name in self.link_parametric_list):
             index_link = self.link_parametric_list.index(link.name) 
-            return LinkParametric(link, self.math, self.lenght_multiplier[index_link], self.density[index_link])
+            return ParametricLink(link, self.math, self.lenght_multiplier[index_link], self.density[index_link])
         return StdLink(link, self.math)
     
     def get_element_by_name(self,link_name):

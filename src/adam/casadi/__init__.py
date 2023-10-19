@@ -4,3 +4,5 @@
 
 from .casadi_like import CasadiLike
 from .computations import KinDynComputations
+from .computations_parametric import KinDynComputationsParametric
+

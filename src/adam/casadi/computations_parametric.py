@@ -34,7 +34,7 @@ class KinDynComputationsParametric:
         n_param_link = len(link_name_list)
         self.density = cs.SX.sym("density", n_param_link)
         self.length_multiplier = cs.SX.sym("length_multiplier",n_param_link)
-        factory = URDFParametricModelFactory(path=urdfstring, math=math,link_parametric_list=link_name_list,lenght_multiplier=lenght_multiplier, density=density)
+        factory = URDFParametricModelFactory(path=urdfstring, math=math,link_parametric_list=link_name_list,lenght_multiplier=self.length_multiplier, density=self.density)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
