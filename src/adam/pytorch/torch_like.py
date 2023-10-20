@@ -202,6 +202,14 @@ class SpatialMath(SpatialMath):
             torch.FloatTensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
         )
 
+
+    @staticmethod
+    def skew(x: ntp.ArrayLike, y:np.ArrayLike) -> "TorchLike":
+        if isinstance(x, TorchLike) and isinstance(y, TorchLike):
+            return TorchLike(torch.mtimes(TorchLike(x), TorchLike(y)))
+        else:
+            return TorchLike(torch.mtimes(x.array, y.array))
+
     @staticmethod
     def vertcat(*x: ntp.ArrayLike) -> "TorchLike":
         """
@@ -212,4 +220,17 @@ class SpatialMath(SpatialMath):
             v = torch.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
         else:
             v = torch.FloatTensor(x).reshape(-1, 1)
+        return TorchLike(v)
+
+
+    @staticmethod
+    def horzcat(*x: ntp.ArrayLike) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: horizontal concatenation of x
+        """
+        if isinstance(x[0], TorchLike):
+            v = torch.hstack([x[i].array for i in range(len(x))]).reshape(1,-1)
+        else:
+            v = torch.FloatTensor(x).reshape(1,-1)
         return TorchLike(v)

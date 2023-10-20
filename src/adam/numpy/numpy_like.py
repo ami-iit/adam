@@ -150,6 +150,22 @@ class SpatialMath(SpatialMath):
             NumpyLike: sin value of x
         """
         return NumpyLike(np.sin(x))
+    
+    @staticmethod
+    def mtimes(x: npt.ArrayLike, y:npt.ArrayLike) -> "NumpyLike":
+        """
+        Args:
+            x (npt.ArrayLike): angle value
+
+        Returns:
+            CasadiLike: the sin value of x
+        """
+        if isinstance(x, NumpyLike) and isinstance(y, NumpyLike):
+            return NumpyLike((x.array@y.array))
+        else:
+            return NumpyLike(x@y)
+        # return CasadiLike(cs.mtimes(x, y))
+
 
     @staticmethod
     def cos(x: npt.ArrayLike) -> "NumpyLike":
@@ -186,6 +202,19 @@ class SpatialMath(SpatialMath):
             v = np.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
         else:
             v = np.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
+        return NumpyLike(v)
+
+    
+    @staticmethod
+    def horzcat(*x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
+        """
+        Returns:
+            NumpyLike: horrizontal concatenation of x
+        """
+        if isinstance(x[0], NumpyLike):
+            v = np.hstack([x[i].array for i in range(len(x))]).reshape(1, -1)
+        else:
+            v = np.hstack([x[i] for i in range(len(x))]).reshape(1, -1)
         return NumpyLike(v)
 
     @staticmethod

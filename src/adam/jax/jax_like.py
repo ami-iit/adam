@@ -189,6 +189,14 @@ class SpatialMath(SpatialMath):
         return JaxLike(-jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0))
 
     @staticmethod
+    def mtimes(x:npt.ArrayLike, y:npt.ArrayLike) -> "JaxLike":
+        if  isinstance(x, JaxLike) and isinstance(y, JaxLike):
+            return jnp.mtimes(jnp.array(x), jnp.array(y))
+        else: 
+            return jnp.mtimes(jnp.array(x.array), jnp.array(y.array))
+        return JaxLike(-jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0))
+
+    @staticmethod
     def vertcat(*x) -> "JaxLike":
         """
         Returns:
@@ -198,4 +206,16 @@ class SpatialMath(SpatialMath):
             v = jnp.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
         else:
             v = jnp.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
+        return JaxLike(v)
+
+    @staticmethod
+    def horzcat(*x) -> "JaxLike":
+        """
+        Returns:
+            JaxLike: Horizontal concatenation of elements
+        """
+        if isinstance(x[0], JaxLike):
+            v = jnp.hstack([x[i].array for i in range(len(x))]).reshape(1,-1)
+        else:
+            v = jnp.hstack([x[i] for i in range(len(x))]).reshape(1, -1)
         return JaxLike(v)
