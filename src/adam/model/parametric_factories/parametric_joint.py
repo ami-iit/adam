@@ -19,7 +19,7 @@ class ParmetricJoint(Joint):
     ) -> None:
         self.math = math
         self.name = joint.name
-        self.parent = parent_link.link
+        self.parent = parent_link.link.name
         self.parent_parametric = parent_link
         self.child = joint.child
         self.type = joint.joint_type
@@ -30,6 +30,7 @@ class ParmetricJoint(Joint):
         joint_offset = self.parent_parametric.compute_joint_offset(joint, self.parent_parametric.link_offset)
         self.offset = joint_offset
         self.origin = self.modify(self.parent_parametric.link_offset)
+
 
     def modify(self, parent_joint_offset):
         length = self.parent_parametric.get_principal_lenght_parametric()
@@ -58,21 +59,26 @@ class ParmetricJoint(Joint):
             npt.ArrayLike: the homogenous transform of a joint, given q
         """
 
+
+        o = self.math.factory.zeros(3)
+        o[0] = self.origin[0]
+        o[1] = self.origin[1]
+        o[2] = self.origin[2]
+        rpy = self.origin[3:]
+
         if self.type == "fixed":
-            xyz = self.origin.xyz
-            rpy = self.origin.rpy
-            return self.math.H_from_Pos_RPY(xyz, rpy)
+            return self.math.H_from_Pos_RPY(o, rpy)
         elif self.type in ["revolute", "continuous"]:
             return self.math.H_revolute_joint(
-                self.origin.xyz,
-                self.origin.rpy,
+                o,
+                rpy,
                 self.axis,
                 q,
             )
         elif self.type in ["prismatic"]:
             return self.math.H_prismatic_joint(
-                self.origin.xyz,
-                self.origin.rpy,
+                o,
+                rpy,
                 self.axis,
                 q,
             )

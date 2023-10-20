@@ -6,6 +6,7 @@ from adam.core.spatial_math import SpatialMath
 from adam.model import Link
 
 import math
+from adam.model.abc_factories import Inertial
 
 class I_parametric():
     def __init__(self) -> None:
@@ -27,8 +28,6 @@ class Side(Enum):
     WIDTH = 1
     HEIGHT = 2
     DEPTH = 3
-# ['XML_REFL', '_Link__get_collision', '_Link__get_visual', '_Link__set_collision', '_Link__set_visual', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'add_aggregate', 'add_aggregates_to_xml', 'aggregate_init', 'aggregate_order', 'aggregate_type', 'check_valid', 'collision', 'collisions', 'from_xml', 'from_xml_file', 'from_xml_string', 'get_aggregate_list', 'get_refl_vars', 'inertial', 'lump_aggregates', 'name', 'origin', 'parse', 'post_read_xml', 'pre_write_xml', 'read_xml', 'remove_aggregate', 'to_xml', 'to_xml_string', 'to_yaml', 'visual', 'visuals', 'write_xml']
-
 
 class ParametricLink(Link):
     """Parametric Link class"""
@@ -39,19 +38,20 @@ class ParametricLink(Link):
         self.length_multiplier = length_multiplier
         self.density = density
         self.visuals = link.visual
-        print(self.get_geometry(self.visuals))
         self.geometry_type, self.visual_data = self.get_geometry(self.visuals)
         self.link = link
+        # self.parent = self.link.parent
         self.link_offset = self.compute_offset()        
         (self.volume, self.visual_data_new) = self.compute_volume()
         self.mass = self.compute_mass()
         self.I = self.compute_inertia_parametric()
+        
         self.origin = self.modify_origin()
       
-        # if the link has inertial properties, but the origin is None, let's add it
-        if link.inertial is not None and link.inertial.origin is None:
-            link.inertial.origin.xyz = [0, 0, 0]
-            link.inertial.origin.rpy = [0, 0, 0]
+        self.inertial = Inertial(self.mass)
+        self.inertial.mass = self.mass
+        self.inertial.inertia = self.I
+        self.inertial.origin = self.origin
 
     def get_principal_lenght(self):  
         xyz_rpy =  [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
@@ -98,7 +98,6 @@ class ParametricLink(Link):
          # Taking the principal direction i.e. the length 
         xyz_rpy =  [*self.visuals.origin.xyz, *self.visuals.origin.rpy]  
         v_l= self.get_principal_lenght()
-        print(joint_i.origin.xyz)
         j_0 = joint_i.origin.xyz[2]
         v_o = xyz_rpy[2]
         if(j_0<0):
@@ -111,18 +110,13 @@ class ParametricLink(Link):
 
     @staticmethod
     def get_geometry(visual_obj):
-        print("visual obj",dir(visual_obj))
-        print(type(visual_obj.geometry))
-        print(visual_obj.name)
+
         """Returns the geometry type and thez corresponding geometry object for a given visual"""
         if type(visual_obj.geometry) is urdf_parser_py.urdf.Box:
-            print("IS A BOX")
             return (Geometry.BOX, visual_obj.geometry)
         if type(visual_obj.geometry) is urdf_parser_py.urdf.Cylinder:
-            print("IS A CYLINDER")
             return (Geometry.CYLINDER, visual_obj.geometry)
         if type(visual_obj.geometry) is urdf_parser_py.urdf.Sphere:
-            print("IS A SPHERE")
             return (Geometry.SPHERE, visual_obj.geometry)
 
     """Function that starting from a multiplier and link visual characteristics computes the link volume"""
@@ -178,7 +172,7 @@ class ParametricLink(Link):
         return origin
 
     def compute_inertia_parametric(self):
-        I = I_parametric
+        I = I_parametric()
         xyz_rpy =  [*self.visuals.origin.xyz, *self.visuals.origin.rpy] 
         """Calculates inertia (ixx, iyy and izz) with the formula that corresponds to the geometry
         Formulas retrieved from https://en.wikipedia.org/wiki/List_of_moments_of_inertia"""
@@ -219,16 +213,25 @@ class ParametricLink(Link):
         """
         I = self.I
         mass = self.mass
-        o = self.origin[:3]
+        o = self.math.factory.zeros(3)
+        o[0] = self.origin[0]
+        o[1] = self.origin[1]
+        o[2] = self.origin[2]
         rpy = self.origin[3:]
-        return self.math.spatial_inertia(I, mass, o, rpy)
+        return self.math.spatial_inertial_with_parameter(I, mass, o, rpy)
 
     def homogeneous(self) -> npt.ArrayLike:
         """
         Returns:
             npt.ArrayLike: the homogeneus transform of the link
         """
+
+        o = self.math.factory.zeros(3)
+        o[0] = self.origin[0]
+        o[1] = self.origin[1]
+        o[2] = self.origin[2]
+        rpy = self.origin[3:]
         return self.math.H_from_Pos_RPY(
-            self.inertial.origin.xyz,
-            self.inertial.origin.rpy,
+            o,
+            rpy,
         )

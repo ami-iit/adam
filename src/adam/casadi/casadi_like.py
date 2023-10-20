@@ -160,6 +160,22 @@ class SpatialMath(SpatialMath):
         """
         return CasadiLike(cs.sin(x))
 
+
+    @staticmethod
+    def mtimes(x: npt.ArrayLike, y:npt.ArrayLike) -> "CasadiLike":
+        """
+        Args:
+            x (npt.ArrayLike): angle value
+
+        Returns:
+            CasadiLike: the sin value of x
+        """
+        if isinstance(x, CasadiLike) and isinstance(y, CasadiLike):
+            return CasadiLike(cs.mtimes(x.array, y.array))
+        else:
+            return CasadiLike(cs.mtimes(x,y))
+        # return CasadiLike(cs.mtimes(x, y))
+
     @staticmethod
     def cos(x: npt.ArrayLike) -> "CasadiLike":
         """
@@ -195,6 +211,18 @@ class SpatialMath(SpatialMath):
         # Then the list is unpacked with the * operator.
         y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
         return CasadiLike(cs.vertcat(*y))
+    @staticmethod
+    def horzcat(*x) -> "CasadiLike":
+        """
+        Returns:
+            CasadiLike:  vertical concatenation of elements
+        """
+        # here the logic is a bit convoluted: x is a tuple containing CasadiLike
+        # cs.vertcat accepts *args. A list of cs types is created extracting the value
+        # from the CasadiLike stored in the tuple x.
+        # Then the list is unpacked with the * operator.
+        y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
+        return CasadiLike(cs.horzcat(*y))
 
 
 if __name__ == "__main__":
