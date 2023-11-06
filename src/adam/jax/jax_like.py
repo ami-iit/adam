@@ -190,11 +190,8 @@ class SpatialMath(SpatialMath):
 
     @staticmethod
     def mtimes(x:npt.ArrayLike, y:npt.ArrayLike) -> "JaxLike":
-        if  isinstance(x, JaxLike) and isinstance(y, JaxLike):
-            return jnp.mtimes(jnp.array(x), jnp.array(y))
-        else: 
-            return jnp.mtimes(jnp.array(x.array), jnp.array(y.array))
-
+        return x@y
+        
     @staticmethod
     def vertcat(*x) -> "JaxLike":
         """
@@ -202,9 +199,9 @@ class SpatialMath(SpatialMath):
             JaxLike: Vertical concatenation of elements
         """
         if isinstance(x[0], JaxLike):
-            v = jnp.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+            v = jnp.vstack([x[i].array for i in range(len(x))])
         else:
-            v = jnp.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
+            v = jnp.vstack([x[i] for i in range(len(x))])
         return JaxLike(v)
 
     @staticmethod
@@ -214,7 +211,7 @@ class SpatialMath(SpatialMath):
             JaxLike: Horizontal concatenation of elements
         """
         if isinstance(x[0], JaxLike):
-            v = jnp.hstack([x[i].array for i in range(len(x))]).reshape(1,-1)
+            v = jnp.hstack([x[i].array for i in range(len(x))])
         else:
-            v = jnp.hstack([x[i] for i in range(len(x))]).reshape(1, -1)
+            v = jnp.hstack([x[i] for i in range(len(x))])
         return JaxLike(v)
