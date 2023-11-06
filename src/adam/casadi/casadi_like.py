@@ -21,9 +21,9 @@ class CasadiLike(ArrayLike):
     def __matmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides @ operator"""
         if type(other) in [CasadiLike, NumpyLike]:
-            return CasadiLike(self.array @ other.array)
+            return CasadiLike(cs.mtimes(self.array, other.array))
         else:
-            return CasadiLike(self.array @ other)
+            return CasadiLike(cs.mtimes(self.array, other))
 
     def __rmatmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides @ operator"""
@@ -161,21 +161,6 @@ class SpatialMath(SpatialMath):
         return CasadiLike(cs.sin(x))
 
     @staticmethod
-    def mtimes(x: npt.ArrayLike, y: npt.ArrayLike) -> "CasadiLike":
-        """
-        Args:
-            x (npt.ArrayLike): angle value
-
-        Returns:
-            CasadiLike: the sin value of x
-        """
-        if isinstance(x, CasadiLike) and isinstance(y, CasadiLike):
-            return CasadiLike(cs.mtimes(x.array, y.array))
-        else:
-            return CasadiLike(cs.mtimes(x, y))
-        # return CasadiLike(cs.mtimes(x, y))
-
-    @staticmethod
     def cos(x: npt.ArrayLike) -> "CasadiLike":
         """
         Args:
@@ -215,7 +200,7 @@ class SpatialMath(SpatialMath):
     def horzcat(*x) -> "CasadiLike":
         """
         Returns:
-            CasadiLike:  vertical concatenation of elements
+            CasadiLike:  horizontal concatenation of elements
         """
         # here the logic is a bit convoluted: x is a tuple containing CasadiLike
         # cs.vertcat accepts *args. A list of cs types is created extracting the value

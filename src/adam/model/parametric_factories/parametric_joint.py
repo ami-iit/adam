@@ -34,7 +34,15 @@ class ParmetricJoint(Joint):
         self.offset = joint_offset
         self.origin = self.modify(self.parent_parametric.link_offset)
 
-    def modify(self, parent_joint_offset):
+    def modify(self, parent_joint_offset: npt.ArrayLike):
+        """
+        Args:
+            parent_joint_offset (npt.ArrayLike): offset of the parent joint
+
+        Returns:
+            npt.ArrayLike: the origin of the joint, parametric with respect to the parent link dimensions
+        """
+
         length = self.parent_parametric.get_principal_lenght_parametric()
         # Ack for avoiding depending on casadi
         vo = self.parent_parametric.origin[2]

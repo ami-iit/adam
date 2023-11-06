@@ -401,17 +401,27 @@ class SpatialMath:
         return IO
 
     def spatial_inertial_with_parameter(self, I, mass, c, rpy):
-        # Returns the 6x6 inertia matrix expressed at the origin of the link (with rotation)"""
+        """
+        Args:
+            I (npt.ArrayLike): inertia values parametric
+            mass (npt.ArrayLike): mass value parametric
+            c (npt.ArrayLike): origin of the link parametric
+            rpy (npt.ArrayLike): orientation of the link from urdf
+
+        Returns:
+            npt.ArrayLike: the 6x6 inertia matrix parametric expressed at the origin of the link (with rotation)
+        """
         IO = self.factory.zeros(6, 6)
         Sc = self.skew(c)
         R = self.factory.zeros(3, 3)
         R_temp = self.R_from_RPY(rpy)
         inertia_matrix = self.vertcat(
-            self.horzcat(I.ixx, 0.0, 0.0),
-            self.horzcat(0.0, I.iyy, 0.0),
-            self.horzcat(0.0, 0.0, I.izz),
+            self.horzcat(I.ixx, I.ixy, I.ixz),
+            self.horzcat(I.iyx, I.iyy, I.iyz),
+            self.horzcat(I.ixz, I.iyz, I.izz),
         )
-        IO[3:, 3:] = R_temp @ inertia_matrix @ R_temp.T + mass * self.mtimes(Sc, Sc.T)
+
+        IO[3:, 3:] = R_temp @ inertia_matrix @ R_temp.T + mass * Sc @ Sc.T
         IO[3:, :3] = mass * Sc
         IO[:3, 3:] = mass * Sc.T
         IO[:3, :3] = self.factory.eye(3) * mass

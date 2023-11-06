@@ -10,13 +10,17 @@ from adam.model.abc_factories import Inertial
 
 
 class I_parametric:
+    """Inertia values parametric"""
+
     def __init__(self) -> None:
         self.ixx = 0.0
         self.ixy = 0.0
         self.ixz = 0.0
+        self.iyx = 0.0
         self.iyy = 0.0
         self.iyz = 0.0
         self.izz = 0.0
+        self.ixz = 0.0
 
 
 class Geometry(Enum):
@@ -52,20 +56,18 @@ class ParametricLink(Link):
         self.visuals = link.visual
         self.geometry_type, self.visual_data = self.get_geometry(self.visuals)
         self.link = link
-        # self.parent = self.link.parent
         self.link_offset = self.compute_offset()
         (self.volume, self.visual_data_new) = self.compute_volume()
         self.mass = self.compute_mass()
         self.I = self.compute_inertia_parametric()
-
         self.origin = self.modify_origin()
-
         self.inertial = Inertial(self.mass)
         self.inertial.mass = self.mass
         self.inertial.inertia = self.I
         self.inertial.origin = self.origin
 
     def get_principal_lenght(self):
+        """Method computing the principal link length, i.e. the dimension in which the kinematic chain grows"""
         xyz_rpy = [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
         if self.geometry_type == Geometry.CYLINDER:
             if xyz_rpy[3] < 0.0 or xyz_rpy[4] > 0.0:
@@ -85,7 +87,7 @@ class ParametricLink(Link):
         return v_l
 
     def get_principal_lenght_parametric(self):
-
+        """Method computing the principal link length parametric, i.e. the dimension in which the kinematic chain grows"""
         xyz_rpy = [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
         if self.geometry_type == Geometry.CYLINDER:
             if xyz_rpy[3] < 0.0 or xyz_rpy[4] > 0.0:
@@ -105,6 +107,10 @@ class ParametricLink(Link):
         return v_l
 
     def compute_offset(self):
+        """
+        Returns:
+            npt.ArrayLike: link offset
+        """
         xyz_rpy = [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
         v_l = self.get_principal_lenght()
         v_o = xyz_rpy[2]
@@ -115,6 +121,10 @@ class ParametricLink(Link):
         return link_offset
 
     def compute_joint_offset(self, joint_i, parent_offset):
+        """
+        Returns:
+            npt.ArrayLike: the child joint offset
+        """
         # Taking the principal direction i.e. the length
         xyz_rpy = [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
         v_l = self.get_principal_lenght()
@@ -130,8 +140,10 @@ class ParametricLink(Link):
 
     @staticmethod
     def get_geometry(visual_obj):
-
-        """Returns the geometry type and thez corresponding geometry object for a given visual"""
+        """
+        Returns:
+            (Geometry, urdf geometry): the geometry of the link and the related urdf object
+        """
         if type(visual_obj.geometry) is urdf_parser_py.urdf.Box:
             return (Geometry.BOX, visual_obj.geometry)
         if type(visual_obj.geometry) is urdf_parser_py.urdf.Cylinder:
@@ -139,9 +151,11 @@ class ParametricLink(Link):
         if type(visual_obj.geometry) is urdf_parser_py.urdf.Sphere:
             return (Geometry.SPHERE, visual_obj.geometry)
 
-    """Function that starting from a multiplier and link visual characteristics computes the link volume"""
-
     def compute_volume(self):
+        """
+        Returns:
+            (npt.ArrayLike, npt.ArrayLike): the volume and the dimension parametric
+        """
         volume = 0.0
         """Modifies a link's volume by a given multiplier, in a manner that is logical with the link's geometry"""
         if self.geometry_type == Geometry.BOX:
@@ -164,12 +178,19 @@ class ParametricLink(Link):
     """Function that computes the mass starting from the density, the length multiplier and the link"""
 
     def compute_mass(self):
-        """Changes the mass of a link by preserving a given density."""
+        """
+        Returns:
+            (npt.ArrayLike): the link mass
+        """
         mass = 0.0
         mass = self.volume * self.density
         return mass
 
     def modify_origin(self):
+        """
+        Returns:
+            (npt.ArrayLike): the link origin parametrized
+        """
         origin = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         xyz_rpy = [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
         v_o = xyz_rpy[2]
@@ -194,10 +215,13 @@ class ParametricLink(Link):
         return origin
 
     def compute_inertia_parametric(self):
+        """
+        Returns:
+            Inertia Parametric: inertia (ixx, iyy and izz) with the formula that corresponds to the geometry
+        Formulas retrieved from https://en.wikipedia.org/wiki/List_of_moments_of_inertia
+        """
         I = I_parametric()
         xyz_rpy = [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
-        """Calculates inertia (ixx, iyy and izz) with the formula that corresponds to the geometry
-        Formulas retrieved from https://en.wikipedia.org/wiki/List_of_moments_of_inertia"""
         if self.geometry_type == Geometry.BOX:
             I.ixx = (
                 self.mass

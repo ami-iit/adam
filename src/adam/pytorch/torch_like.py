@@ -171,11 +171,6 @@ class SpatialMath(SpatialMath):
         return TorchLike(torch.cos(x))
 
     @staticmethod
-    def mtimes(x: ntp.ArrayLike, y: ntp.ArrayLike) -> "TorchLike":
-
-        return x @ y
-
-    @staticmethod
     def outer(x: ntp.ArrayLike, y: ntp.ArrayLike) -> "TorchLike":
         """
         Args:

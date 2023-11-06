@@ -152,21 +152,6 @@ class SpatialMath(SpatialMath):
         return NumpyLike(np.sin(x))
 
     @staticmethod
-    def mtimes(x: npt.ArrayLike, y: npt.ArrayLike) -> "NumpyLike":
-        """
-        Args:
-            x (npt.ArrayLike): angle value
-
-        Returns:
-            CasadiLike: the sin value of x
-        """
-        if isinstance(x, NumpyLike) and isinstance(y, NumpyLike):
-            return NumpyLike((x.array @ y.array))
-        else:
-            return NumpyLike(x @ y)
-        # return CasadiLike(cs.mtimes(x, y))
-
-    @staticmethod
     def cos(x: npt.ArrayLike) -> "NumpyLike":
         """
         Args:

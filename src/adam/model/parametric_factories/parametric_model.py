@@ -9,7 +9,7 @@ from adam.model import ParmetricJoint, ParametricLink
 
 
 class URDFParametricModelFactory(ModelFactory):
-    """This factory generates robot elements from urdf_parser_py
+    """This factory generates robot elements from urdf_parser_py parametrized w.r.t. link lengths and densities
 
     Args:
         ModelFactory: the Model factory
@@ -37,14 +37,14 @@ class URDFParametricModelFactory(ModelFactory):
     def get_joints(self) -> List[Joint]:
         """
         Returns:
-            List[StdJoint]: build the list of the joints
+            List[Joint]: build the list of the joints
         """
         return [self.build_joint(j) for j in self.urdf_desc.joints]
 
     def get_links(self) -> List[Link]:
         """
         Returns:
-            List[StdLink]: build the list of the links
+            List[Link]: build the list of the links
         """
         return [
             self.build_link(l) for l in self.urdf_desc.links if l.inertial is not None
@@ -53,7 +53,7 @@ class URDFParametricModelFactory(ModelFactory):
     def get_frames(self) -> List[StdLink]:
         """
         Returns:
-            List[StdLink]: build the list of the links
+            List[Link]: build the list of the links
         """
         return [self.build_link(l) for l in self.urdf_desc.links if l.inertial is None]
 
@@ -63,7 +63,7 @@ class URDFParametricModelFactory(ModelFactory):
             joint (Joint): the urdf_parser_py joint
 
         Returns:
-            StdJoint: our joint representation
+            StdJoint/ParametricJoint: our joint representation
         """
         if joint.parent in self.link_parametric_list:
             index_link = self.link_parametric_list.index(joint.parent)
@@ -84,7 +84,7 @@ class URDFParametricModelFactory(ModelFactory):
             link (Link): the urdf_parser_py link
 
         Returns:
-            Link: our link representation
+            StdLink/ParametricLink: our link representation
         """
         if link.name in self.link_parametric_list:
             index_link = self.link_parametric_list.index(link.name)
@@ -97,7 +97,13 @@ class URDFParametricModelFactory(ModelFactory):
         return StdLink(link, self.math)
 
     def get_element_by_name(self, link_name):
-        """Explores the robot looking for the link whose name matches the first argument"""
+        """
+        Args:
+            link_name (Link): the link name
+
+        Returns:
+            Link: the urdf parser link object associated to the link name
+        """
         link_list = [
             corresponding_link
             for corresponding_link in self.urdf_desc.links
