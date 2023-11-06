@@ -189,9 +189,9 @@ class SpatialMath(SpatialMath):
         return JaxLike(-jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0))
 
     @staticmethod
-    def mtimes(x:npt.ArrayLike, y:npt.ArrayLike) -> "JaxLike":
-        return x@y
-        
+    def mtimes(x: npt.ArrayLike, y: npt.ArrayLike) -> "JaxLike":
+        return x @ y
+
     @staticmethod
     def vertcat(*x) -> "JaxLike":
         """

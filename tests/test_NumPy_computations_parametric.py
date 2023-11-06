@@ -5,20 +5,17 @@
 import logging
 from os import link
 import urdf_parser_py.urdf
-import jax.numpy as jnp
-from jax import config
-import numpy as np
 import pytest
 import math
-from adam.jax.computations_parametric import KinDynComputationsParametric
-from adam.jax import KinDynComputations
+import numpy as np
+from adam.numpy.computations_parametric import KinDynComputationsParametric
+from adam.numpy import KinDynComputations
 
 from adam.geometry import utils
 import tempfile
 from git import Repo
 
 np.random.seed(42)
-config.update("jax_enable_x64", True)
 
 # Getting stickbot urdf file
 temp_dir = tempfile.TemporaryDirectory()

@@ -23,7 +23,7 @@ class TorchLike(ArrayLike):
         if type(self) is type(value):
             self.array[idx] = value.array.reshape(self.array[idx].shape)
         else:
-            self.array[idx] =torch.tensor(value)
+            self.array[idx] = torch.tensor(value)
 
     def __getitem__(self, idx):
         """Overrides get item operator"""
@@ -171,6 +171,11 @@ class SpatialMath(SpatialMath):
         return TorchLike(torch.cos(x))
 
     @staticmethod
+    def mtimes(x: ntp.ArrayLike, y: ntp.ArrayLike) -> "TorchLike":
+
+        return x @ y
+
+    @staticmethod
     def outer(x: ntp.ArrayLike, y: ntp.ArrayLike) -> "TorchLike":
         """
         Args:
@@ -202,7 +207,6 @@ class SpatialMath(SpatialMath):
             torch.FloatTensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
         )
 
-
     @staticmethod
     def vertcat(*x: ntp.ArrayLike) -> "TorchLike":
         """
@@ -210,11 +214,10 @@ class SpatialMath(SpatialMath):
             TorchLike: vertical concatenation of x
         """
         if isinstance(x[0], TorchLike):
-            v = torch.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+            v = torch.vstack([x[i].array for i in range(len(x))])
         else:
-            v = torch.FloatTensor(x).reshape(-1, 1)
+            v = torch.FloatTensor(x)
         return TorchLike(v)
-
 
     @staticmethod
     def horzcat(*x: ntp.ArrayLike) -> "TorchLike":
@@ -223,7 +226,7 @@ class SpatialMath(SpatialMath):
             TorchLike: horizontal concatenation of x
         """
         if isinstance(x[0], TorchLike):
-            v = torch.hstack([x[i].array for i in range(len(x))]).reshape(1,-1)
+            v = torch.hstack([x[i].array for i in range(len(x))])
         else:
-            v = torch.FloatTensor(x).reshape(1,-1)
+            v = torch.FloatTensor(x)
         return TorchLike(v)

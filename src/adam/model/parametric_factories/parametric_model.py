@@ -15,7 +15,14 @@ class URDFParametricModelFactory(ModelFactory):
         ModelFactory: the Model factory
     """
 
-    def __init__(self, path: str, math: SpatialMath, link_parametric_list:List, lenght_multiplier, density):
+    def __init__(
+        self,
+        path: str,
+        math: SpatialMath,
+        link_parametric_list: List,
+        lenght_multiplier,
+        density,
+    ):
         self.math = math
         if type(path) is not pathlib.Path:
             path = pathlib.Path(path)
@@ -25,7 +32,7 @@ class URDFParametricModelFactory(ModelFactory):
         self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_file(path)
         self.name = self.urdf_desc.name
         self.lenght_multiplier = lenght_multiplier
-        self.density  = density
+        self.density = density
 
     def get_joints(self) -> List[Joint]:
         """
@@ -58,10 +65,15 @@ class URDFParametricModelFactory(ModelFactory):
         Returns:
             StdJoint: our joint representation
         """
-        if(joint.parent in self.link_parametric_list): 
+        if joint.parent in self.link_parametric_list:
             index_link = self.link_parametric_list.index(joint.parent)
             link_parent = self.get_element_by_name(joint.parent)
-            parent_link_parametric = ParametricLink(link_parent, self.math,self.lenght_multiplier[index_link], self.density[index_link]) 
+            parent_link_parametric = ParametricLink(
+                link_parent,
+                self.math,
+                self.lenght_multiplier[index_link],
+                self.density[index_link],
+            )
             return ParmetricJoint(joint, self.math, parent_link_parametric)
 
         return StdJoint(joint, self.math)
@@ -74,14 +86,23 @@ class URDFParametricModelFactory(ModelFactory):
         Returns:
             Link: our link representation
         """
-        if(link.name in self.link_parametric_list):
-            index_link = self.link_parametric_list.index(link.name) 
-            return ParametricLink(link, self.math, self.lenght_multiplier[index_link], self.density[index_link])
+        if link.name in self.link_parametric_list:
+            index_link = self.link_parametric_list.index(link.name)
+            return ParametricLink(
+                link,
+                self.math,
+                self.lenght_multiplier[index_link],
+                self.density[index_link],
+            )
         return StdLink(link, self.math)
-    
-    def get_element_by_name(self,link_name):
+
+    def get_element_by_name(self, link_name):
         """Explores the robot looking for the link whose name matches the first argument"""
-        link_list = [corresponding_link for corresponding_link in self.urdf_desc.links if corresponding_link.name == link_name]
+        link_list = [
+            corresponding_link
+            for corresponding_link in self.urdf_desc.links
+            if corresponding_link.name == link_name
+        ]
         if len(link_list) != 0:
             return link_list[0]
         else:

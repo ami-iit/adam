@@ -7,6 +7,7 @@ from adam.core.spatial_math import SpatialMath
 from adam.model import Joint
 from adam.model.parametric_factories.parametric_link import ParametricLink
 
+
 class ParmetricJoint(Joint):
     """Parametric Joint class"""
 
@@ -14,7 +15,7 @@ class ParmetricJoint(Joint):
         self,
         joint: urdf_parser_py.urdf.Joint,
         math: SpatialMath,
-        parent_link:ParametricLink,
+        parent_link: ParametricLink,
         idx: Union[int, None] = None,
     ) -> None:
         self.math = math
@@ -27,14 +28,15 @@ class ParmetricJoint(Joint):
         self.limit = joint.limit
         self.idx = idx
         self.joint = joint
-        joint_offset = self.parent_parametric.compute_joint_offset(joint, self.parent_parametric.link_offset)
+        joint_offset = self.parent_parametric.compute_joint_offset(
+            joint, self.parent_parametric.link_offset
+        )
         self.offset = joint_offset
         self.origin = self.modify(self.parent_parametric.link_offset)
 
-
     def modify(self, parent_joint_offset):
         length = self.parent_parametric.get_principal_lenght_parametric()
-        # Ack for avoiding depending on casadi 
+        # Ack for avoiding depending on casadi
         vo = self.parent_parametric.origin[2]
         xyz_rpy = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         xyz_rpy[0] = self.joint.origin.xyz[0]
@@ -43,11 +45,11 @@ class ParmetricJoint(Joint):
         xyz_rpy[3] = self.joint.origin.rpy[0]
         xyz_rpy[4] = self.joint.origin.rpy[1]
         xyz_rpy[5] = self.joint.origin.rpy[2]
-        
-        if(xyz_rpy[2]<0): 
-            xyz_rpy[2] = -length +parent_joint_offset - self.offset   
+
+        if xyz_rpy[2] < 0:
+            xyz_rpy[2] = -length + parent_joint_offset - self.offset
         else:
-            xyz_rpy[2] = vo+ length/2 - self.offset
+            xyz_rpy[2] = vo + length / 2 - self.offset
         return xyz_rpy
 
     def homogeneous(self, q: npt.ArrayLike) -> npt.ArrayLike:
@@ -58,7 +60,6 @@ class ParmetricJoint(Joint):
         Returns:
             npt.ArrayLike: the homogenous transform of a joint, given q
         """
-
 
         o = self.math.factory.zeros(3)
         o[0] = self.origin[0]

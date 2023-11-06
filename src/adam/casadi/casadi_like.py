@@ -160,9 +160,8 @@ class SpatialMath(SpatialMath):
         """
         return CasadiLike(cs.sin(x))
 
-
     @staticmethod
-    def mtimes(x: npt.ArrayLike, y:npt.ArrayLike) -> "CasadiLike":
+    def mtimes(x: npt.ArrayLike, y: npt.ArrayLike) -> "CasadiLike":
         """
         Args:
             x (npt.ArrayLike): angle value
@@ -173,7 +172,7 @@ class SpatialMath(SpatialMath):
         if isinstance(x, CasadiLike) and isinstance(y, CasadiLike):
             return CasadiLike(cs.mtimes(x.array, y.array))
         else:
-            return CasadiLike(cs.mtimes(x,y))
+            return CasadiLike(cs.mtimes(x, y))
         # return CasadiLike(cs.mtimes(x, y))
 
     @staticmethod
@@ -211,6 +210,7 @@ class SpatialMath(SpatialMath):
         # Then the list is unpacked with the * operator.
         y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
         return CasadiLike(cs.vertcat(*y))
+
     @staticmethod
     def horzcat(*x) -> "CasadiLike":
         """

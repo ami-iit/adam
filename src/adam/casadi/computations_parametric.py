@@ -19,7 +19,7 @@ class KinDynComputationsParametric:
         self,
         urdfstring: str,
         joints_name_list: list,
-        link_name_list:list,  
+        link_name_list: list,
         root_link: str = "root_link",
         gravity: np.array = np.array([0.0, 0.0, -9.80665, 0.0, 0.0, 0.0]),
         f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast")),
@@ -33,8 +33,14 @@ class KinDynComputationsParametric:
         math = SpatialMath()
         n_param_link = len(link_name_list)
         self.density = cs.SX.sym("density", n_param_link)
-        self.length_multiplier = cs.SX.sym("length_multiplier",n_param_link)
-        self.factory = URDFParametricModelFactory(path=urdfstring, math=math,link_parametric_list=link_name_list,lenght_multiplier=self.length_multiplier, density=self.density)
+        self.length_multiplier = cs.SX.sym("length_multiplier", n_param_link)
+        self.factory = URDFParametricModelFactory(
+            path=urdfstring,
+            math=math,
+            link_parametric_list=link_name_list,
+            lenght_multiplier=self.length_multiplier,
+            density=self.density,
+        )
         model = Model.build(factory=self.factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
@@ -50,7 +56,9 @@ class KinDynComputationsParametric:
         T_b = cs.SX.sym("T_b", 4, 4)
         s = cs.SX.sym("s", self.NDoF)
         [M, _] = self.rbdalgos.crba(T_b, s)
-        return cs.Function("M", [T_b, s, self.length_multiplier, self.density], [M.array], self.f_opts)
+        return cs.Function(
+            "M", [T_b, s, self.length_multiplier, self.density], [M.array], self.f_opts
+        )
 
     def centroidal_momentum_matrix_fun(self) -> cs.Function:
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
@@ -61,7 +69,12 @@ class KinDynComputationsParametric:
         T_b = cs.SX.sym("T_b", 4, 4)
         s = cs.SX.sym("s", self.NDoF)
         [_, Jcm] = self.rbdalgos.crba(T_b, s)
-        return cs.Function("Jcm", [T_b, s,self.length_multiplier, self.density], [Jcm.array], self.f_opts)
+        return cs.Function(
+            "Jcm",
+            [T_b, s, self.length_multiplier, self.density],
+            [Jcm.array],
+            self.f_opts,
+        )
 
     def forward_kinematics_fun(self, frame: str) -> cs.Function:
         """Computes the forward kinematics relative to the specified frame
@@ -75,7 +88,12 @@ class KinDynComputationsParametric:
         s = cs.SX.sym("s", self.NDoF)
         T_b = cs.SX.sym("T_b", 4, 4)
         T_fk = self.rbdalgos.forward_kinematics(frame, T_b, s)
-        return cs.Function("T_fk", [T_b, s,self.length_multiplier, self.density], [T_fk.array], self.f_opts)
+        return cs.Function(
+            "T_fk",
+            [T_b, s, self.length_multiplier, self.density],
+            [T_fk.array],
+            self.f_opts,
+        )
 
     def jacobian_fun(self, frame: str) -> cs.Function:
         """Returns the Jacobian relative to the specified frame
@@ -89,7 +107,12 @@ class KinDynComputationsParametric:
         s = cs.SX.sym("s", self.NDoF)
         T_b = cs.SX.sym("T_b", 4, 4)
         J_tot = self.rbdalgos.jacobian(frame, T_b, s)
-        return cs.Function("J_tot", [T_b, s,self.length_multiplier, self.density], [J_tot.array], self.f_opts)
+        return cs.Function(
+            "J_tot",
+            [T_b, s, self.length_multiplier, self.density],
+            [J_tot.array],
+            self.f_opts,
+        )
 
     def relative_jacobian_fun(self, frame: str) -> cs.Function:
         """Returns the Jacobian between the root link and a specified frame frames
@@ -102,7 +125,9 @@ class KinDynComputationsParametric:
         """
         s = cs.SX.sym("s", self.NDoF)
         J = self.rbdalgos.relative_jacobian(frame, s)
-        return cs.Function("J", [s,self.length_multiplier, self.density], [J.array], self.f_opts)
+        return cs.Function(
+            "J", [s, self.length_multiplier, self.density], [J.array], self.f_opts
+        )
 
     def CoM_position_fun(self) -> cs.Function:
         """Returns the CoM positon
@@ -113,7 +138,12 @@ class KinDynComputationsParametric:
         s = cs.SX.sym("s", self.NDoF)
         T_b = cs.SX.sym("T_b", 4, 4)
         com_pos = self.rbdalgos.CoM_position(T_b, s)
-        return cs.Function("CoM_pos", [T_b, s,self.length_multiplier, self.density], [com_pos.array], self.f_opts)
+        return cs.Function(
+            "CoM_pos",
+            [T_b, s, self.length_multiplier, self.density],
+            [com_pos.array],
+            self.f_opts,
+        )
 
     def bias_force_fun(self) -> cs.Function:
         """Returns the bias force of the floating-base dynamics equation,
@@ -127,7 +157,12 @@ class KinDynComputationsParametric:
         v_b = cs.SX.sym("v_b", 6)
         s_dot = cs.SX.sym("s_dot", self.NDoF)
         h = self.rbdalgos.rnea(T_b, s, v_b, s_dot, self.g)
-        return cs.Function("h", [T_b, s, v_b, s_dot,self.length_multiplier, self.density], [h.array], self.f_opts)
+        return cs.Function(
+            "h",
+            [T_b, s, v_b, s_dot, self.length_multiplier, self.density],
+            [h.array],
+            self.f_opts,
+        )
 
     def coriolis_term_fun(self) -> cs.Function:
         """Returns the coriolis term of the floating-base dynamics equation,
@@ -142,7 +177,12 @@ class KinDynComputationsParametric:
         q_dot = cs.SX.sym("q_dot", self.NDoF)
         # set in the bias force computation the gravity term to zero
         C = self.rbdalgos.rnea(T_b, q, v_b, q_dot, np.zeros(6))
-        return cs.Function("C", [T_b, q, v_b, q_dot,self.length_multiplier, self.density], [C.array], self.f_opts)
+        return cs.Function(
+            "C",
+            [T_b, q, v_b, q_dot, self.length_multiplier, self.density],
+            [C.array],
+            self.f_opts,
+        )
 
     def gravity_term_fun(self) -> cs.Function:
         """Returns the gravity term of the floating-base dynamics equation,
@@ -155,7 +195,9 @@ class KinDynComputationsParametric:
         q = cs.SX.sym("q", self.NDoF)
         # set in the bias force computation the velocity to zero
         G = self.rbdalgos.rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
-        return cs.Function("G", [T_b, q,self.length_multiplier, self.density], [G.array], self.f_opts)
+        return cs.Function(
+            "G", [T_b, q, self.length_multiplier, self.density], [G.array], self.f_opts
+        )
 
     def forward_kinematics(self, frame, T_b, s) -> cs.Function:
         """Computes the forward kinematics relative to the specified frame
@@ -167,7 +209,9 @@ class KinDynComputationsParametric:
             T_fk (casADi function): The fk represented as Homogenous transformation matrix
         """
 
-        return self.rbdalgos.forward_kinematics(frame, T_b, s,self.length_multiplier, self.density)
+        return self.rbdalgos.forward_kinematics(
+            frame, T_b, s, self.length_multiplier, self.density
+        )
 
     def get_total_mass(self) -> float:
         """Returns the total mass of the robot
@@ -176,5 +220,7 @@ class KinDynComputationsParametric:
             mass: The total mass
         """
         m = self.rbdalgos.get_total_mass()
-        return cs.Function("m", [self.density, self.length_multiplier], [m], self.f_opts)
+        return cs.Function(
+            "m", [self.density, self.length_multiplier], [m], self.f_opts
+        )
         return self.rbdalgos.get_total_mass()
