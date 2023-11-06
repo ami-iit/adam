@@ -23,7 +23,7 @@ class TorchLike(ArrayLike):
         if type(self) is type(value):
             self.array[idx] = value.array.reshape(self.array[idx].shape)
         else:
-            self.array[idx] = torch.FloatTensor(value)
+            self.array[idx] =torch.tensor(value)
 
     def __getitem__(self, idx):
         """Overrides get item operator"""
@@ -202,13 +202,6 @@ class SpatialMath(SpatialMath):
             torch.FloatTensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
         )
 
-
-    @staticmethod
-    def skew(x: ntp.ArrayLike, y:np.ArrayLike) -> "TorchLike":
-        if isinstance(x, TorchLike) and isinstance(y, TorchLike):
-            return TorchLike(torch.mtimes(TorchLike(x), TorchLike(y)))
-        else:
-            return TorchLike(torch.mtimes(x.array, y.array))
 
     @staticmethod
     def vertcat(*x: ntp.ArrayLike) -> "TorchLike":

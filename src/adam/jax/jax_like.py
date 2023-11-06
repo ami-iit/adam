@@ -194,7 +194,6 @@ class SpatialMath(SpatialMath):
             return jnp.mtimes(jnp.array(x), jnp.array(y))
         else: 
             return jnp.mtimes(jnp.array(x.array), jnp.array(y.array))
-        return JaxLike(-jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0))
 
     @staticmethod
     def vertcat(*x) -> "JaxLike":
