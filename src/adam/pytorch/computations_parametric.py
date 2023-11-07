@@ -12,14 +12,14 @@ from adam.pytorch.torch_like import SpatialMath
 
 class KinDynComputationsParametric:
     """This is a small class that retrieves robot quantities using Pytorch
-    in mixed representation, for Floating Base systems - as humanoid robots.
+    in mixed representation, for Floating Base systems - as humanoid robots. This is parametric w.r.t the link length and denisties
     """
 
     def __init__(
         self,
         urdfstring: str,
         joints_name_list: list,
-        link_name_list: list,
+        links_name_list: list,
         root_link: str = "root_link",
         gravity: np.array = torch.FloatTensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
@@ -27,11 +27,12 @@ class KinDynComputationsParametric:
         Args:
             urdfstring (str): path of the urdf
             joints_name_list (list): list of the actuated joints
+            links_name_list (list): list of parametric links
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
         self.math = SpatialMath()
         self.g = gravity
-        self.link_name_list = link_name_list
+        self.links_name_list = links_name_list
         self.joints_name_list = joints_name_list
         self.urdfstring = urdfstring
 
@@ -39,14 +40,16 @@ class KinDynComputationsParametric:
         self,
         base_transform: torch.Tensor,
         s: torch.Tensor,
-        lenght_multiplier: torch.Tensor,
-        density: torch.Tensor,
+        length_multiplier: torch.Tensor,
+        densities: torch.Tensor,
     ) -> torch.Tensor:
         """Returns the Mass Matrix functions computed the CRBA
 
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             s (torch.tensor): The joints position
+            length_multiplier (torch.tensor): The length multiplier of the parametrized links
+            densities (torch.tensor): The densities of the parametrized links
 
         Returns:
             M (torch.tensor): Mass Matrix
@@ -55,9 +58,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -69,14 +72,16 @@ class KinDynComputationsParametric:
         self,
         base_transform: torch.Tensor,
         s: torch.Tensor,
-        lenght_multiplier: torch.Tensor,
-        density: torch.Tensor,
+        length_multiplier: torch.Tensor,
+        densities: torch.Tensor,
     ) -> torch.Tensor:
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             s (torch.tensor): The joints position
+            length_multiplier (torch.tensor): The length multiplier of the parametrized links
+            densities (torch.tensor): The densities of the parametrized links
 
         Returns:
             Jcc (torch.tensor): Centroidal Momentum matrix
@@ -85,9 +90,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -100,8 +105,8 @@ class KinDynComputationsParametric:
         frame,
         base_transform: torch.Tensor,
         s: torch.Tensor,
-        lenght_multiplier: torch.Tensor,
-        density: torch.Tensor,
+        length_multiplier: torch.Tensor,
+        densities: torch.Tensor,
     ) -> torch.Tensor:
         """Computes the forward kinematics relative to the specified frame
 
@@ -109,6 +114,8 @@ class KinDynComputationsParametric:
             frame (str): The frame to which the fk will be computed
             base_transform (torch.tensor): The homogenous transform from base to world frame
             s (torch.tensor): The joints position
+            length_multiplier (torch.tensor): The length multiplier of the parametrized links
+            densities (torch.tensor): The densities of the parametrized links
 
         Returns:
             T_fk (torch.tensor): The fk represented as Homogenous transformation matrix
@@ -117,9 +124,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -135,8 +142,8 @@ class KinDynComputationsParametric:
         frame: str,
         base_transform: torch.Tensor,
         joint_positions: torch.Tensor,
-        lenght_multiplier: torch.Tensor,
-        density: torch.Tensor,
+        length_multiplier: torch.Tensor,
+        densities: torch.Tensor,
     ) -> torch.Tensor:
         """Returns the Jacobian relative to the specified frame
 
@@ -144,6 +151,8 @@ class KinDynComputationsParametric:
             frame (str): The frame to which the jacobian will be computed
             base_transform (torch.tensor): The homogenous transform from base to world frame
             joint_positions (torch.tensor): The joints position
+            length_multiplier (torch.tensor): The length multiplier of the parametrized links
+            densities (torch.tensor): The densities of the parametrized links
 
         Returns:
             J_tot (torch.tensor): The Jacobian relative to the frame
@@ -152,9 +161,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -165,14 +174,16 @@ class KinDynComputationsParametric:
         self,
         frame,
         joint_positions: torch.Tensor,
-        lenght_multiplier: torch.Tensor,
-        density: torch.Tensor,
+        length_multiplier: torch.Tensor,
+        densities: torch.Tensor,
     ) -> torch.Tensor:
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
             frame (str): The tip of the chain
             joint_positions (torch.tensor): The joints position
+            length_multiplier (torch.tensor): The length multiplier of the parametrized links
+            densities (torch.tensor): The densities of the parametrized links
 
         Returns:
             J (torch.tensor): The Jacobian between the root and the frame
@@ -181,9 +192,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -194,14 +205,16 @@ class KinDynComputationsParametric:
         self,
         base_transform: torch.Tensor,
         joint_positions: torch.Tensor,
-        lenght_multiplier: torch.Tensor,
-        density: torch.Tensor,
+        length_multiplier: torch.Tensor,
+        densities: torch.Tensor,
     ) -> torch.Tensor:
         """Returns the CoM positon
 
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             joint_positions (torch.tensor): The joints position
+            length_multiplier (torch.tensor): The length multiplier of the parametrized links
+            densities (torch.tensor): The densities of the parametrized links
 
         Returns:
             com (torch.tensor): The CoM position
@@ -210,9 +223,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -227,8 +240,8 @@ class KinDynComputationsParametric:
         s: torch.Tensor,
         base_velocity: torch.Tensor,
         joint_velocities: torch.Tensor,
-        lenght_multiplier: torch.Tensor,
-        density: torch.Tensor,
+        length_multiplier: torch.Tensor,
+        densities: torch.Tensor,
     ) -> torch.Tensor:
         """Returns the bias force of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
@@ -238,6 +251,8 @@ class KinDynComputationsParametric:
             s (torch.tensor): The joints position
             base_velocity (torch.tensor): The base velocity in mixed representation
             joint_velocities (torch.tensor): The joints velocity
+            length_multiplier (torch.tensor): The length multiplier of the parametrized links
+            densities (torch.tensor): The densities of the parametrized links
 
         Returns:
             h (torch.tensor): the bias force
@@ -246,9 +261,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -267,8 +282,8 @@ class KinDynComputationsParametric:
         joint_positions: torch.Tensor,
         base_velocity: torch.Tensor,
         joint_velocities: torch.Tensor,
-        lenght_multiplier: torch.Tensor,
-        density: torch.Tensor,
+        length_multiplier: torch.Tensor,
+        densities: torch.Tensor,
     ) -> torch.Tensor:
         """Returns the coriolis term of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
@@ -278,6 +293,8 @@ class KinDynComputationsParametric:
             joint_positions (torch.tensor): The joints position
             base_velocity (torch.tensor): The base velocity in mixed representation
             joint_velocities (torch.tensor): The joints velocity
+            length_multiplier (torch.tensor): The length multiplier of the parametrized links
+            densities (torch.tensor): The densities of the parametrized links
 
         Returns:
             C (torch.tensor): the Coriolis term
@@ -286,9 +303,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -306,8 +323,8 @@ class KinDynComputationsParametric:
         self,
         base_transform: torch.Tensor,
         base_positions: torch.Tensor,
-        lenght_multiplier: torch.Tensor,
-        density: torch.Tensor,
+        length_multiplier: torch.Tensor,
+        densities: torch.Tensor,
     ) -> torch.Tensor:
         """Returns the gravity term of the floating-base dynamics ejoint_positionsuation,
         using a reduced RNEA (no acceleration and external forces)
@@ -315,6 +332,8 @@ class KinDynComputationsParametric:
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             base_positions (torch.tensor): The joints position
+            length_multiplier (torch.tensor): The length multiplier of the parametrized links
+            densities (torch.tensor): The densities of the parametrized links
 
         Returns:
             G (torch.tensor): the gravity term
@@ -322,9 +341,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -338,9 +357,13 @@ class KinDynComputationsParametric:
         ).array.squeeze()
 
     def get_total_mass(
-        self, lenght_multiplier: torch.Tensor, density: torch.Tensor
+        self, length_multiplier: torch.Tensor, densities: torch.Tensor
     ) -> float:
         """Returns the total mass of the robot
+
+        Args:
+            length_multiplier (torch.tensor): The length multiplier of the parametrized links
+            densities (torch.tensor): The densities of the parametrized links
 
         Returns:
             mass: The total mass
@@ -348,9 +371,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)

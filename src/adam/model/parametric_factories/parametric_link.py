@@ -47,12 +47,12 @@ class ParametricLink(Link):
         link: urdf_parser_py.urdf.Link,
         math: SpatialMath,
         length_multiplier,
-        density,
+        densities,
     ):
         self.math = math
         self.name = link.name
         self.length_multiplier = length_multiplier
-        self.density = density
+        self.densities = densities
         self.visuals = link.visual
         self.geometry_type, self.visual_data = self.get_geometry(self.visuals)
         self.link = link
@@ -175,7 +175,7 @@ class ParametricLink(Link):
             volume = 4 * math.pi * visual_data_new ** 3 / 3
         return volume, visual_data_new
 
-    """Function that computes the mass starting from the density, the length multiplier and the link"""
+    """Function that computes the mass starting from the densities, the length multiplier and the link"""
 
     def compute_mass(self):
         """
@@ -183,7 +183,7 @@ class ParametricLink(Link):
             (npt.ArrayLike): the link mass
         """
         mass = 0.0
-        mass = self.volume * self.density
+        mass = self.volume * self.densities
         return mass
 
     def modify_origin(self):

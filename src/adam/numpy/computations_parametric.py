@@ -11,14 +11,14 @@ from adam.numpy.numpy_like import SpatialMath
 
 class KinDynComputationsParametric:
     """This is a small class that retrieves robot quantities using NumPy
-    in mixed representation, for Floating Base systems - as humanoid robots.
+    in mixed representation, for Floating Base systems - as humanoid robots. This is parametric w.r.t the link length and denisties
     """
 
     def __init__(
         self,
         urdfstring: str,
         joints_name_list: list,
-        link_name_list: list,
+        links_name_list: list,
         root_link: str = "root_link",
         gravity: np.array = np.array([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
@@ -26,9 +26,10 @@ class KinDynComputationsParametric:
         Args:
             urdfstring (str): path of the urdf
             joints_name_list (list): list of the actuated joints
+            links_name_list (list): list of parametric links
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
-        self.link_name_list = link_name_list
+        self.links_name_list = links_name_list
         self.math = SpatialMath()
         self.g = gravity
         self.urdfstring = urdfstring
@@ -38,14 +39,16 @@ class KinDynComputationsParametric:
         self,
         base_transform: np.ndarray,
         joint_positions: np.ndarray,
-        lenght_multiplier: np.ndarray,
-        density: np.ndarray,
+        length_multiplier: np.ndarray,
+        densities: np.ndarray,
     ) -> np.ndarray:
         """Returns the Mass Matrix functions computed the CRBA
 
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
+            length_multiplier (np.ndarray): The length multiplier of the parametrized links
+            densities (np.ndarray): The densities of the parametrized links
 
         Returns:
             M (np.ndarray): Mass Matrix
@@ -54,9 +57,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -68,14 +71,16 @@ class KinDynComputationsParametric:
         self,
         base_transform: np.ndarray,
         s: np.ndarray,
-        lenght_multiplier: np.ndarray,
-        density: np.ndarray,
+        length_multiplier: np.ndarray,
+        densities: np.ndarray,
     ) -> np.ndarray:
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joint positions
+            length_multiplier (np.ndarray): The length multiplier of the parametrized links
+            densities (np.ndarray): The densities of the parametrized links
 
         Returns:
             Jcc (np.ndarray): Centroidal Momentum matrix
@@ -84,9 +89,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -99,8 +104,8 @@ class KinDynComputationsParametric:
         frame: str,
         base_transform: np.ndarray,
         joint_positions: np.ndarray,
-        lenght_multiplier: np.ndarray,
-        density: np.ndarray,
+        length_multiplier: np.ndarray,
+        densities: np.ndarray,
     ) -> np.ndarray:
         """Computes the forward kinematics relative to the specified frame
 
@@ -108,6 +113,8 @@ class KinDynComputationsParametric:
             frame (str): The frame to which the fk will be computed
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
+            length_multiplier (np.ndarray): The length multiplier of the parametrized links
+            densities (np.ndarray): The densities of the parametrized links
 
         Returns:
             T_fk (np.ndarray): The fk represented as Homogenous transformation matrix
@@ -116,9 +123,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -132,8 +139,8 @@ class KinDynComputationsParametric:
         frame: str,
         base_transform: np.ndarray,
         joint_positions: np.ndarray,
-        lenght_multiplier: np.ndarray,
-        density: np.ndarray,
+        length_multiplier: np.ndarray,
+        densities: np.ndarray,
     ) -> np.ndarray:
         """Returns the Jacobian relative to the specified frame
 
@@ -141,6 +148,8 @@ class KinDynComputationsParametric:
             frame (str): The frame to which the jacobian will be computed
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
+            length_multiplier (np.ndarray): The length multiplier of the parametrized links
+            densities (np.ndarray): The densities of the parametrized links
 
         Returns:
             J_tot (np.ndarray): The Jacobian relative to the frame
@@ -149,9 +158,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -164,14 +173,16 @@ class KinDynComputationsParametric:
         self,
         frame: str,
         joint_positions: np.ndarray,
-        lenght_multiplier: np.ndarray,
-        density: np.ndarray,
+        length_multiplier: np.ndarray,
+        densities: np.ndarray,
     ) -> np.ndarray:
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
             frame (str): The tip of the chain
             joint_positions (np.ndarray): The joints position
+            length_multiplier (np.ndarray): The length multiplier of the parametrized links
+            densities (np.ndarray): The densities of the parametrized links
 
         Returns:
             J (np.ndarray): The Jacobian between the root and the frame
@@ -180,9 +191,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -193,14 +204,16 @@ class KinDynComputationsParametric:
         self,
         base_transform: np.ndarray,
         joint_positions: np.ndarray,
-        lenght_multiplier: np.ndarray,
-        density: np.ndarray,
+        length_multiplier: np.ndarray,
+        densities: np.ndarray,
     ) -> np.ndarray:
         """Returns the CoM positon
 
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
+            length_multiplier (np.ndarray): The length multiplier of the parametrized links
+            densities (np.ndarray): The densities of the parametrized links
 
         Returns:
             CoM (np.ndarray): The CoM position
@@ -209,9 +222,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -226,8 +239,8 @@ class KinDynComputationsParametric:
         joint_positions: np.ndarray,
         base_velocity: np.ndarray,
         joint_velocities: np.ndarray,
-        lenght_multiplier: np.ndarray,
-        density: np.ndarray,
+        length_multiplier: np.ndarray,
+        densities: np.ndarray,
     ) -> np.ndarray:
         """Returns the bias force of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
@@ -237,6 +250,8 @@ class KinDynComputationsParametric:
             joint_positions (np.ndarray): The joints position
             base_velocity (np.ndarray): The base velocity in mixed representation
             joint_velocities (np.ndarray): The joint velocities
+            length_multiplier (np.ndarray): The length multiplier of the parametrized links
+            densities (np.ndarray): The densities of the parametrized links
 
         Returns:
             h (np.ndarray): the bias force
@@ -245,9 +260,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -266,8 +281,8 @@ class KinDynComputationsParametric:
         joint_positions: np.ndarray,
         base_velocity: np.ndarray,
         joint_velocities: np.ndarray,
-        lenght_multiplier: np.ndarray,
-        density: np.ndarray,
+        length_multiplier: np.ndarray,
+        densities: np.ndarray,
     ) -> np.ndarray:
         """Returns the coriolis term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
@@ -277,6 +292,8 @@ class KinDynComputationsParametric:
             joint_positions (np.ndarray): The joints position
             base_velocity (np.ndarray): The base velocity in mixed representation
             joint_velocities (np.ndarray): The joint velocities
+            length_multiplier (np.ndarray): The length multiplier of the parametrized links
+            densities (np.ndarray): The densities of the parametrized links
 
         Returns:
             C (np.ndarray): the Coriolis term
@@ -285,9 +302,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -305,8 +322,8 @@ class KinDynComputationsParametric:
         self,
         base_transform: np.ndarray,
         joint_positions: np.ndarray,
-        lenght_multiplier: np.ndarray,
-        density: np.ndarray,
+        length_multiplier: np.ndarray,
+        densities: np.ndarray,
     ) -> np.ndarray:
         """Returns the gravity term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
@@ -314,6 +331,8 @@ class KinDynComputationsParametric:
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
+            length_multiplier (np.ndarray): The length multiplier of the parametrized links
+            densities (np.ndarray): The densities of the parametrized links
 
         Returns:
             G (np.ndarray): the gravity term
@@ -322,9 +341,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
@@ -338,9 +357,13 @@ class KinDynComputationsParametric:
         ).array.squeeze()
 
     def get_total_mass(
-        self, lenght_multiplier: np.ndarray, density: np.ndarray
+        self, length_multiplier: np.ndarray, densities: np.ndarray
     ) -> float:
         """Returns the total mass of the robot
+
+        Args:
+            length_multiplier (np.ndarray): The length multiplier of the parametrized links
+            densities (np.ndarray): The densities of the parametrized links
 
         Returns:
             mass: The total mass
@@ -348,9 +371,9 @@ class KinDynComputationsParametric:
         factory = URDFParametricModelFactory(
             path=self.urdfstring,
             math=self.math,
-            link_parametric_list=self.link_name_list,
-            lenght_multiplier=lenght_multiplier,
-            density=density,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)

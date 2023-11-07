@@ -19,20 +19,20 @@ class URDFParametricModelFactory(ModelFactory):
         self,
         path: str,
         math: SpatialMath,
-        link_parametric_list: List,
-        lenght_multiplier,
-        density,
+        links_name_list: List,
+        length_multiplier,
+        densities,
     ):
         self.math = math
         if type(path) is not pathlib.Path:
             path = pathlib.Path(path)
         if not path.exists():
             raise FileExistsError(path)
-        self.link_parametric_list = link_parametric_list
+        self.links_name_list = links_name_list
         self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_file(path)
         self.name = self.urdf_desc.name
-        self.lenght_multiplier = lenght_multiplier
-        self.density = density
+        self.length_multiplier = length_multiplier
+        self.densities = densities
 
     def get_joints(self) -> List[Joint]:
         """
@@ -65,14 +65,14 @@ class URDFParametricModelFactory(ModelFactory):
         Returns:
             StdJoint/ParametricJoint: our joint representation
         """
-        if joint.parent in self.link_parametric_list:
-            index_link = self.link_parametric_list.index(joint.parent)
+        if joint.parent in self.links_name_list:
+            index_link = self.links_name_list.index(joint.parent)
             link_parent = self.get_element_by_name(joint.parent)
             parent_link_parametric = ParametricLink(
                 link_parent,
                 self.math,
-                self.lenght_multiplier[index_link],
-                self.density[index_link],
+                self.length_multiplier[index_link],
+                self.densities[index_link],
             )
             return ParmetricJoint(joint, self.math, parent_link_parametric)
 
@@ -86,13 +86,13 @@ class URDFParametricModelFactory(ModelFactory):
         Returns:
             StdLink/ParametricLink: our link representation
         """
-        if link.name in self.link_parametric_list:
-            index_link = self.link_parametric_list.index(link.name)
+        if link.name in self.links_name_list:
+            index_link = self.links_name_list.index(link.name)
             return ParametricLink(
                 link,
                 self.math,
-                self.lenght_multiplier[index_link],
-                self.density[index_link],
+                self.length_multiplier[index_link],
+                self.densities[index_link],
             )
         return StdLink(link, self.math)
 

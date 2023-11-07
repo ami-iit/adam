@@ -12,14 +12,14 @@ from adam.model import Model, URDFModelFactory, URDFParametricModelFactory
 
 class KinDynComputationsParametric:
     """This is a small class that retrieves robot quantities represented in a symbolic fashion using CasADi
-    in mixed representation, for Floating Base systems - as humanoid robots.
+    in mixed representation, for Floating Base systems - as humanoid robots. This is parametric w.r.t the link length and denisties
     """
 
     def __init__(
         self,
         urdfstring: str,
         joints_name_list: list,
-        link_name_list: list,
+        links_name_list: list,
         root_link: str = "root_link",
         gravity: np.array = np.array([0.0, 0.0, -9.80665, 0.0, 0.0, 0.0]),
         f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast")),
@@ -28,18 +28,19 @@ class KinDynComputationsParametric:
         Args:
             urdfstring (str): path of the urdf
             joints_name_list (list): list of the actuated joints
+            links_name_list (list): list of the parametrized links
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
         math = SpatialMath()
-        n_param_link = len(link_name_list)
-        self.density = cs.SX.sym("density", n_param_link)
+        n_param_link = len(links_name_list)
+        self.densities = cs.SX.sym("densities", n_param_link)
         self.length_multiplier = cs.SX.sym("length_multiplier", n_param_link)
         self.factory = URDFParametricModelFactory(
             path=urdfstring,
             math=math,
-            link_parametric_list=link_name_list,
-            lenght_multiplier=self.length_multiplier,
-            density=self.density,
+            links_name_list=links_name_list,
+            length_multiplier=self.length_multiplier,
+            densities=self.densities,
         )
         model = Model.build(factory=self.factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
@@ -57,7 +58,10 @@ class KinDynComputationsParametric:
         s = cs.SX.sym("s", self.NDoF)
         [M, _] = self.rbdalgos.crba(T_b, s)
         return cs.Function(
-            "M", [T_b, s, self.length_multiplier, self.density], [M.array], self.f_opts
+            "M",
+            [T_b, s, self.length_multiplier, self.densities],
+            [M.array],
+            self.f_opts,
         )
 
     def centroidal_momentum_matrix_fun(self) -> cs.Function:
@@ -71,7 +75,7 @@ class KinDynComputationsParametric:
         [_, Jcm] = self.rbdalgos.crba(T_b, s)
         return cs.Function(
             "Jcm",
-            [T_b, s, self.length_multiplier, self.density],
+            [T_b, s, self.length_multiplier, self.densities],
             [Jcm.array],
             self.f_opts,
         )
@@ -90,7 +94,7 @@ class KinDynComputationsParametric:
         T_fk = self.rbdalgos.forward_kinematics(frame, T_b, s)
         return cs.Function(
             "T_fk",
-            [T_b, s, self.length_multiplier, self.density],
+            [T_b, s, self.length_multiplier, self.densities],
             [T_fk.array],
             self.f_opts,
         )
@@ -109,7 +113,7 @@ class KinDynComputationsParametric:
         J_tot = self.rbdalgos.jacobian(frame, T_b, s)
         return cs.Function(
             "J_tot",
-            [T_b, s, self.length_multiplier, self.density],
+            [T_b, s, self.length_multiplier, self.densities],
             [J_tot.array],
             self.f_opts,
         )
@@ -126,7 +130,7 @@ class KinDynComputationsParametric:
         s = cs.SX.sym("s", self.NDoF)
         J = self.rbdalgos.relative_jacobian(frame, s)
         return cs.Function(
-            "J", [s, self.length_multiplier, self.density], [J.array], self.f_opts
+            "J", [s, self.length_multiplier, self.densities], [J.array], self.f_opts
         )
 
     def CoM_position_fun(self) -> cs.Function:
@@ -140,7 +144,7 @@ class KinDynComputationsParametric:
         com_pos = self.rbdalgos.CoM_position(T_b, s)
         return cs.Function(
             "CoM_pos",
-            [T_b, s, self.length_multiplier, self.density],
+            [T_b, s, self.length_multiplier, self.densities],
             [com_pos.array],
             self.f_opts,
         )
@@ -159,7 +163,7 @@ class KinDynComputationsParametric:
         h = self.rbdalgos.rnea(T_b, s, v_b, s_dot, self.g)
         return cs.Function(
             "h",
-            [T_b, s, v_b, s_dot, self.length_multiplier, self.density],
+            [T_b, s, v_b, s_dot, self.length_multiplier, self.densities],
             [h.array],
             self.f_opts,
         )
@@ -179,7 +183,7 @@ class KinDynComputationsParametric:
         C = self.rbdalgos.rnea(T_b, q, v_b, q_dot, np.zeros(6))
         return cs.Function(
             "C",
-            [T_b, q, v_b, q_dot, self.length_multiplier, self.density],
+            [T_b, q, v_b, q_dot, self.length_multiplier, self.densities],
             [C.array],
             self.f_opts,
         )
@@ -196,7 +200,10 @@ class KinDynComputationsParametric:
         # set in the bias force computation the velocity to zero
         G = self.rbdalgos.rnea(T_b, q, np.zeros(6), np.zeros(self.NDoF), self.g)
         return cs.Function(
-            "G", [T_b, q, self.length_multiplier, self.density], [G.array], self.f_opts
+            "G",
+            [T_b, q, self.length_multiplier, self.densities],
+            [G.array],
+            self.f_opts,
         )
 
     def forward_kinematics(self, frame, T_b, s) -> cs.Function:
@@ -210,7 +217,7 @@ class KinDynComputationsParametric:
         """
 
         return self.rbdalgos.forward_kinematics(
-            frame, T_b, s, self.length_multiplier, self.density
+            frame, T_b, s, self.length_multiplier, self.densities
         )
 
     def get_total_mass(self) -> float:
@@ -221,6 +228,6 @@ class KinDynComputationsParametric:
         """
         m = self.rbdalgos.get_total_mass()
         return cs.Function(
-            "m", [self.density, self.length_multiplier], [m], self.f_opts
+            "m", [self.densities, self.length_multiplier], [m], self.f_opts
         )
         return self.rbdalgos.get_total_mass()
