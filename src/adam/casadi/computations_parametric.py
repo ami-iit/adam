@@ -7,6 +7,7 @@ import numpy as np
 
 from adam.casadi.casadi_like import SpatialMath
 from adam.core import RBDAlgorithms
+from adam.core.constants import Representations
 from adam.model import Model, URDFModelFactory, URDFParametricModelFactory
 
 
@@ -35,18 +36,28 @@ class KinDynComputationsParametric:
         n_param_link = len(links_name_list)
         self.densities = cs.SX.sym("densities", n_param_link)
         self.length_multiplier = cs.SX.sym("length_multiplier", n_param_link)
-        self.factory = URDFParametricModelFactory(
+        factory = URDFParametricModelFactory(
             path=urdfstring,
             math=math,
             links_name_list=links_name_list,
             length_multiplier=self.length_multiplier,
             densities=self.densities,
         )
-        model = Model.build(factory=self.factory, joints_name_list=joints_name_list)
+        model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
         self.f_opts = f_opts
+
+    def set_frame_velocity_representation(
+        self, representation: Representations
+    ) -> None:
+        """Sets the representation of the velocity of the frames
+
+        Args:
+            representation (Representations): The representation of the velocity
+        """
+        self.rbdalgos.set_frame_velocity_representation(representation)
 
     def mass_matrix_fun(self) -> cs.Function:
         """Returns the Mass Matrix functions computed the CRBA
@@ -131,6 +142,36 @@ class KinDynComputationsParametric:
         J = self.rbdalgos.relative_jacobian(frame, s)
         return cs.Function(
             "J", [s, self.length_multiplier, self.densities], [J.array], self.f_opts
+        )
+
+    def jacobian_dot_fun(self, frame: str) -> cs.Function:
+        """Returns the Jacobian derivative relative to the specified frame
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+
+        Returns:
+            J_dot (casADi function): The Jacobian derivative relative to the frame
+        """
+        base_transform = cs.SX.sym("H", 4, 4)
+        joint_positions = cs.SX.sym("s", self.NDoF)
+        base_velocity = cs.SX.sym("v_b", 6)
+        joint_velocities = cs.SX.sym("s_dot", self.NDoF)
+        J_dot = self.rbdalgos.jacobian_dot(
+            frame, base_transform, joint_positions, base_velocity, joint_velocities
+        )
+        return cs.Function(
+            "J_dot",
+            [
+                base_transform,
+                joint_positions,
+                base_velocity,
+                joint_velocities,
+                self.length_multiplier,
+                self.densities,
+            ],
+            [J_dot.array],
+            self.f_opts,
         )
 
     def CoM_position_fun(self) -> cs.Function:

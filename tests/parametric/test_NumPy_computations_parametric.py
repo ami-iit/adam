@@ -5,20 +5,18 @@
 import logging
 from os import link
 import urdf_parser_py.urdf
-import jax.numpy as jnp
-from jax import config
-import numpy as np
 import pytest
 import math
-from adam.jax.computations_parametric import KinDynComputationsParametric
-from adam.jax import KinDynComputations
+import numpy as np
+from adam.numpy.computations_parametric import KinDynComputationsParametric
+from adam.numpy import KinDynComputations
 
 from adam.geometry import utils
 import tempfile
 from git import Repo
+from adam import Representations
 
 np.random.seed(42)
-config.update("jax_enable_x64", True)
 
 # Getting stickbot urdf file
 temp_dir = tempfile.TemporaryDirectory()
@@ -68,6 +66,9 @@ link_name_list = ["chest"]
 comp_w_hardware = KinDynComputationsParametric(
     model_path, joints_name_list, link_name_list, root_link
 )
+# comp.set_frame_velocity_representation(Representations.BODY_FIXED_REPRESENTATION)
+# comp_w_hardware.set_frame_velocity_representation(Representations.BODY_FIXED_REPRESENTATION)
+
 original_density = [628.0724496264945]
 original_length = np.ones(len(link_name_list))
 
@@ -88,26 +89,26 @@ s_dot_ = joints_dot_val
 
 def test_mass_matrix():
     mass_test = comp.mass_matrix(H_b, s_)
-    mass_test_hardware = np.array(
-        comp_w_hardware.mass_matrix(H_b, s_, original_length, original_density)
+    mass_test_hardware = comp_w_hardware.mass_matrix(
+        H_b, s_, original_length, original_density
     )
+
     assert mass_test - mass_test_hardware == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CMM():
     Jcm_test = comp.centroidal_momentum_matrix(H_b, s_)
-    Jcm_test_hardware = np.array(
-        comp_w_hardware.centroidal_momentum_matrix(
-            H_b, s_, original_length, original_density
-        )
+    Jcm_test_hardware = comp_w_hardware.centroidal_momentum_matrix(
+        H_b, s_, original_length, original_density
     )
+
     assert Jcm_test - Jcm_test_hardware == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CoM_pos():
     CoM_test = comp.CoM_position(H_b, s_)
-    CoM_hardware = np.array(
-        comp_w_hardware.CoM_position(H_b, s_, original_length, original_density)
+    CoM_hardware = comp_w_hardware.CoM_position(
+        H_b, s_, original_length, original_density
     )
     assert CoM_test - CoM_hardware == pytest.approx(0.0, abs=1e-5)
 
@@ -120,26 +121,38 @@ def test_total_mass():
 
 def test_jacobian():
     J_test = comp.jacobian("l_sole", H_b, s_)
-    J_test_hardware = np.array(
-        comp_w_hardware.jacobian("l_sole", H_b, s_, original_length, original_density)
+    J_test_hardware = comp_w_hardware.jacobian(
+        "l_sole", H_b, s_, original_length, original_density
     )
     assert J_test - J_test_hardware == pytest.approx(0.0, abs=1e-5)
 
 
 def test_jacobian_non_actuated():
     J_test = comp.jacobian("head", H_b, s_)
-    J_test_hardware = np.array(
-        comp_w_hardware.jacobian("head", H_b, s_, original_length, original_density)
+    J_test_hardware = comp_w_hardware.jacobian(
+        "head", H_b, s_, original_length, original_density
     )
     assert J_test - J_test_hardware == pytest.approx(0.0, abs=1e-5)
 
 
+def test_jacobian_dot():
+    J_dot = comp.jacobian_dot("l_sole", H_b, joints_val, base_vel, joints_dot_val)
+    J_dot_w_hardware = comp_w_hardware.jacobian_dot(
+        "l_sole",
+        H_b,
+        joints_val,
+        base_vel,
+        joints_dot_val,
+        original_length,
+        original_density,
+    )
+    assert J_dot - J_dot_w_hardware == pytest.approx(0.0, abs=1e-5)
+
+
 def test_fk():
     H_test = comp.forward_kinematics("l_sole", H_b, s_)
-    H_with_hardware_test = np.array(
-        comp_w_hardware.forward_kinematics(
-            "l_sole", H_b, s_, original_length, original_density
-        )
+    H_with_hardware_test = comp_w_hardware.forward_kinematics(
+        "l_sole", H_b, s_, original_length, original_density
     )
     assert H_with_hardware_test[:3, :3] - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert H_with_hardware_test[:3, 3] - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
@@ -147,10 +160,8 @@ def test_fk():
 
 def test_fk_non_actuated():
     H_test = comp.forward_kinematics("head", H_b, s_)
-    H_with_hardware_test = np.array(
-        comp_w_hardware.forward_kinematics(
-            "head", H_b, s_, original_length, original_density
-        )
+    H_with_hardware_test = comp_w_hardware.forward_kinematics(
+        "head", H_b, s_, original_length, original_density
     )
     assert H_with_hardware_test[:3, :3] - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert H_with_hardware_test[:3, 3] - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
@@ -158,20 +169,16 @@ def test_fk_non_actuated():
 
 def test_bias_force():
     h_test = comp.bias_force(H_b, s_, vb_, s_dot_)
-    h_with_hardware_test = np.array(
-        comp_w_hardware.bias_force(
-            H_b, s_, vb_, s_dot_, original_length, original_density
-        )
+    h_with_hardware_test = comp_w_hardware.bias_force(
+        H_b, s_, vb_, s_dot_, original_length, original_density
     )
     assert h_with_hardware_test - h_test == pytest.approx(0.0, abs=1e-4)
 
 
 def test_coriolis_term():
     C_test = comp.coriolis_term(H_b, s_, vb_, s_dot_)
-    C_with_hardware_test = np.array(
-        comp_w_hardware.coriolis_term(
-            H_b, s_, vb_, s_dot_, original_length, original_density
-        )
+    C_with_hardware_test = comp_w_hardware.coriolis_term(
+        H_b, s_, vb_, s_dot_, original_length, original_density
     )
     assert C_with_hardware_test - C_test == pytest.approx(0.0, abs=1e-4)
 

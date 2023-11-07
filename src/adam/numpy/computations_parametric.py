@@ -5,6 +5,7 @@
 import numpy as np
 
 from adam.core.rbd_algorithms import RBDAlgorithms
+from adam.core.constants import Representations
 from adam.model import Model, URDFParametricModelFactory
 from adam.numpy.numpy_like import SpatialMath
 
@@ -34,6 +35,17 @@ class KinDynComputationsParametric:
         self.g = gravity
         self.urdfstring = urdfstring
         self.joints_name_list = joints_name_list
+        self.representation = Representations.MIXED_REPRESENTATION  # Default
+
+    def set_frame_velocity_representation(
+        self, representation: Representations
+    ) -> None:
+        """Sets the representation of the velocity of the frames
+
+        Args:
+            representation (Representations): The representation of the velocity
+        """
+        self.representation = representation
 
     def mass_matrix(
         self,
@@ -63,6 +75,7 @@ class KinDynComputationsParametric:
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
+        self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = model.NDoF
         [M, _] = self.rbdalgos.crba(base_transform, joint_positions)
         return M.array
@@ -95,6 +108,7 @@ class KinDynComputationsParametric:
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
+        self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = model.NDoF
         [_, Jcm] = self.rbdalgos.crba(base_transform, s)
         return Jcm.array
@@ -129,6 +143,7 @@ class KinDynComputationsParametric:
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
+        self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = model.NDoF
         return self.rbdalgos.forward_kinematics(
             frame, base_transform, joint_positions
@@ -164,6 +179,7 @@ class KinDynComputationsParametric:
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
+        self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = model.NDoF
         return self.rbdalgos.jacobian(
             frame, base_transform, joint_positions
@@ -197,8 +213,49 @@ class KinDynComputationsParametric:
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
+        self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = model.NDoF
         return self.rbdalgos.relative_jacobian(frame, joint_positions).array
+
+    def jacobian_dot(
+        self,
+        frame: str,
+        base_transform: np.ndarray,
+        joint_positions: np.ndarray,
+        base_velocity: np.ndarray,
+        joint_velocities: np.ndarray,
+        length_multiplier: np.ndarray,
+        densities: np.ndarray,
+    ) -> np.ndarray:
+
+        """Returns the Jacobian derivative relative to the specified frame
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+            base_transform (np.ndarray): The homogenous transform from base to world frame
+            joint_positions (np.ndarray): The joints position
+            base_velocity (np.ndarray): The base velocity in mixed representation
+            joint_velocities (np.ndarray): The joint velocities
+            length_multiplier (np.ndarray): The length multiplier of the parametrized links
+            densities (np.ndarray): The densities of the parametrized links
+
+        Returns:
+            Jdot (np.ndarray): The Jacobian derivative relative to the frame
+        """
+        factory = URDFParametricModelFactory(
+            path=self.urdfstring,
+            math=self.math,
+            links_name_list=self.links_name_list,
+            length_multiplier=length_multiplier,
+            densities=densities,
+        )
+        model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
+        self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
+        self.rbdalgos.set_frame_velocity_representation(self.representation)
+        self.NDoF = model.NDoF
+        return self.rbdalgos.jacobian_dot(
+            frame, base_transform, joint_positions, base_velocity, joint_velocities
+        ).array.squeeze()
 
     def CoM_position(
         self,
@@ -228,6 +285,7 @@ class KinDynComputationsParametric:
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
+        self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = model.NDoF
         return self.rbdalgos.CoM_position(
             base_transform, joint_positions
@@ -266,6 +324,7 @@ class KinDynComputationsParametric:
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
+        self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = model.NDoF
         return self.rbdalgos.rnea(
             base_transform,
@@ -308,6 +367,7 @@ class KinDynComputationsParametric:
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
+        self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = model.NDoF
         # set in the bias force computation the gravity term to zero
         return self.rbdalgos.rnea(
@@ -347,6 +407,7 @@ class KinDynComputationsParametric:
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
+        self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = model.NDoF
         return self.rbdalgos.rnea(
             base_transform,
@@ -377,5 +438,6 @@ class KinDynComputationsParametric:
         )
         model = Model.build(factory=factory, joints_name_list=self.joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=self.math)
+        self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = model.NDoF
         return self.rbdalgos.get_total_mass()

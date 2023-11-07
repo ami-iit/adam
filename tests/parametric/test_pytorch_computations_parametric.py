@@ -7,15 +7,18 @@ from os import link
 import urdf_parser_py.urdf
 import pytest
 import math
+import torch
 import numpy as np
-from adam.numpy.computations_parametric import KinDynComputationsParametric
-from adam.numpy import KinDynComputations
+from adam.pytorch.computations_parametric import KinDynComputationsParametric
+from adam.pytorch import KinDynComputations
 
 from adam.geometry import utils
 import tempfile
 from git import Repo
+from adam import Representations
 
 np.random.seed(42)
+torch.set_default_dtype(torch.float64)
 
 # Getting stickbot urdf file
 temp_dir = tempfile.TemporaryDirectory()
@@ -65,6 +68,9 @@ link_name_list = ["chest"]
 comp_w_hardware = KinDynComputationsParametric(
     model_path, joints_name_list, link_name_list, root_link
 )
+# comp.set_frame_velocity_representation(Representations.BODY_FIXED_REPRESENTATION)
+# comp_w_hardware.set_frame_velocity_representation(Representations.BODY_FIXED_REPRESENTATION)
+
 original_density = [628.0724496264945]
 original_length = np.ones(len(link_name_list))
 
@@ -77,10 +83,10 @@ base_vel = (np.random.rand(6) - 0.5) * 5
 joints_val = (np.random.rand(n_dofs) - 0.5) * 5
 joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
 
-H_b = utils.H_from_Pos_RPY(xyz, rpy)
-vb_ = base_vel
-s_ = joints_val
-s_dot_ = joints_dot_val
+H_b = torch.FloatTensor(utils.H_from_Pos_RPY(xyz, rpy))
+vb_ = torch.FloatTensor(base_vel)
+s_ = torch.FloatTensor(joints_val)
+s_dot_ = torch.FloatTensor(joints_dot_val)
 
 
 def test_mass_matrix():
@@ -131,8 +137,22 @@ def test_jacobian_non_actuated():
     assert J_test - J_test_hardware == pytest.approx(0.0, abs=1e-5)
 
 
+def test_jacobian_dot():
+    J_dot = comp.jacobian_dot("l_sole", H_b, joints_val, base_vel, joints_dot_val)
+    J_dot_hardware = comp_w_hardware.jacobian_dot(
+        "l_sole",
+        H_b,
+        joints_val,
+        base_vel,
+        joints_dot_val,
+        original_length,
+        original_density,
+    )
+    assert J_dot - J_dot_hardware == pytest.approx(0.0, abs=1e-5)
+
+
 def test_fk():
-    H_test = comp.forward_kinematics("l_sole", H_b, s_)
+    H_test = np.array(comp.forward_kinematics("l_sole", H_b, s_))
     H_with_hardware_test = np.array(
         comp_w_hardware.forward_kinematics(
             "l_sole", H_b, s_, original_length, original_density
@@ -143,7 +163,7 @@ def test_fk():
 
 
 def test_fk_non_actuated():
-    H_test = comp.forward_kinematics("head", H_b, s_)
+    H_test = np.array(comp.forward_kinematics("head", H_b, s_))
     H_with_hardware_test = np.array(
         comp_w_hardware.forward_kinematics(
             "head", H_b, s_, original_length, original_density
@@ -154,7 +174,7 @@ def test_fk_non_actuated():
 
 
 def test_bias_force():
-    h_test = comp.bias_force(H_b, s_, vb_, s_dot_)
+    h_test = np.array(comp.bias_force(H_b, s_, vb_, s_dot_))
     h_with_hardware_test = np.array(
         comp_w_hardware.bias_force(
             H_b, s_, vb_, s_dot_, original_length, original_density
@@ -164,7 +184,7 @@ def test_bias_force():
 
 
 def test_coriolis_term():
-    C_test = comp.coriolis_term(H_b, s_, vb_, s_dot_)
+    C_test = np.array(comp.coriolis_term(H_b, s_, vb_, s_dot_))
     C_with_hardware_test = np.array(
         comp_w_hardware.coriolis_term(
             H_b, s_, vb_, s_dot_, original_length, original_density
