@@ -8,7 +8,8 @@ import numpy as np
 from adam.casadi.casadi_like import SpatialMath
 from adam.core import RBDAlgorithms
 from adam.core.constants import Representations
-from adam.model import Model, URDFModelFactory, URDFParametricModelFactory
+from adam.model import Model
+from adam.parametric.model import URDFParametricModelFactory
 
 
 class KinDynComputationsParametric:

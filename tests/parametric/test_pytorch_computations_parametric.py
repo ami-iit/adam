@@ -9,7 +9,7 @@ import pytest
 import math
 import torch
 import numpy as np
-from adam.pytorch.computations_parametric import KinDynComputationsParametric
+from adam.parametric.pytorch import KinDynComputationsParametric
 from adam.pytorch import KinDynComputations
 
 from adam.geometry import utils

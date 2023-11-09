@@ -8,7 +8,7 @@ import urdf_parser_py.urdf
 import pytest
 import math
 import numpy as np
-from adam.numpy.computations_parametric import KinDynComputationsParametric
+from adam.parametric.numpy import KinDynComputationsParametric
 from adam.numpy import KinDynComputations
 
 from adam.geometry import utils

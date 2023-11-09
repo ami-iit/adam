@@ -10,7 +10,7 @@ from jax import config
 import numpy as np
 import pytest
 import math
-from adam.jax.computations_parametric import KinDynComputationsParametric
+from adam.parametric.jax import KinDynComputationsParametric
 from adam.jax import KinDynComputations
 
 from adam.geometry import utils

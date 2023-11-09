@@ -4,12 +4,11 @@
 
 import logging
 from os import link
-import urdf_parser_py.urdf
 import casadi as cs
 import numpy as np
 import pytest
 import math
-from adam.casadi.computations_parametric import KinDynComputationsParametric
+from adam.parametric.casadi import KinDynComputationsParametric
 from adam.casadi import KinDynComputations
 
 from adam.geometry import utils

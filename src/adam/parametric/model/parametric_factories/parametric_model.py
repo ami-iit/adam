@@ -5,7 +5,7 @@ import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
 from adam.model import ModelFactory, StdJoint, StdLink, Link, Joint
-from adam.model import ParmetricJoint, ParametricLink
+from adam.parametric.model import ParmetricJoint, ParametricLink
 
 
 class URDFParametricModelFactory(ModelFactory):
