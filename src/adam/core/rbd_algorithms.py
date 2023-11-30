@@ -457,5 +457,75 @@ class RBDAlgorithms:
         tau[:6] = B_X_BI.T @ tau[:6]
         return tau
 
-    def aba(self):
-        raise NotImplementedError
+    def aba(
+        self,
+        base_transform: npt.ArrayLike,
+        joint_positions: npt.ArrayLike,
+        joint_velocities: npt.ArrayLike,
+        joint_accelerations: npt.ArrayLike,
+        tau: npt.ArrayLike,
+        g: npt.ArrayLike,
+    ) -> npt.ArrayLike:
+        """Implementation of Articulated Body Algorithm
+
+        Args:
+            base_transform (T): The homogenous transform from base to world frame
+            joint_positions (T): The joints position
+            joint_velocities (T): The joints velocity
+            joint_accelerations (T): The joints acceleration
+            tau (T): The generalized force variables
+            g (T): The 6D gravity acceleration
+
+        Returns:
+            a (T): The base acceleration
+            qdd (T): The joints acceleration
+        """
+        # Pass 1
+        for i in range(self.model.N):
+            ii = i - 1
+
+            # Parent-child transform
+            i_X_pi[i] = self.model.tree[i].joint.homogeneous(joint_positions[i])
+            v_J = self.model.tree[i].joint.motion_subspace() * joint_velocities[i]
+
+            v[i] = i_X_pi[i] @ v[pi] + v_J
+            c[i] = i_X_pi[i] @ c[pi] + self.math.spatial_skew(v[i]) @ v_J
+
+            IA = self.model.tree[i].link.spatial_inertia()
+
+            pA[i] = IA @ c[i] + self.math.spatial_skew_star(v[i]) @ IA @ v[i]
+
+        # Pass 2
+        for i in reversed(range(self.model.N)):
+            ii = i - 1
+
+            pi = self.model.tree[i].parent.idx
+
+            U[i] = IA[i] @ self.model.tree[i].joint.motion_subspace()
+            D[i] = self.model.tree[i].joint.motion_subspace().T @ U[i]
+            u[i] = tau[i] - self.model.tree[i].joint.motion_subspace().T @ pA[i]
+
+            Ia = IA[i] - U[i] / D[i] @ U[i].T
+            pa = pA[i] + Ia @ c[i] + U[i] * u[i] / D[i]
+
+            # If model is floating base and i is the root link
+            if pi != 0:
+                IA[pi] += i_X_pi[i].T @ Ia @ i_X_pi[i]
+                pA[pi] += i_X_pi[i].T @ pa
+
+        # Pass 3
+        for i in range(self.model.N):
+            ii = i - 1
+
+            pi = self.model.tree[i].parent.idx
+
+            a[i] = (
+                i_X_pi[i] @ a[pi]
+                + self.model.tree[i].joint.motion_subspace() * joint_accelerations[i]
+            )
+            f[i] = IA[i] @ a[i] + self.math.spatial_skew_star(v[i]) @ IA[i] @ v[i]
+
+            if pi != 0:
+                f[i] += i_X_pi[i].T @ f[pi]
+
+        return a, qdd
