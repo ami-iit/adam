@@ -477,8 +477,8 @@ class RBDAlgorithms:
             g (T): The 6D gravity acceleration
 
         Returns:
-            a (T): The base acceleration
-            qdd (T): The joints acceleration
+            base_acceleration (T): The base acceleration in mixed representation
+            joint_accelerations (T): The joints acceleration
         """
         # Pass 1
         for i in range(self.model.N):
