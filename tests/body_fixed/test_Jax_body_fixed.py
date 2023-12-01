@@ -196,8 +196,15 @@ def test_gravity_term():
 
 def test_fd():
     joint_torques = np.random.rand(n_dofs)
-    aWb_idyntree = kinDyn.getFloatingBaseAcceleration()
-    base_acc = comp.forward_dynamics(
-        H_b, joints_val, base_vel, joints_vel, joint_torques
+    joints_vel = np.random.rand(n_dofs)
+    reference_acc = jnp.linalg.inv(comp.mass_matrix(H_b, joints_val)) @ (
+        jnp.concatenate((jnp.zeros(6), joint_torques))
+        - comp.coriolis_term(H_b, joints_val, base_vel, joints_dot_val)
+        - comp.gravity_term(H_b, joints_val)
     )
-    assert aWb_idyntree.toNumPy() - base_acc == pytest.approx(0.0, abs=1e-4)
+    base_acc, joint_acc = comp.forward_dynamics(
+        H_b, joints_val, joints_vel, joint_torques
+    )
+
+    assert base_acc - reference_acc[:6] == pytest.approx(0.0, abs=1e-4)
+    assert joint_acc - reference_acc[6:] == pytest.approx(0.0, abs=1e-4)
