@@ -189,3 +189,12 @@ def test_gravity_term():
     )
     G_test = comp.gravity_term(H_b, joints_val)
     assert G_iDyn_np - G_test == pytest.approx(0.0, abs=1e-4)
+
+
+def test_fd():
+    joint_torques = np.random.rand(n_dofs)
+    aWb_idyntree = kinDyn.getFloatingBaseAcceleration()
+    base_acc = comp.forward_dynamics(
+        H_b, joints_val, base_vel, joints_vel, joint_torques
+    )
+    assert aWb_idyntree.toNumPy() - base_acc == pytest.approx(0.0, abs=1e-4)
