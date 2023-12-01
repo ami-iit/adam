@@ -249,17 +249,14 @@ class KinDynComputations:
         self,
         base_transform: np.ndarray,
         joint_positions: np.ndarray,
-        base_velocity: np.ndarray,
         joint_velocities: np.ndarray,
         joint_torques: np.ndarray,
     ) -> np.ndarray:
-        """Returns the forward dynamics of the floating-base dynamics equation,
-        using a reduced RNEA (no acceleration and external forces)
+        """Returns base and joints accelerations of the floating-base dynamics equation
 
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
-            base_velocity (np.ndarray): The base velocity in mixed representation
             joint_velocities (np.ndarray): The joint velocities
             joint_torques (np.ndarray): The joint torques
 
@@ -270,7 +267,6 @@ class KinDynComputations:
         return self.rbdalgos.aba(
             base_transform,
             joint_positions,
-            base_velocity.reshape(6, 1),
             joint_velocities,
             joint_torques,
             self.g,

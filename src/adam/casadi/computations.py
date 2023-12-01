@@ -416,16 +416,14 @@ class KinDynComputations:
         self,
         base_transform: Union[cs.SX, cs.DM],
         joint_positions: Union[cs.SX, cs.DM],
-        base_velocity: Union[cs.SX, cs.DM],
         joint_velocities: Union[cs.SX, cs.DM],
         joint_torques: Union[cs.SX, cs.DM],
     ) -> Union[cs.SX, cs.DM]:
-        """Returns the base acceleration and joint accelerations
+        """Returns base and joints accelerations of the floating-base dynamics equation
 
         Args:
             base_transform (Union[cs.SX, cs.DM]): The homogenous transform from base to world frame
             joint_positions (Union[cs.SX, cs.DM]): The joints position
-            base_velocity (Union[cs.SX, cs.DM]): The base velocity in mixed representation
             joint_velocities (Union[cs.SX, cs.DM]): The joints velocity
             joint_torques (Union[cs.SX, cs.DM]): The joints torque
 
@@ -436,7 +434,6 @@ class KinDynComputations:
         return self.rbdalgos.aba(
             base_transform,
             joint_positions,
-            base_velocity,
             joint_velocities,
             joint_torques,
             self.g,
