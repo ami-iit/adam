@@ -462,8 +462,7 @@ class RBDAlgorithms:
         base_transform: npt.ArrayLike,
         joint_positions: npt.ArrayLike,
         joint_velocities: npt.ArrayLike,
-        joint_accelerations: npt.ArrayLike,
-        tau: npt.ArrayLike,
+        joint_torques: npt.ArrayLike,
         g: npt.ArrayLike,
     ) -> npt.ArrayLike:
         """Implementation of Articulated Body Algorithm
@@ -472,7 +471,6 @@ class RBDAlgorithms:
             base_transform (T): The homogenous transform from base to world frame
             joint_positions (T): The joints position
             joint_velocities (T): The joints velocity
-            joint_accelerations (T): The joints acceleration
             tau (T): The generalized force variables
             g (T): The 6D gravity acceleration
 
@@ -480,52 +478,67 @@ class RBDAlgorithms:
             base_acceleration (T): The base acceleration in mixed representation
             joint_accelerations (T): The joints acceleration
         """
+        i_X_pi = self.math.factory.zeros(self.model.N, 6, 6)
+        v = self.math.factory.zeros(self.model.N, 6, 1)
+        c = self.math.factory.zeros(self.model.N, 6, 1)
+        pA = self.math.factory.zeros(self.model.N, 6, 1)
+        IA = self.math.factory.zeros(self.model.N, 6, 6)
+        U = self.math.factory.zeros(self.model.N, 6, 6)
+        D = self.math.factory.zeros(self.model.N, 6, 6)
+        u = self.math.factory.zeros(self.model.N, 6, 1)
+        a = self.math.factory.zeros(self.model.N, 6, 1)
+        f = self.math.factory.zeros(self.model.N, 6, 1)
+
         # Pass 1
-        for i in range(self.model.N):
-            ii = i - 1
+        for i, node in enumerate(self.model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            if link_i.name == self.root_link:
+                continue
+
+            pi = self.model.tree.get_idx_from_name(link_pi.name)
 
             # Parent-child transform
-            i_X_pi[i] = self.model.tree[i].joint.homogeneous(joint_positions[i])
-            v_J = self.model.tree[i].joint.motion_subspace() * joint_velocities[i]
+            i_X_pi[i] = joint_i.spatial_transform(joint_positions[i])
+            v_J = joint_i.motion_subspace() * joint_velocities[i]
 
             v[i] = i_X_pi[i] @ v[pi] + v_J
             c[i] = i_X_pi[i] @ c[pi] + self.math.spatial_skew(v[i]) @ v_J
 
-            IA = self.model.tree[i].link.spatial_inertia()
+            IA[i] = link_i.spatial_inertia()
 
-            pA[i] = IA @ c[i] + self.math.spatial_skew_star(v[i]) @ IA @ v[i]
+            pA[i] = IA[i] @ c[i] + self.math.spatial_skew_star(v[i]) @ IA[i] @ v[i]
 
         # Pass 2
-        for i in reversed(range(self.model.N)):
-            ii = i - 1
+        for i, node in reversed(list(enumerate(self.model.tree))):
+            link_i, joint_i, link_pi = node.get_elements()
 
-            pi = self.model.tree[i].parent.idx
+            if link_i.name == self.root_link:
+                IA[pi] += i_X_pi[i].T @ Ia @ i_X_pi[i]
+                pA[pi] += i_X_pi[i].T @ pa
+                continue
 
-            U[i] = IA[i] @ self.model.tree[i].joint.motion_subspace()
-            D[i] = self.model.tree[i].joint.motion_subspace().T @ U[i]
-            u[i] = tau[i] - self.model.tree[i].joint.motion_subspace().T @ pA[i]
+            pi = self.model.tree.get_idx_from_name(link_pi.name)
+
+            U[i] = IA[i] @ node.joint.motion_subspace()
+            D[i] = node.joint.motion_subspace().T @ U[i]
+            u[i] = tau[i] - node.joint.motion_subspace().T @ pA[i]
 
             Ia = IA[i] - U[i] / D[i] @ U[i].T
             pa = pA[i] + Ia @ c[i] + U[i] * u[i] / D[i]
 
-            # If model is floating base and i is the root link
-            if pi != 0:
+        # Pass 3
+        for i, node in enumerate(self.model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            if link_i.name == self.root_link:
                 IA[pi] += i_X_pi[i].T @ Ia @ i_X_pi[i]
                 pA[pi] += i_X_pi[i].T @ pa
 
-        # Pass 3
-        for i in range(self.model.N):
-            ii = i - 1
+            pi = self.model.tree.get_idx_from_name(link_pi.name)
 
-            pi = self.model.tree[i].parent.idx
+            sdd = (u[i] - U[i].T @ a[i]) / D[i]
 
-            a[i] = (
-                i_X_pi[i] @ a[pi]
-                + self.model.tree[i].joint.motion_subspace() * joint_accelerations[i]
-            )
-            f[i] = IA[i] @ a[i] + self.math.spatial_skew_star(v[i]) @ IA[i] @ v[i]
+            a[i] = i_X_pi[i].T @ a[pi] + node.joint.motion_subspace() * sdd + c[i]
 
-            if pi != 0:
-                f[i] += i_X_pi[i].T @ f[pi]
-
-        return a, qdd
+        return a, sdd
