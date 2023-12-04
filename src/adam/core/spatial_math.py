@@ -158,6 +158,18 @@ class SpatialMath:
     def skew(x):
         pass
 
+    @abc.abstractmethod
+    def solve(A: npt.ArrayLike, b: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            A (npt.ArrayLike): matrix
+            b (npt.ArrayLike): vector
+
+        Returns:
+            npt.ArrayLike: solution of the linear system Ax=b
+        """
+        pass
+
     def R_from_axis_angle(self, axis: npt.ArrayLike, q: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:

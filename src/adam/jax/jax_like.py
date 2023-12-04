@@ -211,3 +211,15 @@ class SpatialMath(SpatialMath):
         else:
             v = jnp.hstack([x[i] for i in range(len(x))])
         return JaxLike(v)
+
+    @staticmethod
+    def solve(A: "JaxLike", b: "JaxLike") -> "JaxLike":
+        """
+        Args:
+            A (JaxLike): Matrix
+            b (JaxLike): Vector
+
+        Returns:
+            JaxLike: Solution of Ax=b
+        """
+        return JaxLike(jnp.linalg.solve(A.array, b.array))

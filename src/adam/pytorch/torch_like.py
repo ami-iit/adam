@@ -225,3 +225,15 @@ class SpatialMath(SpatialMath):
         else:
             v = torch.FloatTensor(x)
         return TorchLike(v)
+
+    @staticmethod
+    def solve(A: "TorchLike", b: "TorchLike") -> "TorchLike":
+        """
+        Args:
+            A (TorchLike): matrix
+            b (TorchLike): vector
+
+        Returns:
+            TorchLike: solution of Ax = b
+        """
+        return TorchLike(torch.linalg.solve(A.array, b.array))

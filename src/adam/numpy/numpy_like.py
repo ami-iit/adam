@@ -213,3 +213,15 @@ class SpatialMath(SpatialMath):
             return -np.cross(np.array(x), np.eye(3), axisa=0, axisb=0)
         x = x.array
         return NumpyLike(-np.cross(np.array(x), np.eye(3), axisa=0, axisb=0))
+
+    @staticmethod
+    def solve(A: "NumpyLike", b: "NumpyLike") -> "NumpyLike":
+        """
+        Args:
+            A (NumpyLike): matrix
+            b (NumpyLike): vector
+
+        Returns:
+            NumpyLike: solution of Ax=b
+        """
+        return NumpyLike(np.linalg.solve(A.array, b.array))
