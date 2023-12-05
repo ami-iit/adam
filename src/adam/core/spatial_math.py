@@ -400,7 +400,7 @@ class SpatialMath:
         IO[:3, :3] = self.factory.eye(3) * mass
         return IO
 
-    def spatial_inertial_with_parameter(self, I, mass, c, rpy):
+    def spatial_inertial_with_parameters(self, I, mass, c, rpy):
         """
         Args:
             I (npt.ArrayLike): inertia values parametric

@@ -172,7 +172,7 @@ class ParametricLink(Link):
         elif self.geometry_type == Geometry.SPHERE:
             visual_data_new = 0.0
             visual_data_new = self.visual_data.radius * self.length_multiplier
-            volume = 4 * math.pi * visual_data_new ** 3 / 3
+            volume = 4 * math.pi * visual_data_new**3 / 3
         return volume, visual_data_new
 
     """Function that computes the mass starting from the densities, the length multiplier and the link"""
@@ -256,7 +256,7 @@ class ParametricLink(Link):
                 I.izz = I.iyy
             return I
         elif self.geometry_type == Geometry.SPHERE:
-            I.ixx = 2 * self.mass * self.visual_data_new ** 2 / 5
+            I.ixx = 2 * self.mass * self.visual_data_new**2 / 5
             I.iyy = I.ixx
             I.izz = I.ixx
         return I
@@ -276,7 +276,7 @@ class ParametricLink(Link):
         o[1] = self.origin[1]
         o[2] = self.origin[2]
         rpy = self.origin[3:]
-        return self.math.spatial_inertial_with_parameter(I, mass, o, rpy)
+        return self.math.spatial_inertial_with_parameters(I, mass, o, rpy)
 
     def homogeneous(self) -> npt.ArrayLike:
         """

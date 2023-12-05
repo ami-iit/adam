@@ -79,7 +79,9 @@ comp_w_hardware = KinDynComputationsParametric(
     model_path, joints_name_list, link_name_list, root_link
 )
 
-original_density = [628.0724496264945]
+original_density = [
+    628.0724496264945
+]  # This is the original density value associated to the chest link, computed as mass/volume
 original_length = np.ones(len(link_name_list))
 
 n_dofs = len(joints_name_list)

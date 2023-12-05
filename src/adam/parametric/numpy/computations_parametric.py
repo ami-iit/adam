@@ -228,7 +228,6 @@ class KinDynComputationsParametric:
         length_multiplier: np.ndarray,
         densities: np.ndarray,
     ) -> np.ndarray:
-
         """Returns the Jacobian derivative relative to the specified frame
 
         Args:

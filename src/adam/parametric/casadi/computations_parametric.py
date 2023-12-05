@@ -34,9 +34,9 @@ class KinDynComputationsParametric:
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
         math = SpatialMath()
-        n_param_link = len(links_name_list)
-        self.densities = cs.SX.sym("densities", n_param_link)
-        self.length_multiplier = cs.SX.sym("length_multiplier", n_param_link)
+        n_param_links = len(links_name_list)
+        self.densities = cs.SX.sym("densities", n_param_links)
+        self.length_multiplier = cs.SX.sym("length_multiplier", n_param_links)
         factory = URDFParametricModelFactory(
             path=urdfstring,
             math=math,
