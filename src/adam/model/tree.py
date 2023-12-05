@@ -136,6 +136,13 @@ class Tree(Iterable):
         """
         return self.graph[name]
 
+    def is_floating_base(self) -> bool:
+        """
+        Returns:
+            bool: True if the model is floating base
+        """
+        return len(self.graph[self.root].children) > 1
+
     def __iter__(self) -> Node:
         """This method allows to iterate on the model
         Returns:

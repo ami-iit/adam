@@ -18,6 +18,7 @@ class Model:
     tree: Tree
     NDoF: int
     actuated_joints: List[str]
+    floating_base: bool = True
 
     def __post_init__(self):
         """set the "length of the model as the number of links"""
@@ -61,6 +62,8 @@ class Model:
 
         tree = Tree.build_tree(links=links, joints=joints)
 
+        floating_base = tree.is_floating_base()
+
         # generate some useful dict
         joints: Dict(str, Joint) = {joint.name: joint for joint in joints}
         links: Dict(str, Link) = {link.name: link for link in links}
@@ -74,6 +77,7 @@ class Model:
             tree=tree,
             NDoF=len(joints_name_list),
             actuated_joints=joints_name_list,
+            floating_base=floating_base,
         )
 
     def get_joints_chain(self, root: str, target: str) -> List[Joint]:
