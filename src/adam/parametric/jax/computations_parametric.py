@@ -66,7 +66,7 @@ class KinDynComputationsParametric:
             densities (jnp.array): The densities of the parametrized links
 
         Returns:
-            M (jax): Mass Matrix
+            M (jnp.array): Mass Matrix
         """
 
         factory = URDFParametricModelFactory(
