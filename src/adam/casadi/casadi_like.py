@@ -93,6 +93,12 @@ class CasadiLike(ArrayLike):
         """Overrides get item operator"""
         return CasadiLike(self.array[idx])
 
+    def __eq__(self, other: Union["CasadiLike", npt.ArrayLike]) -> bool:
+        """Overrides == operator"""
+        if type(self) is not type(other):
+            return self.array == other
+        return self.array == other.array
+
     @property
     def T(self) -> "CasadiLike":
         """

@@ -107,6 +107,12 @@ class JaxLike(ArrayLike):
         """Overrides - operator"""
         return JaxLike(-self.array)
 
+    def __eq__(self, other: Union["JaxLike", npt.ArrayLike]) -> bool:
+        """Overrides == operator"""
+        if type(self) is not type(other):
+            return self.array.squeeze() == other.squeeze()
+        return self.array.squeeze() == other.array.squeeze()
+
 
 class JaxLikeFactory(ArrayLikeFactory):
     @staticmethod

@@ -106,6 +106,13 @@ class NumpyLike(ArrayLike):
         """Overrides - operator"""
         return NumpyLike(-self.array)
 
+    def __eq__(self, other: Union["NumpyLike", npt.ArrayLike]) -> bool:
+        """Overrides == operator"""
+        if type(self) is type(other):
+            return self.array == other.array
+        else:
+            return self.array == other
+
 
 class NumpyLikeFactory(ArrayLikeFactory):
     @staticmethod

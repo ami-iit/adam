@@ -112,6 +112,13 @@ class TorchLike(ArrayLike):
         """Overrides - operator"""
         return TorchLike(-self.array)
 
+    def __eq__(self, other: Union["TorchLike", ntp.ArrayLike]) -> bool:
+        """Overrides == operator"""
+        if type(self) is type(other):
+            return self.array == other.array
+        else:
+            return self.array == other
+
 
 class TorchLikeFactory(ArrayLikeFactory):
     @staticmethod
