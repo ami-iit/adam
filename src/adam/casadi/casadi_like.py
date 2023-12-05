@@ -212,6 +212,18 @@ class SpatialMath(SpatialMath):
         y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
         return CasadiLike(cs.horzcat(*y))
 
+    @staticmethod
+    def solve(A: "CasadiLike", b: "CasadiLike") -> "CasadiLike":
+        """
+        Args:
+            A (CasadiLike): matrix
+            b (CasadiLike): vector
+
+        Returns:
+            CasadiLike: solution of A*x=b
+        """
+        return CasadiLike(cs.solve(A.array, b.array))
+
 
 if __name__ == "__main__":
     math = SpatialMath()

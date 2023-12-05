@@ -259,10 +259,12 @@ class KinDynComputations:
             base_acceleration (jnp.array): The base acceleration in mixed representation
             joint_accelerations (jnp.array): The joints acceleration
         """
-        return self.rbdalgos.aba(
+        base_acceleration, joint_accelerations = self.rbdalgos.aba(
             base_transform,
             joint_positions,
             joint_velocities,
             joint_torques,
             self.g,
-        ).array.squeeze()
+        )
+
+        return base_acceleration.array.squeeze(), joint_accelerations.array.squeeze()
