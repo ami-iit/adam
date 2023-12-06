@@ -16,3 +16,4 @@ dependencies:
   - pytest-repeat
   - icub-models
   - idyntree
+  - gitpython
