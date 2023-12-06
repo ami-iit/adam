@@ -25,11 +25,20 @@ jobs:
       shell: bash -l {0}
       id: week
       run: echo "week=$(date +%Y-%U)" >> "${GITHUB_OUTPUT}"
+
     - uses: mamba-org/setup-micromamba@v1
+      if: contains(matrix.os, 'macos') || contains(matrix.os, 'ubuntu')
       with:
         environment-file: ci_env.yml
         cache-environment-key: environment-${{ steps.week.outputs.week }}-${{ matrix.os }}
+
+    - uses: mamba-org/setup-micromamba@v1
+      if: contains(matrix.os, 'windows')
+      with:
+        environment-file: ci_env_win.yml
+        cache-environment-key: environment-${{ steps.week.outputs.week }}-${{ matrix.os }}
         
+
     - name: Print packages and environment
       shell: bash -l {0}
       run: |
@@ -46,8 +55,6 @@ jobs:
       shell: bash -l {0}
       if: contains(matrix.os, 'macos') || contains(matrix.os, 'ubuntu')
       run: |
-          # Add additional dependencies not available on Windows
-          micromamba install jax pytorch
           pytest
 
     - name: Test with pytest [Windows]
