@@ -21,9 +21,9 @@ class CasadiLike(ArrayLike):
     def __matmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides @ operator"""
         if type(other) in [CasadiLike, NumpyLike]:
-            return CasadiLike(self.array @ other.array)
+            return CasadiLike(cs.mtimes(self.array, other.array))
         else:
-            return CasadiLike(self.array @ other)
+            return CasadiLike(cs.mtimes(self.array, other))
 
     def __rmatmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides @ operator"""
@@ -195,6 +195,16 @@ class SpatialMath(SpatialMath):
         # Then the list is unpacked with the * operator.
         y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
         return CasadiLike(cs.vertcat(*y))
+
+    @staticmethod
+    def horzcat(*x) -> "CasadiLike":
+        """
+        Returns:
+            CasadiLike:  horizontal concatenation of elements
+        """
+
+        y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
+        return CasadiLike(cs.horzcat(*y))
 
 
 if __name__ == "__main__":

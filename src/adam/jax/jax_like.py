@@ -195,7 +195,19 @@ class SpatialMath(SpatialMath):
             JaxLike: Vertical concatenation of elements
         """
         if isinstance(x[0], JaxLike):
-            v = jnp.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+            v = jnp.vstack([x[i].array for i in range(len(x))])
         else:
-            v = jnp.vstack([x[i] for i in range(len(x))]).reshape(-1, 1)
+            v = jnp.vstack([x[i] for i in range(len(x))])
+        return JaxLike(v)
+
+    @staticmethod
+    def horzcat(*x) -> "JaxLike":
+        """
+        Returns:
+            JaxLike: Horizontal concatenation of elements
+        """
+        if isinstance(x[0], JaxLike):
+            v = jnp.hstack([x[i].array for i in range(len(x))])
+        else:
+            v = jnp.hstack([x[i] for i in range(len(x))])
         return JaxLike(v)

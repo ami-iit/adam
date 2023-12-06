@@ -118,6 +118,21 @@ class SpatialMath:
         pass
 
     @abc.abstractmethod
+    def horzcat(x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): elements
+
+        Returns:
+            npt.ArrayLike: horizontal concatenation of elements x
+        """
+        pass
+
+    @abc.abstractmethod
+    def mtimes(x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
     def sin(x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
@@ -227,7 +242,9 @@ class SpatialMath:
         T = self.factory.eye(4)
         R = self.R_from_RPY(rpy) @ self.R_from_axis_angle(axis, q)
         T[:3, :3] = R
-        T[:3, 3] = xyz
+        T[0, 3] = xyz[0]
+        T[1, 3] = xyz[1]
+        T[2, 3] = xyz[2]
         return T
 
     def H_prismatic_joint(
@@ -264,7 +281,9 @@ class SpatialMath:
         """
         T = self.factory.eye(4)
         T[:3, :3] = self.R_from_RPY(rpy)
-        T[:3, 3] = xyz
+        T[0, 3] = xyz[0]
+        T[1, 3] = xyz[1]
+        T[2, 3] = xyz[2]
         return T
 
     def R_from_RPY(self, rpy: npt.ArrayLike) -> npt.ArrayLike:
@@ -376,6 +395,33 @@ class SpatialMath:
         )
 
         IO[3:, 3:] = R @ inertia_matrix @ R.T + mass * Sc @ Sc.T
+        IO[3:, :3] = mass * Sc
+        IO[:3, 3:] = mass * Sc.T
+        IO[:3, :3] = self.factory.eye(3) * mass
+        return IO
+
+    def spatial_inertial_with_parameters(self, I, mass, c, rpy):
+        """
+        Args:
+            I (npt.ArrayLike): inertia values parametric
+            mass (npt.ArrayLike): mass value parametric
+            c (npt.ArrayLike): origin of the link parametric
+            rpy (npt.ArrayLike): orientation of the link from urdf
+
+        Returns:
+            npt.ArrayLike: the 6x6 inertia matrix parametric expressed at the origin of the link (with rotation)
+        """
+        IO = self.factory.zeros(6, 6)
+        Sc = self.skew(c)
+        R = self.factory.zeros(3, 3)
+        R_temp = self.R_from_RPY(rpy)
+        inertia_matrix = self.vertcat(
+            self.horzcat(I.ixx, I.ixy, I.ixz),
+            self.horzcat(I.iyx, I.iyy, I.iyz),
+            self.horzcat(I.ixz, I.iyz, I.izz),
+        )
+
+        IO[3:, 3:] = R_temp @ inertia_matrix @ R_temp.T + mass * Sc @ Sc.T
         IO[3:, :3] = mass * Sc
         IO[:3, 3:] = mass * Sc.T
         IO[:3, :3] = self.factory.eye(3) * mass

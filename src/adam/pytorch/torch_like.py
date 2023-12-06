@@ -23,7 +23,7 @@ class TorchLike(ArrayLike):
         if type(self) is type(value):
             self.array[idx] = value.array.reshape(self.array[idx].shape)
         else:
-            self.array[idx] = torch.FloatTensor(value)
+            self.array[idx] = torch.tensor(value)
 
     def __getitem__(self, idx):
         """Overrides get item operator"""
@@ -209,7 +209,19 @@ class SpatialMath(SpatialMath):
             TorchLike: vertical concatenation of x
         """
         if isinstance(x[0], TorchLike):
-            v = torch.vstack([x[i].array for i in range(len(x))]).reshape(-1, 1)
+            v = torch.vstack([x[i].array for i in range(len(x))])
         else:
-            v = torch.FloatTensor(x).reshape(-1, 1)
+            v = torch.FloatTensor(x)
+        return TorchLike(v)
+
+    @staticmethod
+    def horzcat(*x: ntp.ArrayLike) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: horizontal concatenation of x
+        """
+        if isinstance(x[0], TorchLike):
+            v = torch.hstack([x[i].array for i in range(len(x))])
+        else:
+            v = torch.FloatTensor(x)
         return TorchLike(v)
