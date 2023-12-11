@@ -17,6 +17,7 @@ class Model:
     joints: List[Joint]
     tree: Tree
     NDoF: int
+    actuated_joints: List[str]
 
     def __post_init__(self):
         """set the "length of the model as the number of links"""
@@ -41,6 +42,9 @@ class Model:
         # if the joints_name_list is None, set it to the list of all the joints that are not fixed
         if joints_name_list is None:
             joints_name_list = [joint.name for joint in joints if joint.type != "fixed"]
+            print(
+                f"joints_name_list is None. Setting it to the list of all the joints that are not fixed: {joints_name_list}"
+            )
 
         # check if the joints in the list are in the model
         for joint_str in joints_name_list:
@@ -69,6 +73,7 @@ class Model:
             joints=joints,
             tree=tree,
             NDoF=len(joints_name_list),
+            actuated_joints=joints_name_list,
         )
 
     def get_joints_chain(self, root: str, target: str) -> List[Joint]:
