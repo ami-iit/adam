@@ -38,6 +38,13 @@ class Model:
         links = factory.get_links()
         frames = factory.get_frames()
 
+        # check if the joints in the list are in the model
+        for joint_str in joints_name_list:
+            if joint_str not in [joint.name for joint in joints]:
+                raise ValueError(
+                    f"{joint_str} is not in the robot model. Check the joints_name_list"
+                )
+
         # set idx to the actuated joints
         for [idx, joint_str] in enumerate(joints_name_list):
             for joint in joints:
