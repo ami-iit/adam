@@ -19,7 +19,7 @@ class KinDynComputations:
     def __init__(
         self,
         urdfstring: str,
-        joints_name_list: list,
+        joints_name_list: list = None,
         root_link: str = "root_link",
         gravity: np.array = jnp.array([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:

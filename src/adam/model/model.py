@@ -17,13 +17,14 @@ class Model:
     joints: List[Joint]
     tree: Tree
     NDoF: int
+    actuated_joints: List[str]
 
     def __post_init__(self):
         """set the "length of the model as the number of links"""
         self.N = len(self.links)
 
     @staticmethod
-    def build(factory: ModelFactory, joints_name_list: List[str]) -> "Model":
+    def build(factory: ModelFactory, joints_name_list: List[str] = None) -> "Model":
         """generates the model starting from the list of joints and the links-joints factory
 
         Args:
@@ -37,6 +38,20 @@ class Model:
         joints = factory.get_joints()
         links = factory.get_links()
         frames = factory.get_frames()
+
+        # if the joints_name_list is None, set it to the list of all the joints that are not fixed
+        if joints_name_list is None:
+            joints_name_list = [joint.name for joint in joints if joint.type != "fixed"]
+            print(
+                f"joints_name_list is None. Setting it to the list of all the joints that are not fixed: {joints_name_list}"
+            )
+
+        # check if the joints in the list are in the model
+        for joint_str in joints_name_list:
+            if joint_str not in [joint.name for joint in joints]:
+                raise ValueError(
+                    f"{joint_str} is not in the robot model. Check the joints_name_list"
+                )
 
         # set idx to the actuated joints
         for [idx, joint_str] in enumerate(joints_name_list):
@@ -58,6 +73,7 @@ class Model:
             joints=joints,
             tree=tree,
             NDoF=len(joints_name_list),
+            actuated_joints=joints_name_list,
         )
 
     def get_joints_chain(self, root: str, target: str) -> List[Joint]:
@@ -124,7 +140,6 @@ class Model:
 
         console = Console()
 
-        console = Console()
         table = Table(show_header=True, header_style="bold red")
         table.add_column("Idx")
         table.add_column("Parent Link")
