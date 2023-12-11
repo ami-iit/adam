@@ -23,7 +23,7 @@ class Model:
         self.N = len(self.links)
 
     @staticmethod
-    def build(factory: ModelFactory, joints_name_list: List[str]) -> "Model":
+    def build(factory: ModelFactory, joints_name_list: List[str] = None) -> "Model":
         """generates the model starting from the list of joints and the links-joints factory
 
         Args:
@@ -37,6 +37,10 @@ class Model:
         joints = factory.get_joints()
         links = factory.get_links()
         frames = factory.get_frames()
+
+        # if the joints_name_list is None, set it to the list of all the joints that are not fixed
+        if joints_name_list is None:
+            joints_name_list = [joint.name for joint in joints if joint.type != "fixed"]
 
         # check if the joints in the list are in the model
         for joint_str in joints_name_list:
@@ -131,7 +135,6 @@ class Model:
 
         console = Console()
 
-        console = Console()
         table = Table(show_header=True, header_style="bold red")
         table.add_column("Idx")
         table.add_column("Parent Link")
