@@ -5,7 +5,7 @@
 
 **Automatic Differentiation for rigid-body-dynamics AlgorithMs**
 
-ADAM implements a collection of algorithms for calculating rigid-body dynamics for **floating-base** robots, in _mixed_ and _base fixed representations_, also called _left trivialized_ representation (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)) using:
+ADAM implements a collection of algorithms for calculating rigid-body dynamics for **floating-base** robots, in _mixed_ and _base fixed representations_ (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)) using:
 
 - [Jax](https://github.com/google/jax)
 - [CasADi](https://web.casadi.org/)
