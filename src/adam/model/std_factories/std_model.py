@@ -42,7 +42,9 @@ class URDFModelFactory(ModelFactory):
         # to have a useless and noisy warning, let's remove before hands all the sensor elements,
         # that anyhow are not parser by urdf_parser_py or adam
         # See https://github.com/ami-iit/ADAM/issues/59
-        xml_string = open(path, 'r').read()
+        xml_file = open(path, 'r')
+        xml_string = xml_file.read()
+        xml_file.close()
         xml_string_without_sensors_tags = urdf_remove_sensors_tags(xml_string)
         self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_string(xml_string_without_sensors_tags)
         self.name = self.urdf_desc.name
