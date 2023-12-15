@@ -1,20 +1,20 @@
-# ADAM
+# adam
 
-[![Adam](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml)
+[![adam](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml)
 [![](https://img.shields.io/badge/license-LGPL-19c2d8.svg)](https://github.com/ami-iit/ADAM/blob/main/LICENSE)
 
 **Automatic Differentiation for rigid-body-dynamics AlgorithMs**
 
-ADAM implements a collection of algorithms for calculating rigid-body dynamics for **floating-base** robots, in _mixed_ and _body fixed representations_ (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)) using:
+**adam** implements a collection of algorithms for calculating rigid-body dynamics for **floating-base** robots, in _mixed_ and _body fixed representations_ (see [Traversaro's A Unified View of the Equations of Motion used for Control Design of Humanoid Robots](https://www.researchgate.net/publication/312200239_A_Unified_View_of_the_Equations_of_Motion_used_for_Control_Design_of_Humanoid_Robots)) using:
 
 - [Jax](https://github.com/google/jax)
 - [CasADi](https://web.casadi.org/)
 - [PyTorch](https://github.com/pytorch/pytorch)
 - [NumPy](https://numpy.org/)
 
-ADAM employs the **automatic differentiation** capabilities of these frameworks to compute, if needed, gradients, Jacobian, Hessians of rigid-body dynamics quantities. This approach enables the design of optimal control and reinforcement learning strategies in robotics.
+**adam** employs the **automatic differentiation** capabilities of these frameworks to compute, if needed, gradients, Jacobian, Hessians of rigid-body dynamics quantities. This approach enables the design of optimal control and reinforcement learning strategies in robotics.
 
-ADAM is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
+**adam** is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
 
 ---
 
@@ -94,8 +94,8 @@ pip install adam-robotics[selected-interface]@git+https://github.com/ami-iit/ADA
 or clone the repo and install:
 
 ```bash
-git clone https://github.com/ami-iit/ADAM.git
-cd ADAM
+git clone https://github.com/ami-iit/adam.git
+cd adam
 pip install .[selected-interface]
 ```
 
@@ -142,13 +142,13 @@ Activate the environment, clone the repo and install the library:
 ```bash
 mamba activate adamenv
 git clone https://github.com/ami-iit/ADAM.git
-cd ADAM
+cd adam
 pip install --no-deps .
 ```
 
 ## 🚀 Usage
 
-The following are small snippets of the use of ADAM. More examples are arriving!
+The following are small snippets of the use of **adam**. More examples are arriving!
 Have also a look at te `tests` folder.
 
 ### Jax interface
@@ -246,7 +246,7 @@ print(M)
 
 ## 🦸‍♂️ Contributing
 
-**ADAM** is an open-source project. Contributions are very welcome!
+**adam** is an open-source project. Contributions are very welcome!
 
 Open an issue with your feature request or if you spot a bug. Then, you can also proceed with a Pull-requests! :rocket:
 
