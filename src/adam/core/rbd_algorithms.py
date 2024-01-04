@@ -460,6 +460,7 @@ class RBDAlgorithms:
     def aba(
         self,
         base_transform: npt.ArrayLike,
+        base_velocity: npt.ArrayLike,
         joint_positions: npt.ArrayLike,
         joint_velocities: npt.ArrayLike,
         tau: npt.ArrayLike,
@@ -469,6 +470,7 @@ class RBDAlgorithms:
 
         Args:
             base_transform (T): The homogenous transform from base to world frame
+            base_velocity (T): The base velocity in mixed representation
             joint_positions (T): The joints position
             joint_velocities (T): The joints velocity
             tau (T): The generalized force variables

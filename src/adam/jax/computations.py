@@ -243,6 +243,7 @@ class KinDynComputations:
     def forward_dynamics(
         self,
         base_transform: jnp.array,
+        base_velocity: jnp.array,
         joint_positions: jnp.array,
         joint_velocities: jnp.array,
         joint_torques: jnp.array,
@@ -251,6 +252,7 @@ class KinDynComputations:
 
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame
+            base_velocity (jnp.array): The base velocity in mixed representation
             joint_positions (jnp.array): The joints position
             joint_velocities (jnp.array): The joints velocity
             joint_torques (jnp.array): The joints torques
@@ -261,6 +263,7 @@ class KinDynComputations:
         """
         base_acceleration, joint_accelerations = self.rbdalgos.aba(
             base_transform,
+            base_velocity,
             joint_positions,
             joint_velocities,
             joint_torques,

@@ -254,6 +254,7 @@ class KinDynComputations:
     def forward_dynamic(
         self,
         base_transform: torch.Tensor,
+        base_velocity: torch.Tensor,
         joint_positions: torch.Tensor,
         joint_velocities: torch.Tensor,
         joint_torques: torch.Tensor,
@@ -262,6 +263,7 @@ class KinDynComputations:
 
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
+            base_velocity (torch.tensor): The base velocity in mixed representation
             joint_positions (torch.tensor): The joints positions
             joint_velocities (torch.tensor): The joints velocities
             joint_torques (torch.tensor): The joints torques
@@ -272,6 +274,7 @@ class KinDynComputations:
         """
         return self.rbdalgos.aba(
             base_transform,
+            base_velocity,
             joint_positions,
             joint_velocities,
             joint_torques,
