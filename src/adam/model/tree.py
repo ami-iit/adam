@@ -71,6 +71,53 @@ class Tree(Iterable):
             raise ValueError("The model has more than one root link")
         return Tree(nodes, root_link[0])
 
+    def reduce(self, considered_joint_names: List[str]) -> "Tree":
+        """reduces the tree to the considered joints
+
+        Args:
+            considered_joint_names (List[str]): the list of the considered joints
+
+        Returns:
+            Tree: the reduced tree
+        """
+        # find the nodes between two fixed joints
+        nodes_to_lump = list(
+            {
+                joint.child
+                for node in self.graph.values()
+                for joint in node.arcs
+                if joint.name not in considered_joint_names
+            }
+        )
+        # TODO: neck_2, l_wrist_1, r_wrist_1 don't get lumped
+        while nodes_to_lump != []:
+            node = self.graph[nodes_to_lump.pop()]
+            parent_node = self.graph[node.parent.name]
+
+            # lump the inertial properties
+            parent_node.link = node.parent.lump(  # r_hip_1
+                other=node.link,  # r_hip_2
+                relative_transform=node.parent_arc.spatial_transform(0),
+            )
+
+            # update the parent
+            node.parent = parent_node.link
+
+            # update the children
+            if node.name in parent_node.children:
+                parent_node.children.remove(node.name)
+                parent_node.children.append(node.children)
+
+            # update the arcs
+            if node.parent_arc.name not in considered_joint_names:
+                parent_node.arcs.remove(node.parent_arc)
+                parent_node.arcs.append(node.arcs)
+
+            # remove the node
+            self.graph.pop(node.name)
+
+        return Tree(self.graph, self.root)
+
     def print(self, root) -> str:
         """prints the tree
 

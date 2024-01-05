@@ -44,3 +44,26 @@ class StdLink(Link):
             self.inertial.origin.xyz,
             self.inertial.origin.rpy,
         )
+
+    def lump(self, other: "StdLink", relative_transform: npt.ArrayLike) -> "StdLink":
+        """lump two links together
+
+        Args:
+            other (StdLink): the other link
+            relative_transform (npt.ArrayLike): the transform between the two links
+
+        Returns:
+            StdLink: the lumped link
+        """
+        other_inertia = (
+            relative_transform.T @ other.spatial_inertia() @ relative_transform
+        )
+
+        # lump the inertial properties
+        lumped_mass = self.inertial.mass + other.inertial.mass
+        lumped_inertia = self.spatial_inertia() + other_inertia
+
+        self.mass = lumped_mass
+        self.inertia = lumped_inertia
+
+        return self
