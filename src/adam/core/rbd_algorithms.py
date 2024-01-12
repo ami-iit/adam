@@ -480,78 +480,98 @@ class RBDAlgorithms:
             base_acceleration (T): The base acceleration in mixed representation
             joint_accelerations (T): The joints acceleration
         """
-        i_X_pi = self.math.factory.zeros(self.model.N, 6, 6)
-        v = self.math.factory.zeros(self.model.N, 6, 1)
-        c = self.math.factory.zeros(self.model.N, 6, 1)
-        pA = self.math.factory.zeros(self.model.N, 6, 1)
-        IA = self.math.factory.zeros(self.model.N, 6, 6)
-        U = self.math.factory.zeros(self.model.N, 6, 1)
-        D = self.math.factory.zeros(self.model.N, 1, 1)
-        u = self.math.factory.zeros(self.model.N, 1, 1)
-        a = self.math.factory.zeros(self.model.N, 6, 1)
-        sdd = self.math.factory.zeros(self.model.N, 1, 1)
-        B_X_W = self.math.adjoint_mixed_inverse(base_transform)
+        model = self.model.reduce(self.model.actuated_joints)
+
+        joints = list(
+            filter(
+                lambda joint: joint.name in self.model.actuated_joints,
+                self.model.joints.values(),
+            )
+        )
+
+        joints.sort(key=lambda joint: joint.idx)
+
+        NB = model.N
+
+        i_X_pi = self.math.factory.zeros(NB, 6, 6)
+        v = self.math.factory.zeros(NB, 6, 1)
+        c = self.math.factory.zeros(NB, 6, 1)
+        pA = self.math.factory.zeros(NB, 6, 1)
+        IA = self.math.factory.zeros(NB, 6, 6)
+        U = self.math.factory.zeros(NB, 6, 1)
+        D = self.math.factory.zeros(NB, 1, 1)
+        u = self.math.factory.zeros(NB, 1, 1)
+
+        a = self.math.factory.zeros(NB, 6, 1)
+        sdd = self.math.factory.zeros(NB, 1, 1)
+        B_X_W = self.math.adjoint_mixed(base_transform)
+
+        if self.model.floating_base:
+            IA[0] = self.model.tree.get_node_from_name(
+                self.root_link
+            ).link.spatial_inertia()
+            v[0] = B_X_W @ base_velocity
+            pA[0] = (
+                self.math.spatial_skew_star(v[0]) @ IA[0] @ v[0]
+            )  # - self.math.adjoint_inverse(B_X_W).T @ f_ext[0]
+        tree_transform = self.model.tree
 
         # Pass 1
-        for i, node in enumerate(self.model.tree):
-            link_i, joint_i, link_pi = node.get_elements()
+        for i, joint in enumerate(joints[1:], start=1):
+            q = joint_positions[i]
+            q_dot = joint_velocities[i]
 
-            if link_i.name == self.root_link:
-                continue
-            q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
-            q_dot = joint_velocities[joint_i.idx] if joint_i.idx is not None else 0.0
-
-            pi = self.model.tree.get_idx_from_name(link_pi.name)
+            pi = model.tree.get_idx_from_name(joint.parent)
 
             # Parent-child transform
-            i_X_pi[i] = joint_i.spatial_transform(q)
-            v_J = joint_i.motion_subspace() * q_dot
+            i_X_pi[i] = joint.spatial_transform(q)
+            v_J = joint.motion_subspace() * q_dot
 
             v[i] = i_X_pi[i] @ v[pi] + v_J
             c[i] = i_X_pi[i] @ c[pi] + self.math.spatial_skew(v[i]) @ v_J
 
-            IA[i] = link_i.spatial_inertia()
+            IA[i] = model.tree.get_node_from_name(joint.parent).link.spatial_inertia()
 
             pA[i] = IA[i] @ c[i] + self.math.spatial_skew_star(v[i]) @ IA[i] @ v[i]
 
         # Pass 2
-        for i, node in reversed(list(enumerate(self.model.tree))):
-            link_i, joint_i, link_pi = node.get_elements()
+        for i, joint in reversed(
+            list(
+                enumerate(
+                    joints[1:],
+                    start=1,
+                )
+            )
+        ):
+            pi = self.model.tree.get_idx_from_name(joint.parent)
 
-            if link_i.name == self.root_link:
-                IA[pi] += i_X_pi[i].T @ Ia @ i_X_pi[i]
-                pA[pi] += i_X_pi[i].T @ pa
-                continue
-
-            pi = self.model.tree.get_idx_from_name(link_pi.name)
-            tau_i = tau[joint_i.idx] if joint_i.idx is not None else 0.0
-
-            U[i] = IA[i] @ joint_i.motion_subspace()
-            D[i] = joint_i.motion_subspace().T @ U[i]
-            u[i] = self.math.vertcat(tau_i) - joint_i.motion_subspace().T @ pA[i]
+            U[i] = IA[i] @ joint.motion_subspace()
+            D[i] = joint.motion_subspace().T @ U[i]
+            u[i] = self.math.vertcat(tau[joint.idx]) - joint.motion_subspace().T @ pA[i]
 
             Ia = IA[i] - U[i] / D[i] @ U[i].T
             pa = pA[i] + Ia @ c[i] + U[i] * u[i] / D[i]
 
+            if joint.parent != self.root_link or not self.model.floating_base:
+                IA[pi] += i_X_pi[i].T @ Ia @ i_X_pi[i]
+                pA[pi] += i_X_pi[i].T @ pa
+                continue
+
         a[0] = B_X_W @ g if self.model.floating_base else self.math.solve(-IA[0], pA[0])
 
         # Pass 3
-        for i, node in enumerate(self.model.tree):
-            link_i, joint_i, link_pi = node.get_elements()
-
-            if link_i.name == self.root_link:
+        for i, joint in enumerate(joints[1:], start=1):
+            if joint.parent == self.root_link:
                 continue
 
-            pi = self.model.tree.get_idx_from_name(link_pi.name)
+            pi = self.model.tree.get_idx_from_name(joint.parent)
 
             sdd[i - 1] = (u[i] - U[i].T @ a[i]) / D[i]
 
-            a[i] += i_X_pi[i].T @ a[pi] + joint_i.motion_subspace() * sdd[i - 1] + c[i]
+            a[i] += i_X_pi[i].T @ a[pi] + joint.motion_subspace() * sdd[i - 1] + c[i]
 
-        # Filter sdd to remove NaNs generate with lumped joints
-        s_ddot = self.math.vertcat(
-            *[sdd[i] for i in range(self.model.N) if sdd[i] == sdd[i]]
-        )
+        # Squeeze sdd
+        s_ddot = self.math.vertcat(*[sdd[i] for i in range(sdd.shape[0])])
 
         if (
             self.frame_velocity_representation
