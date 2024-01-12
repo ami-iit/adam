@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: black
-        uses: lgeiger/black-action@v1.0.1
+        uses: psf/black@stable
         with:
           args: .
       - name: Check for modified files
