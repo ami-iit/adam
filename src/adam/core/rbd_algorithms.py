@@ -607,10 +607,10 @@ class RBDAlgorithms:
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
         ):
-            return a[0], s_ddot
+            return self.math.horzcat(a[0], s_ddot)
 
         elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            return (
+            return self.math.horzcat(
                 self.math.vertcat(
                     self.math.solve(B_X_W, a[0]) + g
                     if self.model.floating_base
