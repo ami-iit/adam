@@ -6,7 +6,6 @@ import logging
 
 import icub_models
 import idyntree.swig as idyntree
-import jax.numpy as jnp
 import numpy as np
 import pytest
 from jax import config
@@ -197,14 +196,12 @@ def test_gravity_term():
 def test_fd():
     joint_torques = np.random.rand(n_dofs)
     joints_vel = np.random.rand(n_dofs)
-    reference_acc = jnp.linalg.inv(comp.mass_matrix(H_b, joints_val)) @ (
-        jnp.concatenate((jnp.zeros(6), joint_torques))
-        - comp.coriolis_term(H_b, joints_val, base_vel, joints_dot_val)
-        - comp.gravity_term(H_b, joints_val)
+    reference_acc = np.linalg.inv(comp.mass_matrix(H_b, joints_val)) @ (
+        np.concatenate((np.zeros(6), joint_torques))
+        - comp.bias_force(H_b, joints_val, base_vel, joints_vel)
     )
     base_acc, joint_acc = comp.forward_dynamics(
-        H_b, joints_val, joints_vel, joint_torques
+        H_b, base_vel, joints_vel, joints_vel, joint_torques
     )
-
     assert base_acc - reference_acc[:6] == pytest.approx(0.0, abs=1e-4)
     assert joint_acc - reference_acc[6:] == pytest.approx(0.0, abs=1e-4)
