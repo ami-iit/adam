@@ -514,21 +514,55 @@ class RBDAlgorithms:
             pA[0] = (
                 self.math.spatial_skew_star(v[0]) @ IA[0] @ v[0]
             )  # - self.math.adjoint_inverse(B_X_W).T @ f_ext[0]
-        tree_transform = self.model.tree
+
+        def get_tree_transform(self, joints) -> "Array":
+            """returns the tree transform
+
+            Returns:
+                Array: the tree transform
+            """
+            relative_transform = lambda j: self.math.inv(
+                self.model.tree.graph[j.parent].parent_arc.spatial_transform(0)
+            ) @ j.spatial_transform(0)
+
+            return self.math.vertcat(
+                [self.math.factory.eye(6).array]
+                + list(
+                    map(
+                        lambda j: relative_transform(j).array
+                        if j.parent != self.root_link
+                        else self.math.factory.eye(6).array,
+                        joints,
+                    )
+                )
+            )
+
+        tree_transform = get_tree_transform(self, joints)
+
+        find_parent = (
+            lambda j: find_parent(model.tree.get_node_from_name(j.parent).parent_arc)
+            if model.tree.get_node_from_name(j.parent).parent_arc.idx is None
+            else model.tree.get_node_from_name(j.parent).parent_arc.idx
+        )
+
+        p = [-1] + [
+            model.tree.get_idx_from_name(i.parent)
+            if model.tree.get_idx_from_name(i.parent) < NB
+            else find_parent(i)
+            for i in joints
+        ]
 
         # Pass 1
         for i, joint in enumerate(joints[1:], start=1):
             q = joint_positions[i]
             q_dot = joint_velocities[i]
 
-            pi = model.tree.get_idx_from_name(joint.parent)
-
             # Parent-child transform
-            i_X_pi[i] = joint.spatial_transform(q)
+            i_X_pi[i] = joint.spatial_transform(q) @ tree_transform[i]
             v_J = joint.motion_subspace() * q_dot
 
-            v[i] = i_X_pi[i] @ v[pi] + v_J
-            c[i] = i_X_pi[i] @ c[pi] + self.math.spatial_skew(v[i]) @ v_J
+            v[i] = i_X_pi[i] @ v[p[i]] + v_J
+            c[i] = i_X_pi[i] @ c[p[i]] + self.math.spatial_skew(v[i]) @ v_J
 
             IA[i] = model.tree.get_node_from_name(joint.parent).link.spatial_inertia()
 
@@ -543,8 +577,6 @@ class RBDAlgorithms:
                 )
             )
         ):
-            pi = self.model.tree.get_idx_from_name(joint.parent)
-
             U[i] = IA[i] @ joint.motion_subspace()
             D[i] = joint.motion_subspace().T @ U[i]
             u[i] = self.math.vertcat(tau[joint.idx]) - joint.motion_subspace().T @ pA[i]
@@ -553,8 +585,8 @@ class RBDAlgorithms:
             pa = pA[i] + Ia @ c[i] + U[i] * u[i] / D[i]
 
             if joint.parent != self.root_link or not self.model.floating_base:
-                IA[pi] += i_X_pi[i].T @ Ia @ i_X_pi[i]
-                pA[pi] += i_X_pi[i].T @ pa
+                IA[p[i]] += i_X_pi[i].T @ Ia @ i_X_pi[i]
+                pA[p[i]] += i_X_pi[i].T @ pa
                 continue
 
         a[0] = B_X_W @ g if self.model.floating_base else self.math.solve(-IA[0], pA[0])
@@ -564,11 +596,9 @@ class RBDAlgorithms:
             if joint.parent == self.root_link:
                 continue
 
-            pi = self.model.tree.get_idx_from_name(joint.parent)
-
             sdd[i - 1] = (u[i] - U[i].T @ a[i]) / D[i]
 
-            a[i] += i_X_pi[i].T @ a[pi] + joint.motion_subspace() * sdd[i - 1] + c[i]
+            a[i] += i_X_pi[i].T @ a[p[i]] + joint.motion_subspace() * sdd[i - 1] + c[i]
 
         # Squeeze sdd
         s_ddot = self.math.vertcat(*[sdd[i] for i in range(sdd.shape[0])])
