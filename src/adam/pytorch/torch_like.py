@@ -210,6 +210,20 @@ class SpatialMath(SpatialMath):
         )
 
     @staticmethod
+    def inv(x: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """
+        Args:
+            x (Union["TorchLike", ntp.ArrayLike]): matrix
+
+        Returns:
+            TorchLike: inverse of x
+        """
+        if isinstance(x, TorchLike):
+            return TorchLike(torch.inverse(x.array))
+        else:
+            return TorchLike(torch.inverse(torch.tensor(x)))
+
+    @staticmethod
     def vertcat(*x: ntp.ArrayLike) -> "TorchLike":
         """
         Returns:

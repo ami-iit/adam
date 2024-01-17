@@ -222,6 +222,20 @@ class SpatialMath(SpatialMath):
         return NumpyLike(-np.cross(np.array(x), np.eye(3), axisa=0, axisb=0))
 
     @staticmethod
+    def inv(x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
+        """
+        Args:
+            x (Union["NumpyLike", npt.ArrayLike]): matrix
+
+        Returns:
+            NumpyLike: inverse of x
+        """
+        if isinstance(x, NumpyLike):
+            return NumpyLike(np.linalg.inv(x.array))
+        else:
+            return NumpyLike(np.linalg.inv(x))
+
+    @staticmethod
     def solve(A: "NumpyLike", b: "NumpyLike") -> "NumpyLike":
         """
         Args:

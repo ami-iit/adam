@@ -159,6 +159,10 @@ class SpatialMath:
         pass
 
     @abc.abstractmethod
+    def inv(x):
+        pass
+
+    @abc.abstractmethod
     def solve(A: npt.ArrayLike, b: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:

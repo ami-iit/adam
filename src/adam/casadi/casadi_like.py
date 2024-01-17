@@ -156,6 +156,24 @@ class SpatialMath(SpatialMath):
             return CasadiLike(cs.skew(x))
 
     @staticmethod
+    def inv(x: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
+        """
+        Args:
+            x (Union[CasadiLike, npt.ArrayLike]): matrix
+
+        Returns:
+            CasadiLike: inverse of x
+        """
+        if isinstance(x, CasadiLike):
+            return CasadiLike(cs.inv(x.array))
+        else:
+            return (
+                CasadiLike(cs.inv(x))
+                if x.size1() <= 5
+                else CasadiLike(self.solve(x, self.eye(x.size1())))
+            )
+
+    @staticmethod
     def sin(x: npt.ArrayLike) -> "CasadiLike":
         """
         Args:

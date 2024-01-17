@@ -195,6 +195,17 @@ class SpatialMath(SpatialMath):
         return JaxLike(-jnp.cross(jnp.array(x), jnp.eye(3), axisa=0, axisb=0))
 
     @staticmethod
+    def inv(x: "JaxLike") -> "JaxLike":
+        """
+        Args:
+            x (JaxLike): Matrix
+
+        Returns:
+            JaxLike: Inverse of x
+        """
+        return JaxLike(jnp.linalg.inv(x.array))
+
+    @staticmethod
     def vertcat(*x) -> "JaxLike":
         """
         Returns:
