@@ -98,14 +98,12 @@ class Model:
                 )
 
         tree = self.tree.reduce(joints_name_list)
-        joints_list = list(
-            filter(
-                lambda joint: joint.name in self.actuated_joints,
-                self.joints.values(),
-            )
-        )
+
+        joints_list = [
+            node.parent_arc for node in tree.graph.values() if node.name != tree.root
+        ]
         joints_list.sort(key=lambda joint: joint.idx)
-        # update nodes dict
+
         links = {node.name: node.link for node in tree.graph.values()}
         joints = {joint.name: joint for joint in joints_list}
         frames = {

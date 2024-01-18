@@ -82,15 +82,6 @@ class Tree(Iterable):
         Returns:
             Tree: the reduced tree
         """
-        # find the nodes between two fixed joints
-        nodes_to_lump = list(
-            {
-                joint.child
-                for node in self.graph.values()
-                for joint in node.arcs
-                if joint.name not in considered_joint_names
-            }
-        )
 
         relative_transform = (
             lambda node: node.link.math.inv(
@@ -101,21 +92,17 @@ class Tree(Iterable):
             else node.parent_arc.spatial_transform(0)
         )
 
-        last = []
-        leaves = [node for node in self.graph.values() if node.children == last]
+        # find the tree leaves and proceed until the root
+        leaves = [node for node in self.graph.values() if node.children == []]
 
         while all(leaf.name != self.root for leaf in leaves):
             for leaf in leaves:
-                if leaf is self.graph[self.root]:
-                    continue
-
-                if leaf.parent_arc.name not in considered_joint_names:
-                    # create the new node
+                if leaf.parent_arc.name not in considered_joint_names + [self.root]:
                     new_node = Node(
                         name=leaf.parent.name,
                         link=None,
                         arcs=[],
-                        children=None,
+                        children=[],
                         parent=None,
                         parent_arc=None,
                     )
@@ -129,22 +116,29 @@ class Tree(Iterable):
                     # update the parents
                     new_node.parent = self.graph[leaf.parent.name].parent
                     new_node.parent_arc = self.graph[new_node.name].parent_arc
-                    new_node.parent_arc.parent = (
-                        leaf.children[0].parent_arc.name if leaf.children != [] else []
-                    )
 
                     # update the children
-                    new_node.children = leaf.children
+                    new_node.children = [
+                        child for child in leaf.children if child.name in self.graph
+                    ]
+
+                    for child in new_node.children:
+                        child.parent = new_node.link
+                        child.parent_arc = new_node.parent_arc
 
                     # update the arcs
-                    if leaf.arcs != []:
-                        for arc in leaf.arcs:
-                            if arc.name in considered_joint_names:
-                                new_node.arcs.append(arc)
+                    new_node.arcs = (
+                        [arc for arc in leaf.arcs if arc.name in considered_joint_names]
+                        if leaf.arcs != []
+                        else []
+                    )
+                    for j in new_node.arcs:
+                        j.parent = new_node.link.name
 
                     logging.debug(f"Removing {leaf.name}")
                     self.graph.pop(leaf.name)
                     self.graph[new_node.name] = new_node
+                    self.ordered_nodes_list.remove(leaf.name)
             leaves = [
                 self.get_node_from_name((leaf.parent.name))
                 for leaf in leaves

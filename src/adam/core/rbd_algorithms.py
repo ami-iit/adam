@@ -481,15 +481,7 @@ class RBDAlgorithms:
             joint_accelerations (T): The joints acceleration
         """
         model = self.model.reduce(self.model.actuated_joints)
-
-        joints = list(
-            filter(
-                lambda joint: joint.name in self.model.actuated_joints,
-                self.model.joints.values(),
-            )
-        )
-
-        joints.sort(key=lambda joint: joint.idx)
+        joints = list(model.joints.values())
 
         NB = model.N
 
@@ -506,10 +498,8 @@ class RBDAlgorithms:
         sdd = self.math.factory.zeros(NB, 1, 1)
         B_X_W = self.math.adjoint_mixed(base_transform)
 
-        if self.model.floating_base:
-            IA[0] = self.model.tree.get_node_from_name(
-                self.root_link
-            ).link.spatial_inertia()
+        if model.floating_base:
+            IA[0] = model.tree.get_node_from_name(self.root_link).link.spatial_inertia()
             v[0] = B_X_W @ base_velocity
             pA[0] = (
                 self.math.spatial_skew_star(v[0]) @ IA[0] @ v[0]
@@ -522,7 +512,7 @@ class RBDAlgorithms:
                 Array: the tree transform
             """
             relative_transform = lambda j: self.math.inv(
-                self.model.tree.graph[j.parent].parent_arc.spatial_transform(0)
+                model.tree.graph[j.child].parent_arc.spatial_transform(0)
             ) @ j.spatial_transform(0)
 
             return self.math.vertcat(
@@ -538,19 +528,7 @@ class RBDAlgorithms:
             )
 
         tree_transform = get_tree_transform(self, joints)
-
-        find_parent = (
-            lambda j: find_parent(model.tree.get_node_from_name(j.parent).parent_arc)
-            if model.tree.get_node_from_name(j.parent).parent_arc.idx is None
-            else model.tree.get_node_from_name(j.parent).parent_arc.idx
-        )
-
-        p = [-1] + [
-            model.tree.get_idx_from_name(i.parent)
-            if model.tree.get_idx_from_name(i.parent) < NB
-            else find_parent(i)
-            for i in joints
-        ]
+        p = lambda i: list(model.tree.graph).index(joints[i].parent)
 
         # Pass 1
         for i, joint in enumerate(joints[1:], start=1):
@@ -561,8 +539,8 @@ class RBDAlgorithms:
             i_X_pi[i] = joint.spatial_transform(q) @ tree_transform[i]
             v_J = joint.motion_subspace() * q_dot
 
-            v[i] = i_X_pi[i] @ v[p[i]] + v_J
-            c[i] = i_X_pi[i] @ c[p[i]] + self.math.spatial_skew(v[i]) @ v_J
+            v[i] = i_X_pi[i] @ v[p(i)] + v_J
+            c[i] = i_X_pi[i] @ c[p(i)] + self.math.spatial_skew(v[i]) @ v_J
 
             IA[i] = model.tree.get_node_from_name(joint.parent).link.spatial_inertia()
 
@@ -579,17 +557,21 @@ class RBDAlgorithms:
         ):
             U[i] = IA[i] @ joint.motion_subspace()
             D[i] = joint.motion_subspace().T @ U[i]
-            u[i] = self.math.vertcat(tau[joint.idx]) - joint.motion_subspace().T @ pA[i]
+            u[i] = (
+                self.math.vertcat(tau[joint.idx]) - joint.motion_subspace().T @ pA[i]
+                if joint.idx is not None
+                else 0.0
+            )
 
             Ia = IA[i] - U[i] / D[i] @ U[i].T
             pa = pA[i] + Ia @ c[i] + U[i] * u[i] / D[i]
 
-            if joint.parent != self.root_link or not self.model.floating_base:
-                IA[p[i]] += i_X_pi[i].T @ Ia @ i_X_pi[i]
-                pA[p[i]] += i_X_pi[i].T @ pa
+            if joint.parent != self.root_link or not model.floating_base:
+                IA[p(i)] += i_X_pi[i].T @ Ia @ i_X_pi[i]
+                pA[p(i)] += i_X_pi[i].T @ pa
                 continue
 
-        a[0] = B_X_W @ g if self.model.floating_base else self.math.solve(-IA[0], pA[0])
+        a[0] = B_X_W @ g if model.floating_base else self.math.solve(-IA[0], pA[0])
 
         # Pass 3
         for i, joint in enumerate(joints[1:], start=1):
@@ -598,7 +580,7 @@ class RBDAlgorithms:
 
             sdd[i - 1] = (u[i] - U[i].T @ a[i]) / D[i]
 
-            a[i] += i_X_pi[i].T @ a[p[i]] + joint.motion_subspace() * sdd[i - 1] + c[i]
+            a[i] += i_X_pi[i].T @ a[p(i)] + joint.motion_subspace() * sdd[i - 1] + c[i]
 
         # Squeeze sdd
         s_ddot = self.math.vertcat(*[sdd[i] for i in range(sdd.shape[0])])
@@ -613,7 +595,7 @@ class RBDAlgorithms:
             return self.math.horzcat(
                 self.math.vertcat(
                     self.math.solve(B_X_W, a[0]) + g
-                    if self.model.floating_base
+                    if model.floating_base
                     else self.math.zeros(6, 1),
                 ),
                 s_ddot,
