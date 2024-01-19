@@ -222,6 +222,19 @@ class SpatialMath(SpatialMath):
         return NumpyLike(-np.cross(np.array(x), np.eye(3), axisa=0, axisb=0))
 
     @staticmethod
+    def vee(x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
+        """
+        Args:
+            x (Union[NumpyLike, npt.ArrayLike]): skew symmetric matrix
+
+        Returns:
+            NumpyLike: vector from the skew symmetric matrix
+        """
+        if not isinstance(x, NumpyLike):
+            return np.array([x[2, 1], x[0, 2], x[1, 0]])
+        return np.array([x.array[2, 1], x.array[0, 2], x.array[1, 0]])
+
+    @staticmethod
     def inv(x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
         """
         Args:

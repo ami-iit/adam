@@ -159,6 +159,10 @@ class SpatialMath:
         pass
 
     @abc.abstractmethod
+    def vee(x):
+        pass
+
+    @abc.abstractmethod
     def inv(x):
         pass
 

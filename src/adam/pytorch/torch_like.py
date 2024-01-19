@@ -221,6 +221,22 @@ class SpatialMath(SpatialMath):
         )
 
     @staticmethod
+    def vee(x: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """
+        Args:
+            x (Union["TorchLike", ntp.ArrayLike]): matrix
+
+        Returns:
+            TorchLike: vector from skew matrix x
+        """
+        if isinstance(x, TorchLike):
+            return TorchLike(
+                torch.tensor([x.array[2, 1], x.array[0, 2], x.array[1, 0]])
+            )
+        else:
+            return TorchLike(torch.tensor([x[2, 1], x[0, 2], x[1, 0]]))
+
+    @staticmethod
     def inv(x: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """
         Args:

@@ -156,6 +156,21 @@ class SpatialMath(SpatialMath):
             return CasadiLike(cs.skew(x))
 
     @staticmethod
+    def vee(x: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
+        """
+        Args:
+            x (Union[CasadiLike, npt.ArrayLike]): 3x3 matrix
+
+        Returns:
+            CasadiLike: the vector from the skew symmetric matrix x
+        """
+        vee = lambda x: cs.vertcat(x[2, 1], x[0, 2], x[1, 0])
+        if isinstance(x, CasadiLike):
+            return CasadiLike(vee(x.array))
+        else:
+            return CasadiLike(vee(x))
+
+    @staticmethod
     def inv(x: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """
         Args:
