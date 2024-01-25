@@ -59,6 +59,8 @@ class TorchLike(ArrayLike):
 
         if type(self) is type(other):
             return TorchLike(self.array @ other.array)
+        if isinstance(other, torch.Tensor):
+            return TorchLike(self.array @ other)
         else:
             return TorchLike(self.array @ torch.tensor(other))
 
