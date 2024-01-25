@@ -23,7 +23,9 @@ class KinDynComputationsParametric:
         joints_name_list: list,
         links_name_list: list,
         root_link: str = "root_link",
-        gravity: np.array = torch.FloatTensor([0, 0, -9.80665, 0, 0, 0]),
+        gravity: np.array = torch.tensor(
+            [0, 0, -9.80665, 0, 0, 0], dtype=torch.float64
+        ),
     ) -> None:
         """
         Args:
@@ -119,7 +121,7 @@ class KinDynComputationsParametric:
         self,
         frame,
         base_transform: torch.Tensor,
-        s: torch.Tensor,
+        joint_postitions: torch.Tensor,
         length_multiplier: torch.Tensor,
         densities: torch.Tensor,
     ) -> torch.Tensor:
@@ -128,7 +130,7 @@ class KinDynComputationsParametric:
         Args:
             frame (str): The frame to which the fk will be computed
             base_transform (torch.tensor): The homogenous transform from base to world frame
-            s (torch.tensor): The joints position
+            joints_postition (torch.tensor): The joints position
             length_multiplier (torch.tensor): The length multiplier of the parametrized links
             densities (torch.tensor): The densities of the parametrized links
 
@@ -149,7 +151,9 @@ class KinDynComputationsParametric:
         self.NDoF = self.rbdalgos.NDoF
         return (
             self.rbdalgos.forward_kinematics(
-                frame, torch.FloatTensor(base_transform), torch.FloatTensor(s)
+                frame,
+                base_transform,
+                joint_postitions,
             )
         ).array
 
@@ -414,7 +418,7 @@ class KinDynComputationsParametric:
             base_positions,
             torch.zeros(6).reshape(6, 1),
             torch.zeros(self.NDoF),
-            torch.FloatTensor(self.g),
+            self.g,
         ).array.squeeze()
 
     def get_total_mass(
