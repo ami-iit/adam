@@ -7,9 +7,9 @@ from typing import Union
 
 import numpy.typing as ntp
 import torch
+import numpy as np
 
 from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
-from adam.numpy import NumpyLike
 
 
 @dataclass
@@ -18,12 +18,17 @@ class TorchLike(ArrayLike):
 
     array: torch.Tensor
 
+    def __post_init__(self):
+        """Converts array to double precision"""
+        if self.array.dtype != torch.float64:
+            self.array = self.array.double()
+
     def __setitem__(self, idx, value: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides set item operator"""
         if type(self) is type(value):
             self.array[idx] = value.array.reshape(self.array[idx].shape)
         else:
-            self.array[idx] = torch.tensor(value)
+            self.array[idx] = torch.tensor(value) if isinstance(value, float) else value
 
     def __getitem__(self, idx):
         """Overrides get item operator"""
@@ -42,24 +47,27 @@ class TorchLike(ArrayLike):
         Returns:
             TorchLike: transpose of array
         """
-        if len(self.array.shape) != 1:
-            return TorchLike(self.array.mT)
+        # check if self.array is a 0-D tensor
+
+        if len(self.array.shape) == 0:
+            return TorchLike(self.array)
         x = self.array
         return TorchLike(x.permute(*torch.arange(x.ndim - 1, -1, -1)))
 
     def __matmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides @ operator"""
+
         if type(self) is type(other):
-            return TorchLike(self.array @ other.array.float())
+            return TorchLike(self.array @ other.array)
         else:
-            return TorchLike(self.array @ torch.tensor(other).float())
+            return TorchLike(self.array @ torch.tensor(other))
 
     def __rmatmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides @ operator"""
         if type(self) is type(other):
             return TorchLike(other.array @ self.array)
         else:
-            return TorchLike(torch.tensor(other).float() @ self.array)
+            return TorchLike(torch.tensor(other) @ self.array)
 
     def __mul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides * operator"""
@@ -120,7 +128,7 @@ class TorchLikeFactory(ArrayLikeFactory):
         Returns:
             TorchLike: zero matrix of dimension *x
         """
-        return TorchLike(torch.zeros(x).float())
+        return TorchLike(torch.zeros(x))
 
     @staticmethod
     def eye(x: int) -> "TorchLike":
@@ -131,7 +139,7 @@ class TorchLikeFactory(ArrayLikeFactory):
         Returns:
             TorchLike: identity matrix of dimension x
         """
-        return TorchLike(torch.eye(x).float())
+        return TorchLike(torch.eye(x))
 
     @staticmethod
     def array(x: ntp.ArrayLike) -> "TorchLike":
@@ -139,7 +147,7 @@ class TorchLikeFactory(ArrayLikeFactory):
         Returns:
             TorchLike: vector wrapping x
         """
-        return TorchLike(torch.FloatTensor(x))
+        return TorchLike(torch.tensor(x))
 
 
 class SpatialMath(SpatialMath):
@@ -155,7 +163,8 @@ class SpatialMath(SpatialMath):
         Returns:
             TorchLike: sin value of x
         """
-        x = torch.tensor(x)
+        if isinstance(x, float):
+            x = torch.tensor(x)
         return TorchLike(torch.sin(x))
 
     @staticmethod
@@ -167,7 +176,9 @@ class SpatialMath(SpatialMath):
         Returns:
             TorchLike: cos value of x
         """
-        x = torch.tensor(x)
+        # transform to torch tensor, if not already
+        if isinstance(x, float):
+            x = torch.tensor(x)
         return TorchLike(torch.cos(x))
 
     @staticmethod
@@ -193,13 +204,11 @@ class SpatialMath(SpatialMath):
         """
         if not isinstance(x, TorchLike):
             return TorchLike(
-                torch.FloatTensor(
-                    [[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]]
-                )
+                torch.tensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
             )
         x = x.array
         return TorchLike(
-            torch.FloatTensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
+            torch.tensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
         )
 
     @staticmethod
@@ -211,7 +220,7 @@ class SpatialMath(SpatialMath):
         if isinstance(x[0], TorchLike):
             v = torch.vstack([x[i].array for i in range(len(x))])
         else:
-            v = torch.FloatTensor(x)
+            v = torch.tensor(x)
         return TorchLike(v)
 
     @staticmethod
@@ -223,5 +232,5 @@ class SpatialMath(SpatialMath):
         if isinstance(x[0], TorchLike):
             v = torch.hstack([x[i].array for i in range(len(x))])
         else:
-            v = torch.FloatTensor(x)
+            v = torch.tensor(x)
         return TorchLike(v)
