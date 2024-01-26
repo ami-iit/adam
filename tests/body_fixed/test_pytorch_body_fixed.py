@@ -13,6 +13,7 @@ import torch
 from adam import Representations
 from adam.geometry import utils
 from adam.pytorch import KinDynComputations
+from adam.pytorch.torch_like import SpatialMath
 
 np.random.seed(42)
 torch.set_default_dtype(torch.float64)
@@ -71,17 +72,18 @@ kinDyn.setFloatingBase(root_link)
 kinDyn.setFrameVelocityRepresentation(idyntree.BODY_FIXED_REPRESENTATION)
 n_dofs = len(joints_name_list)
 
-# base pose quantities
-xyz = (np.random.rand(3) - 0.5) * 5
-rpy = (np.random.rand(3) - 0.5) * 5
-base_vel = (np.random.rand(6) - 0.5) * 5
+xyz = (torch.rand(3) - 0.5) * 5
+rpy = (torch.rand(3) - 0.5) * 5
+base_vel = (torch.rand(6) - 0.5) * 5
 # joints quantitites
-joints_val = (np.random.rand(n_dofs) - 0.5) * 5
-joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
+joints_val = (torch.rand(n_dofs) - 0.5) * 5
+joints_dot_val = (torch.rand(n_dofs) - 0.5) * 5
 
-g = np.array([0, 0, -9.80665])
-H_b = utils.H_from_Pos_RPY(xyz, rpy)
-kinDyn.setRobotState(H_b, joints_val, base_vel, joints_dot_val, g)
+g = torch.tensor([0, 0, -9.80665])
+H_b = SpatialMath().H_from_Pos_RPY(xyz, rpy).array
+kinDyn.setRobotState(
+    H_b.numpy(), joints_val.numpy(), base_vel.numpy(), joints_dot_val.numpy(), g.numpy()
+)
 
 
 def test_mass_matrix():
@@ -165,8 +167,14 @@ def test_bias_force():
 
 
 def test_coriolis_term():
-    g0 = np.zeros(3)
-    kinDyn.setRobotState(H_b, joints_val, base_vel, joints_dot_val, g0)
+    g0 = torch.zeros(3)
+    kinDyn.setRobotState(
+        H_b.numpy(),
+        joints_val.numpy(),
+        base_vel.numpy(),
+        joints_dot_val.numpy(),
+        g0.numpy(),
+    )
     C_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
     assert kinDyn.generalizedBiasForces(C_iDyn)
     C_iDyn_np = np.concatenate(
@@ -181,9 +189,15 @@ def test_gravity_term():
     kinDyn2.loadRobotModel(robot_iDyn.model())
     kinDyn2.setFloatingBase(root_link)
     kinDyn2.setFrameVelocityRepresentation(idyntree.BODY_FIXED_REPRESENTATION)
-    base_vel0 = np.zeros(6)
-    joints_dot_val0 = np.zeros(n_dofs)
-    kinDyn2.setRobotState(H_b, joints_val, base_vel0, joints_dot_val0, g)
+    base_vel0 = torch.zeros(6)
+    joints_dot_val0 = torch.zeros(n_dofs)
+    kinDyn2.setRobotState(
+        H_b.numpy(),
+        joints_val.numpy(),
+        base_vel0.numpy(),
+        joints_dot_val0.numpy(),
+        g.numpy(),
+    )
     G_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn2.model())
     assert kinDyn2.generalizedBiasForces(G_iDyn)
     G_iDyn_np = np.concatenate(
