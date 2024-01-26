@@ -121,7 +121,7 @@ class KinDynComputationsParametric:
         self,
         frame,
         base_transform: torch.Tensor,
-        joint_postitions: torch.Tensor,
+        joint_positions: torch.Tensor,
         length_multiplier: torch.Tensor,
         densities: torch.Tensor,
     ) -> torch.Tensor:
