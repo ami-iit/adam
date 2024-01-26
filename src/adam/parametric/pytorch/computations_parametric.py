@@ -130,7 +130,7 @@ class KinDynComputationsParametric:
         Args:
             frame (str): The frame to which the fk will be computed
             base_transform (torch.tensor): The homogenous transform from base to world frame
-            joint_position (torch.tensor): The joints position
+            joint_positions (torch.tensor): The joints position
             length_multiplier (torch.tensor): The length multiplier of the parametrized links
             densities (torch.tensor): The densities of the parametrized links
 
@@ -153,7 +153,7 @@ class KinDynComputationsParametric:
             self.rbdalgos.forward_kinematics(
                 frame,
                 base_transform,
-                joint_postitions,
+                joint_positions,
             )
         ).array
 
