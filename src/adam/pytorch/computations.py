@@ -21,7 +21,9 @@ class KinDynComputations:
         urdfstring: str,
         joints_name_list: list = None,
         root_link: str = "root_link",
-        gravity: np.array = torch.FloatTensor([0, 0, -9.80665, 0, 0, 0]),
+        gravity: np.array = torch.tensor(
+            [0, 0, -9.80665, 0, 0, 0], dtype=torch.float64
+        ),
     ) -> None:
         """
         Args:
@@ -92,8 +94,8 @@ class KinDynComputations:
         return (
             self.rbdalgos.forward_kinematics(
                 frame,
-                torch.FloatTensor(base_transform),
-                torch.FloatTensor(joint_position),
+                base_transform,
+                joint_position,
             )
         ).array
 
@@ -240,7 +242,7 @@ class KinDynComputations:
             joint_positions,
             torch.zeros(6).reshape(6, 1),
             torch.zeros(self.NDoF),
-            torch.FloatTensor(self.g),
+            self.g,
         ).array.squeeze()
 
     def get_total_mass(self) -> float:

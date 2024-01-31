@@ -1,6 +1,7 @@
 name: Black action
 
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -9,11 +10,11 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: black
-        uses: lgeiger/black-action@v1.0.1
+        uses: psf/black@stable
         with:
-          args: .
+          options: "--check --verbose"
       - name: Check for modified files
         id: git-check
         run: echo ::set-output name=modified::$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)

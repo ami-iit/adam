@@ -11,6 +11,7 @@ import torch
 import numpy as np
 from adam.parametric.pytorch import KinDynComputationsParametric
 from adam.pytorch import KinDynComputations
+from adam.pytorch.torch_like import SpatialMath
 
 from adam.geometry import utils
 import tempfile
@@ -61,11 +62,6 @@ joints_name_list = [
     "r_ankle_roll",
 ]
 
-
-def SX2DM(x):
-    return cs.DM(x)
-
-
 logging.basicConfig(level=logging.DEBUG)
 logging.debug("Showing the robot tree.")
 
@@ -77,8 +73,6 @@ link_name_list = ["chest"]
 comp_w_hardware = KinDynComputationsParametric(
     model_path, joints_name_list, link_name_list, root_link
 )
-# comp.set_frame_velocity_representation(Representations.BODY_FIXED_REPRESENTATION)
-# comp_w_hardware.set_frame_velocity_representation(Representations.BODY_FIXED_REPRESENTATION)
 
 original_density = [
     628.0724496264945
@@ -87,41 +81,39 @@ original_length = np.ones(len(link_name_list))
 
 n_dofs = len(joints_name_list)
 # base pose quantities
-xyz = (np.random.rand(3) - 0.5) * 5
-rpy = (np.random.rand(3) - 0.5) * 5
-base_vel = (np.random.rand(6) - 0.5) * 5
+xyz = (torch.rand(3) - 0.5) * 5
+rpy = (torch.rand(3) - 0.5) * 5
+base_vel = (torch.rand(6) - 0.5) * 5
 # joints quantitites
-joints_val = (np.random.rand(n_dofs) - 0.5) * 5
-joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
+joints_val = (torch.rand(n_dofs) - 0.5) * 5
+joints_dot_val = (torch.rand(n_dofs) - 0.5) * 5
 
-H_b = torch.FloatTensor(utils.H_from_Pos_RPY(xyz, rpy))
-vb_ = torch.FloatTensor(base_vel)
-s_ = torch.FloatTensor(joints_val)
-s_dot_ = torch.FloatTensor(joints_dot_val)
+g = torch.tensor([0, 0, -9.80665])
+H_b = SpatialMath().H_from_Pos_RPY(xyz, rpy).array
 
 
 def test_mass_matrix():
-    mass_test = comp.mass_matrix(H_b, s_)
+    mass_test = comp.mass_matrix(H_b, joints_val)
     mass_test_hardware = np.array(
-        comp_w_hardware.mass_matrix(H_b, s_, original_length, original_density)
+        comp_w_hardware.mass_matrix(H_b, joints_val, original_length, original_density)
     )
     assert mass_test - mass_test_hardware == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CMM():
-    Jcm_test = comp.centroidal_momentum_matrix(H_b, s_)
+    Jcm_test = comp.centroidal_momentum_matrix(H_b, joints_val)
     Jcm_test_hardware = np.array(
         comp_w_hardware.centroidal_momentum_matrix(
-            H_b, s_, original_length, original_density
+            H_b, joints_val, original_length, original_density
         )
     )
     assert Jcm_test - Jcm_test_hardware == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CoM_pos():
-    CoM_test = comp.CoM_position(H_b, s_)
+    CoM_test = comp.CoM_position(H_b, joints_val)
     CoM_hardware = np.array(
-        comp_w_hardware.CoM_position(H_b, s_, original_length, original_density)
+        comp_w_hardware.CoM_position(H_b, joints_val, original_length, original_density)
     )
     assert CoM_test - CoM_hardware == pytest.approx(0.0, abs=1e-5)
 
@@ -133,17 +125,21 @@ def test_total_mass():
 
 
 def test_jacobian():
-    J_test = comp.jacobian("l_sole", H_b, s_)
+    J_test = comp.jacobian("l_sole", H_b, joints_val)
     J_test_hardware = np.array(
-        comp_w_hardware.jacobian("l_sole", H_b, s_, original_length, original_density)
+        comp_w_hardware.jacobian(
+            "l_sole", H_b, joints_val, original_length, original_density
+        )
     )
     assert J_test - J_test_hardware == pytest.approx(0.0, abs=1e-5)
 
 
 def test_jacobian_non_actuated():
-    J_test = comp.jacobian("head", H_b, s_)
+    J_test = comp.jacobian("head", H_b, joints_val)
     J_test_hardware = np.array(
-        comp_w_hardware.jacobian("head", H_b, s_, original_length, original_density)
+        comp_w_hardware.jacobian(
+            "head", H_b, joints_val, original_length, original_density
+        )
     )
     assert J_test - J_test_hardware == pytest.approx(0.0, abs=1e-5)
 
@@ -163,10 +159,10 @@ def test_jacobian_dot():
 
 
 def test_fk():
-    H_test = np.array(comp.forward_kinematics("l_sole", H_b, s_))
+    H_test = np.array(comp.forward_kinematics("l_sole", H_b, joints_val))
     H_with_hardware_test = np.array(
         comp_w_hardware.forward_kinematics(
-            "l_sole", H_b, s_, original_length, original_density
+            "l_sole", H_b, joints_val, original_length, original_density
         )
     )
     assert H_with_hardware_test[:3, :3] - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
@@ -174,10 +170,10 @@ def test_fk():
 
 
 def test_fk_non_actuated():
-    H_test = np.array(comp.forward_kinematics("head", H_b, s_))
+    H_test = np.array(comp.forward_kinematics("head", H_b, joints_val))
     H_with_hardware_test = np.array(
         comp_w_hardware.forward_kinematics(
-            "head", H_b, s_, original_length, original_density
+            "head", H_b, joints_val, original_length, original_density
         )
     )
     assert H_with_hardware_test[:3, :3] - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
@@ -185,28 +181,28 @@ def test_fk_non_actuated():
 
 
 def test_bias_force():
-    h_test = np.array(comp.bias_force(H_b, s_, vb_, s_dot_))
+    h_test = np.array(comp.bias_force(H_b, joints_val, base_vel, joints_dot_val))
     h_with_hardware_test = np.array(
         comp_w_hardware.bias_force(
-            H_b, s_, vb_, s_dot_, original_length, original_density
+            H_b, joints_val, base_vel, joints_dot_val, original_length, original_density
         )
     )
     assert h_with_hardware_test - h_test == pytest.approx(0.0, abs=1e-4)
 
 
 def test_coriolis_term():
-    C_test = np.array(comp.coriolis_term(H_b, s_, vb_, s_dot_))
+    C_test = np.array(comp.coriolis_term(H_b, joints_val, base_vel, joints_dot_val))
     C_with_hardware_test = np.array(
         comp_w_hardware.coriolis_term(
-            H_b, s_, vb_, s_dot_, original_length, original_density
+            H_b, joints_val, base_vel, joints_dot_val, original_length, original_density
         )
     )
     assert C_with_hardware_test - C_test == pytest.approx(0.0, abs=1e-4)
 
 
 def test_gravity_term():
-    G_test = comp.gravity_term(H_b, s_)
+    G_test = comp.gravity_term(H_b, joints_val)
     G_with_hardware_test = comp_w_hardware.gravity_term(
-        H_b, s_, original_length, original_density
+        H_b, joints_val, original_length, original_density
     )
     assert G_with_hardware_test - G_test == pytest.approx(0.0, abs=1e-4)
