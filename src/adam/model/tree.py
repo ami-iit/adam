@@ -1,7 +1,7 @@
 import dataclasses
 import logging
 
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Dict, Iterable, List, Tuple, Union, Set
 
 from adam.model.abc_factories import Joint, Link
 
@@ -218,6 +218,13 @@ class Tree(Iterable):
             bool: True if the model is floating base
         """
         return len(self.graph[self.root].children) > 1
+
+    def get_joint_list(self) -> Set[Joint]:
+        """
+        Returns:
+            Set[Joint]: the set of the joints
+        """
+        return {arc for node in self.graph.values() for arc in node.arcs}
 
     def __iter__(self) -> Node:
         """This method allows to iterate on the model
