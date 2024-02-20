@@ -104,3 +104,6 @@ class StdJoint(Joint):
                 0,
                 0,
             )
+
+    def __hash__(self) -> int:
+        return hash(self.name)

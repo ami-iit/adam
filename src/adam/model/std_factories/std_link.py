@@ -67,3 +67,6 @@ class StdLink(Link):
         self.inertia = lumped_inertia
 
         return self
+
+    def __hash__(self):
+        return hash(self.name)
