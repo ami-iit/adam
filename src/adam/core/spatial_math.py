@@ -267,7 +267,7 @@ class SpatialMath:
         T = self.factory.eye(4)
         R = self.R_from_RPY(rpy)
         T[:3, :3] = R
-        T[:3, 3] = xyz + q * self.factory.array(axis)
+        T[:3, 3] = self.factory.array(xyz) + q * self.factory.array(axis)
         return T
 
     def H_from_Pos_RPY(self, xyz: npt.ArrayLike, rpy: npt.ArrayLike) -> npt.ArrayLike:
