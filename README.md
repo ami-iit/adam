@@ -1,7 +1,7 @@
 # adam
 
 [![adam](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml)
-[![](https://img.shields.io/badge/license-LGPL-19c2d8.svg)](https://github.com/ami-iit/ADAM/blob/main/LICENSE)
+[![](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://github.com/ami-iit/ADAM/blob/main/LICENSE)
 
 **Automatic Differentiation for rigid-body-dynamics AlgorithMs**
 
