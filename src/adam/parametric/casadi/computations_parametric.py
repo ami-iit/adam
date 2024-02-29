@@ -248,21 +248,7 @@ class KinDynComputationsParametric:
             self.f_opts,
         )
 
-    def forward_kinematics(self, frame, T_b, s) -> cs.Function:
-        """Computes the forward kinematics relative to the specified frame
-
-        Args:
-            frame (str): The frame to which the fk will be computed
-
-        Returns:
-            T_fk (casADi function): The fk represented as Homogenous transformation matrix
-        """
-
-        return self.rbdalgos.forward_kinematics(
-            frame, T_b, s, self.length_multiplier, self.densities
-        )
-
-    def get_total_mass(self) -> float:
+    def get_total_mass(self) -> cs.Function:
         """Returns the total mass of the robot
 
         Returns:
@@ -270,6 +256,5 @@ class KinDynComputationsParametric:
         """
         m = self.rbdalgos.get_total_mass()
         return cs.Function(
-            "m", [self.densities, self.length_multiplier], [m], self.f_opts
+            "m", [self.length_multiplier, self.densities], [m], self.f_opts
         )
-        return self.rbdalgos.get_total_mass()
