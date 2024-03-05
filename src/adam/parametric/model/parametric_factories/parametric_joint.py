@@ -8,7 +8,7 @@ from adam.model import Joint
 from adam.parametric.model.parametric_factories.parametric_link import ParametricLink
 
 
-class ParmetricJoint(Joint):
+class ParametricJoint(Joint):
     """Parametric Joint class"""
 
     def __init__(
@@ -43,7 +43,7 @@ class ParmetricJoint(Joint):
             npt.ArrayLike: the origin of the joint, parametric with respect to the parent link dimensions
         """
 
-        length = self.parent_parametric.get_principal_lenght_parametric()
+        length = self.parent_parametric.get_principal_length_parametric()
         # Ack for avoiding depending on casadi
         vo = self.parent_parametric.origin[2]
         xyz_rpy = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

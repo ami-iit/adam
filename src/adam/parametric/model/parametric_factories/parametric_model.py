@@ -5,7 +5,7 @@ import urdf_parser_py.urdf
 from adam.core.spatial_math import SpatialMath
 from adam.model import ModelFactory, StdJoint, StdLink, Link, Joint
 from adam.model.std_factories.std_model import urdf_remove_sensors_tags
-from adam.parametric.model import ParmetricJoint, ParametricLink
+from adam.parametric.model import ParametricJoint, ParametricLink
 
 
 class URDFParametricModelFactory(ModelFactory):
@@ -89,7 +89,7 @@ class URDFParametricModelFactory(ModelFactory):
                 self.length_multiplier[index_link],
                 self.densities[index_link],
             )
-            return ParmetricJoint(joint, self.math, parent_link_parametric)
+            return ParametricJoint(joint, self.math, parent_link_parametric)
 
         return StdJoint(joint, self.math)
 

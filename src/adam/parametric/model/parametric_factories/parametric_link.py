@@ -66,7 +66,7 @@ class ParametricLink(Link):
         self.inertial.inertia = self.I
         self.inertial.origin = self.origin
 
-    def get_principal_lenght(self):
+    def get_principal_length(self):
         """Method computing the principal link length, i.e. the dimension in which the kinematic chain grows"""
         xyz_rpy = [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
         if self.geometry_type == Geometry.CYLINDER:
@@ -86,7 +86,7 @@ class ParametricLink(Link):
             raise Exception(f"THE GEOMETRY IS NOT SPECIFIED")
         return v_l
 
-    def get_principal_lenght_parametric(self):
+    def get_principal_length_parametric(self):
         """Method computing the principal link length parametric, i.e. the dimension in which the kinematic chain grows"""
         xyz_rpy = [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
         if self.geometry_type == Geometry.CYLINDER:
@@ -112,7 +112,7 @@ class ParametricLink(Link):
             npt.ArrayLike: link offset
         """
         xyz_rpy = [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
-        v_l = self.get_principal_lenght()
+        v_l = self.get_principal_length()
         v_o = xyz_rpy[2]
         if v_o < 0:
             link_offset = v_l / 2 + v_o
@@ -127,7 +127,7 @@ class ParametricLink(Link):
         """
         # Taking the principal direction i.e. the length
         xyz_rpy = [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
-        v_l = self.get_principal_lenght()
+        v_l = self.get_principal_length()
         j_0 = joint_i.origin.xyz[2]
         v_o = xyz_rpy[2]
         if j_0 < 0:
@@ -194,7 +194,7 @@ class ParametricLink(Link):
         origin = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         xyz_rpy = [*self.visuals.origin.xyz, *self.visuals.origin.rpy]
         v_o = xyz_rpy[2]
-        length = self.get_principal_lenght_parametric()
+        length = self.get_principal_length_parametric()
         if v_o < 0:
             origin[2] = self.link_offset - length / 2
             origin[0] = xyz_rpy[0]
