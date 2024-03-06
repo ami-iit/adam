@@ -1,3 +1,4 @@
+import copy
 import idyntree.bindings
 from idyntree.bindings import IJoint as idyn_joint
 from idyntree.bindings import Link as idyn_link
@@ -66,11 +67,17 @@ def to_idyntree_link(link: Link) -> [idyn_link, List[idyn_solid_shape]]:
         ]
     )
     inertia_rotation = idyntree.bindings.Rotation.RPY(*link.inertial.origin.rpy)
-    idyn_spatial_rotational_inertia = idyn_rotational_inertia.FromPython(inertia_matrix)
+    idyn_spatial_rotational_inertia = idyn_rotational_inertia()
+    for i in range(3):
+        for j in range(3):
+            idyn_spatial_rotational_inertia.setVal(i, j, inertia_matrix[i, j])
     rotated_inertia = inertia_rotation * idyn_spatial_rotational_inertia
     idyn_spatial_inertia = idyntree.bindings.SpatialInertia()
+    com_position = idyntree.bindings.Position.FromPython(link.inertial.origin.xyz)
     idyn_spatial_inertia.fromRotationalInertiaWrtCenterOfMass(
-        link.inertial.mass, link.inertial.origin, rotated_inertia
+        link.inertial.mass,
+        com_position,
+        rotated_inertia,
     )
     output.setInertia(idyn_spatial_inertia)
 
@@ -96,8 +103,11 @@ def to_idyntree_joint(joint: Joint, parent_index: int, child_index: int) -> idyn
     if joint.type == "fixed":
         return idyntree.bindings.FixedJoint(parent_index, child_index, rest_transform)
 
-    direction = idyntree.bindings.Direction.FromPython(joint.axis)
-    axis = idyntree.bindings.Axis(direction, idyntree.bindings.Position.Zero())
+    direction = idyntree.bindings.Direction(*joint.axis)
+    origin = idyntree.bindings.Position.Zero()
+    axis = idyntree.bindings.Axis()
+    axis.setDirection(direction)
+    axis.setOrigin(origin)
 
     if joint.type in ["revolute", "continuous"]:
         output = idyntree.bindings.RevoluteJoint()
@@ -123,6 +133,9 @@ def to_idyntree_model(model: Model) -> idyn_model:
     Returns:
         iDynTree.Model: the iDynTree model
     """
+
+    # TODO: handle frames
+
     output = idyn_model()
     output_visuals = []
     links_map = {}
@@ -134,9 +147,7 @@ def to_idyntree_model(model: Model) -> idyn_model:
         output_visuals.append(visuals)
         links_map[node.name] = link_index
 
-    output.visualSolidShapes().resize(len(output_visuals))
-    for i, visuals in enumerate(output_visuals):
-        output.visualSolidShapes().set(i, visuals)
+    # TODO: handle visuals
 
     for node in model.tree:
         for j in node.arcs:
@@ -144,4 +155,9 @@ def to_idyntree_model(model: Model) -> idyn_model:
             joint_index = output.addJoint(j.name, joint)
             assert output.isValidJointIndex(joint_index)
 
-    return output
+    model_reducer = idyntree.bindings.ModelLoader()
+    model_reducer.loadReducedModelFromFullModel(output, model.actuated_joints)
+    output_reduced = model_reducer.model().copy()
+
+    assert output_reduced.isValid()
+    return output_reduced
