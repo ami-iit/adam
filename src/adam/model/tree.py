@@ -1,7 +1,7 @@
 import dataclasses
 import logging
 
-from typing import Dict, Iterable, List, Tuple, Union, Set
+from typing import Dict, Iterable, List, Tuple, Union, Set, Iterator
 
 from adam.model.abc_factories import Joint, Link
 
@@ -50,7 +50,7 @@ class Tree(Iterable):
         Returns:
             Tree: the directed tree
         """
-        nodes: Dict(str, Node) = {
+        nodes: Dict[str, Node] = {
             l.name: Node(
                 name=l.name, link=l, arcs=[], children=[], parent=None, parent_arc=None
             )
@@ -83,8 +83,8 @@ class Tree(Iterable):
             Tree: the reduced tree
         """
 
-        relative_transform = (
-            lambda node: node.link.math.inv(
+        relative_transform = lambda node: (
+            node.link.math.inv(
                 self.graph[node.parent.name].parent_arc.spatial_transform(0)
             )
             @ node.parent_arc.spatial_transform(0)
@@ -92,59 +92,50 @@ class Tree(Iterable):
             else node.parent_arc.spatial_transform(0)
         )
 
-        # find the tree leaves and proceed until the root
-        leaves = [node for node in self.graph.values() if node.children == []]
+        # find the fixed joints using the considered_joint_names
+        fixed_joints = [
+            joint
+            for joint in self.get_joint_list()
+            if joint.name not in considered_joint_names
+        ]
 
-        while all(leaf.name != self.root for leaf in leaves):
-            for leaf in leaves:
-                if leaf.parent_arc.name not in considered_joint_names + [self.root]:
-                    new_node = Node(
-                        name=leaf.parent.name,
-                        link=None,
-                        arcs=[],
-                        children=[],
-                        parent=None,
-                        parent_arc=None,
-                    )
+        for f_joint in fixed_joints:
 
-                    # update the link
-                    new_node.link = leaf.parent.lump(
-                        other=leaf.link,
-                        relative_transform=relative_transform(leaf),
-                    )
+            parent_node = self.graph[f_joint.parent]
+            child_node = self.graph[f_joint.child]
 
-                    # update the parents
-                    new_node.parent = self.graph[leaf.parent.name].parent
-                    new_node.parent_arc = self.graph[new_node.name].parent_arc
+            merged_node = parent_node
+            merged_neighbors = child_node
 
-                    # update the children
-                    new_node.children = [
-                        child for child in leaf.children if child.name in self.graph
-                    ]
+            merged_node.children.remove(merged_neighbors)
+            merged_node.children.extend(merged_neighbors.children)
+            # update the arcs
+            merged_node.arcs.remove(f_joint)
+            merged_node.arcs.extend(merged_neighbors.arcs)
 
-                    for child in new_node.children:
-                        child.parent = new_node.link
-                        child.parent_arc = new_node.parent_arc
+            # we need to updated the parents and child on the joints in fixed_joints
+            for joint in fixed_joints:
+                if joint.parent == child_node.name:
+                    joint.parent = merged_node.name
+                if joint.child == child_node.name:
+                    joint.child = merged_node.name
 
-                    # update the arcs
-                    new_node.arcs = (
-                        [arc for arc in leaf.arcs if arc.name in considered_joint_names]
-                        if leaf.arcs != []
-                        else []
-                    )
-                    for j in new_node.arcs:
-                        j.parent = new_node.link.name
+            for child in merged_node.children:
 
-                    logging.debug(f"Removing {leaf.name}")
-                    self.graph.pop(leaf.name)
-                    self.graph[new_node.name] = new_node
-                    self.ordered_nodes_list.remove(leaf.name)
-            leaves = [
-                self.get_node_from_name((leaf.parent.name))
-                for leaf in leaves
-                if leaf.name != self.root
-            ]
+                child.parent = merged_node.link
+                child.parent_arc = merged_node.parent_arc
 
+            self.graph.pop(merged_neighbors.name)
+            self.graph[merged_node.name] = merged_node
+
+        if {joint.name for joint in self.get_joint_list()} != set(
+            considered_joint_names
+        ):
+            raise ValueError(
+                "The joints remaining in the graph are not equal to the considered joints"
+            )
+        tree = Tree(self.graph, self.root)
+        tree.print(self.root)
         return Tree(self.graph, self.root)
 
     def print(self, root) -> str:
@@ -226,7 +217,7 @@ class Tree(Iterable):
         """
         return {arc for node in self.graph.values() for arc in node.arcs}
 
-    def __iter__(self) -> Node:
+    def __iter__(self) -> Iterator[Node]:
         """This method allows to iterate on the model
         Returns:
             Node: the node istance
@@ -236,7 +227,7 @@ class Tree(Iterable):
         """
         yield from [self.graph[name] for name in self.ordered_nodes_list]
 
-    def __reversed__(self) -> Node:
+    def __reversed__(self) -> Iterator[Node]:
         """
         Returns:
             Node
