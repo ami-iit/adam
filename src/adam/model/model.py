@@ -65,9 +65,9 @@ class Model:
         floating_base = tree.is_floating_base()
 
         # generate some useful dict
-        joints: Dict(str, Joint) = {joint.name: joint for joint in joints}
-        links: Dict(str, Link) = {link.name: link for link in links}
-        frames: Dict(str, Link) = {frame.name: frame for frame in frames}
+        joints: Dict[str, Joint] = {joint.name: joint for joint in joints}
+        links: Dict[str, Link] = {link.name: link for link in links}
+        frames: Dict[str, Link] = {frame.name: frame for frame in frames}
 
         return Model(
             name=factory.name,
@@ -90,32 +90,22 @@ class Model:
             Model: the reduced model
         """
 
-        # check if the joints in the list are in the model
-        for joint_str in joints_name_list:
-            if joint_str not in self.joints.keys():
-                raise ValueError(
-                    f"{joint_str} is not in the robot model. Check the joints_name_list"
-                )
-
         tree = self.tree.reduce(joints_name_list)
 
-        joints_list = [
-            node.parent_arc for node in tree.graph.values() if node.name != tree.root
-        ]
-        joints_list.sort(key=lambda joint: joint.idx)
-
         links = {node.name: node.link for node in tree.graph.values()}
-        joints = {joint.name: joint for joint in joints_list}
-        frames = {
-            node.name: node.link
-            for node in tree.graph.values()
-            if node.link.inertial is None
+        joints = {
+            joint.name: joint
+            for joint in self.joints.values()
+            if joint.name in joints_name_list
         }
+        for link in self.links:
+            if link not in tree.graph:
+                self.frames[link] = link
 
         return Model(
             name=self.name,
             links=links,
-            frames=frames,
+            frames=self.frames,
             joints=joints,
             tree=tree,
             NDoF=len(joints_name_list),
