@@ -11,8 +11,20 @@ from adam.core.spatial_math import SpatialMath
 class Pose:
     """Pose class"""
 
-    xyz: List
-    rpy: List
+    xyz: npt.ArrayLike
+    rpy: npt.ArrayLike
+
+
+@dataclasses.dataclass
+class Inertia:
+    """Inertia class"""
+
+    ixx: npt.ArrayLike
+    ixy: npt.ArrayLike
+    ixz: npt.ArrayLike
+    iyy: npt.ArrayLike
+    iyz: npt.ArrayLike
+    izz: npt.ArrayLike
 
 
 @dataclasses.dataclass
@@ -66,8 +78,8 @@ class Inertial:
     """Inertial description"""
 
     mass: npt.ArrayLike
-    inertia = npt.ArrayLike
-    origin = npt.ArrayLike
+    inertia = Inertia
+    origin = Pose
 
 
 @dataclasses.dataclass
@@ -83,11 +95,9 @@ class Link(abc.ABC):
     @abc.abstractmethod
     def spatial_inertia(self) -> npt.ArrayLike:
         """
-        Args:
-            link (Link): Link
-
         Returns:
-            npt.ArrayLike: the 6x6 inertia matrix expressed at the origin of the link (with rotation)
+            npt.ArrayLike: the 6x6 inertia matrix expressed at
+                           the origin of the link (with rotation)
         """
         pass
 
@@ -95,7 +105,7 @@ class Link(abc.ABC):
     def homogeneous(self) -> npt.ArrayLike:
         """
         Returns:
-            npt.ArrayLike: the homogeneus transform of the link
+            npt.ArrayLike: the homogeneous transform of the link
         """
         pass
 
