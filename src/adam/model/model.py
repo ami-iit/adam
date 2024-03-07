@@ -130,18 +130,18 @@ class Model:
         if target == root:
             return []
         chain = []
-        current_node = [
+        current_joint = [
             joint for joint in self.joints.values() if joint.child == target
         ][0]
 
-        chain.insert(0, current_node)
-        while current_node.parent != root:
-            current_node = [
+        chain.insert(0, current_joint)
+        while current_joint.parent != root:
+            current_joint = [
                 joint
                 for joint in self.joints.values()
-                if joint.child == current_node.parent
+                if joint.child == current_joint.parent
             ][0]
-            chain.insert(0, current_node)
+            chain.insert(0, current_joint)
         return chain
 
     def get_total_mass(self) -> float:
