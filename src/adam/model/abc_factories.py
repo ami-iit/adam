@@ -8,6 +8,14 @@ from adam.core.spatial_math import SpatialMath
 
 
 @dataclasses.dataclass
+class Pose:
+    """Pose class"""
+
+    xyz: List
+    rpy: List
+
+
+@dataclasses.dataclass
 class Joint(abc.ABC):
     """Base Joint class. You need to fill at least these fields"""
 
@@ -17,7 +25,7 @@ class Joint(abc.ABC):
     child: str
     type: str
     axis: List
-    origin: List
+    origin: Pose
     limit: List
     idx: int
     """
@@ -71,7 +79,6 @@ class Link(abc.ABC):
     visuals: List
     inertial: Inertial
     collisions: List
-    origin: List
 
     @abc.abstractmethod
     def spatial_inertia(self) -> npt.ArrayLike:
