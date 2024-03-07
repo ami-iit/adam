@@ -149,6 +149,9 @@ def to_idyntree_model(model: Model) -> idyntree.bindings.Model:
         links_map[node.name] = link_index
 
     for i, visuals in enumerate(output_visuals):
+        # To be removed after the change is in iDynTree
+        if not hasattr(output.visualSolidShapes(), "clearSingleLinkSolidShapes"):
+            continue
         output.visualSolidShapes().clearSingleLinkSolidShapes(i)
         for visual in visuals:
             output.visualSolidShapes().addSingleLinkSolidShape(i, visual)
