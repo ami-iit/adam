@@ -17,10 +17,7 @@ def urdf_remove_sensors_tags(xml_string):
     for sensors_tag in root.findall("sensor"):
         root.remove(sensors_tag)
 
-    # Convert the modified XML back to a string
-    modified_xml_string = ET.tostring(root)
-
-    return modified_xml_string
+    return ET.tostring(root)
 
 
 class URDFModelFactory(ModelFactory):
@@ -44,9 +41,8 @@ class URDFModelFactory(ModelFactory):
         # to have a useless and noisy warning, let's remove before hands all the sensor elements,
         # that anyhow are not parser by urdf_parser_py or adam
         # See https://github.com/ami-iit/ADAM/issues/59
-        xml_file = open(path, "r")
-        xml_string = xml_file.read()
-        xml_file.close()
+        with open(path, "r") as xml_file:
+            xml_string = xml_file.read()
         xml_string_without_sensors_tags = urdf_remove_sensors_tags(xml_string)
         self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_string(
             xml_string_without_sensors_tags

@@ -102,39 +102,38 @@ class Tree(Iterable):
         for joint in fixed_joints:
             joint.type = "fixed"
 
-        for f_joint in fixed_joints:
-            merged_node = self.graph[f_joint.parent]
-            merged_neighbors = self.graph[f_joint.child]
+        for fixed_j in fixed_joints:
+            saved_node = self.graph[fixed_j.parent]
+            removing_node = self.graph[fixed_j.child]
 
-            merged_node.children.remove(merged_neighbors)
-            merged_node.children.extend(merged_neighbors.children)
+            saved_node.children.remove(removing_node)
+            saved_node.children.extend(removing_node.children)
             # update the arcs
-            merged_node.arcs.remove(f_joint)
-            merged_node.arcs.extend(merged_neighbors.arcs)
+            saved_node.arcs.remove(fixed_j)
+            saved_node.arcs.extend(removing_node.arcs)
 
-            merged_node.link = merged_node.link.lump(
-                other=merged_neighbors.link, joint=f_joint
+            saved_node.link = saved_node.link.lump(
+                other=removing_node.link, joint=fixed_j
             )
 
-            merged_joint = merged_node.parent_arc
-            removed_joint = merged_neighbors.parent_arc
+            merged_joint = saved_node.parent_arc
+            removed_joint = removing_node.parent_arc
             # update the parent arc of the merged node
-            merged_node.parent_arc = merged_node.parent_arc.lump(removed_joint)
+            # saved_node.parent_arc = saved_node.parent_arc.lump(removed_joint)
 
             # we need to updated the parents and child on the joints in fixed_joints
             for joint in self.get_joint_list():
-                if joint.parent == merged_neighbors.name:
-                    joint.parent = merged_node.name
-                if joint.child == merged_neighbors.name:
-                    joint.child = merged_node.name
+                if joint.parent == removing_node.name:
+                    joint.parent = saved_node.name
+                if joint.child == removing_node.name:
+                    joint.child = saved_node.name
 
-            for child in merged_node.children:
+            for child in saved_node.children:
+                child.parent = saved_node.link
+                child.parent_arc = saved_node.parent_arc
 
-                child.parent = merged_node.link
-                child.parent_arc = merged_node.parent_arc
-
-            self.graph.pop(merged_neighbors.name)
-            self.graph[merged_node.name] = merged_node
+            self.graph.pop(removing_node.name)
+            self.graph[saved_node.name] = saved_node
 
         if {joint.name for joint in self.get_joint_list()} != set(
             considered_joint_names
