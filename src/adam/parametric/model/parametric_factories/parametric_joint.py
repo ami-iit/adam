@@ -45,7 +45,7 @@ class ParametricJoint(Joint):
 
         length = self.parent_parametric.get_principal_length_parametric()
         # Ack for avoiding depending on casadi
-        vo = self.parent_parametric.origin[2]
+        vo = self.parent_parametric.inertial.origin[2]
         xyz_rpy = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         xyz_rpy[0] = self.joint.origin.xyz[0]
         xyz_rpy[1] = self.joint.origin.xyz[1]

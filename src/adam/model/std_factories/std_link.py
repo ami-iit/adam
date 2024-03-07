@@ -14,7 +14,6 @@ class StdLink(Link):
         self.visuals = link.visuals
         self.inertial = link.inertial
         self.collisions = link.collisions
-        self.origin = link.origin
 
         # if the link has inertial properties, but the origin is None, let's add it
         if link.inertial is not None and link.inertial.origin is None:

@@ -62,11 +62,10 @@ class ParametricLink(Link):
         (self.volume, self.visual_data_new) = self.compute_volume()
         self.mass = self.compute_mass()
         self.I = self.compute_inertia_parametric()
-        self.origin = self.modify_origin()
         self.inertial = Inertial(self.mass)
         self.inertial.mass = self.mass
         self.inertial.inertia = self.I
-        self.inertial.origin = self.origin
+        self.inertial.origin = self.modify_origin()
         self.update_visuals()
 
     def get_principal_length(self):
@@ -272,10 +271,10 @@ class ParametricLink(Link):
         I = self.I
         mass = self.mass
         o = self.math.factory.zeros(3)
-        o[0] = self.origin[0]
-        o[1] = self.origin[1]
-        o[2] = self.origin[2]
-        rpy = self.origin[3:]
+        o[0] = self.inertial.origin[0]
+        o[1] = self.inertial.origin[1]
+        o[2] = self.inertial.origin[2]
+        rpy = self.inertial.origin[3:]
         return self.math.spatial_inertial_with_parameters(I, mass, o, rpy)
 
     def homogeneous(self) -> npt.ArrayLike:
@@ -285,10 +284,10 @@ class ParametricLink(Link):
         """
 
         o = self.math.factory.zeros(3)
-        o[0] = self.origin[0]
-        o[1] = self.origin[1]
-        o[2] = self.origin[2]
-        rpy = self.origin[3:]
+        o[0] = self.inertial.origin[0]
+        o[1] = self.inertial.origin[1]
+        o[2] = self.inertial.origin[2]
+        rpy = self.inertial.origin[3:]
         return self.math.H_from_Pos_RPY(
             o,
             rpy,
@@ -297,9 +296,9 @@ class ParametricLink(Link):
     def update_visuals(self):
         if self.geometry_type == Geometry.BOX:
             self.visuals[0].geometry.size = self.visual_data_new
-            self.visuals[0].origin.xyz[2] = self.origin[2]
+            self.visuals[0].origin.xyz[2] = self.inertial.origin[2]
         elif self.geometry_type == Geometry.CYLINDER:
             self.visuals[0].geometry.length = self.visual_data_new[0]
-            self.visuals[0].origin.xyz[2] = self.origin[2]
+            self.visuals[0].origin.xyz[2] = self.inertial.origin[2]
         elif self.geometry_type == Geometry.SPHERE:
             self.visuals[0].geometry.radius = self.visual_data_new
