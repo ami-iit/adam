@@ -98,7 +98,9 @@ def to_idyntree_joint(joint: Joint, parent_index: int, child_index: int) -> idyn
 
     rest_position = idyntree.bindings.Position.FromPython(joint.origin.xyz)  # noqa
     rest_rotation = idyntree.bindings.Rotation.RPY(*joint.origin.rpy)  # noqa
-    rest_transform = idyntree.bindings.Transform(rest_rotation, rest_position)
+    rest_transform = idyntree.bindings.Transform()
+    rest_transform.setRotation(rest_rotation)
+    rest_transform.setPosition(rest_position)
 
     if joint.type == "fixed":
         return idyntree.bindings.FixedJoint(parent_index, child_index, rest_transform)
@@ -134,8 +136,6 @@ def to_idyntree_model(model: Model) -> idyn_model:
         iDynTree.Model: the iDynTree model
     """
 
-    # TODO: handle frames
-
     output = idyn_model()
     output_visuals = []
     links_map = {}
@@ -147,9 +147,6 @@ def to_idyntree_model(model: Model) -> idyn_model:
         assert link_index == len(output_visuals)
         output_visuals.append(visuals)
         links_map[node.name] = link_index
-        for child in node.children:
-            if any([child.name == frame for frame in model.frames]):
-                print("Frame found: ", child)
 
     for i, visuals in enumerate(output_visuals):
         output.visualSolidShapes().clearSingleLinkSolidShapes(i)
@@ -158,9 +155,31 @@ def to_idyntree_model(model: Model) -> idyn_model:
 
     for node in model.tree:
         for j in node.arcs:
+            assert j.name not in model.frames
             joint = to_idyntree_joint(j, links_map[j.parent], links_map[j.child])
             joint_index = output.addJoint(j.name, joint)
             assert output.isValidJointIndex(joint_index)
+
+    frames_list = [f + "_fixed_joint" for f in model.frames] # noqa
+    for name in model.joints:
+        if name in frames_list:
+            joint = model.joints[name] # noqa
+            frame_position = idyntree.bindings.Position.FromPython(
+                joint.origin.xyz  # noqa
+            )
+            frame_transform = idyntree.bindings.Transform()
+            frame_transform.setRotation(
+                idyntree.bindings.Rotation.RPY(*joint.origin.rpy)
+            )
+            frame_transform.setPosition(frame_position)
+            frame_name = joint.name.replace("_fixed_joint", "")
+
+            ok = output.addAdditionalFrameToLink(
+                joint.parent,
+                frame_name,
+                frame_transform,
+            )
+            assert ok
 
     model_reducer = idyntree.bindings.ModelLoader()
     model_reducer.loadReducedModelFromFullModel(output, model.actuated_joints)
