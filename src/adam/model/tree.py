@@ -33,7 +33,7 @@ class Node:
 class Tree(Iterable):
     """The directed tree class"""
 
-    graph: Dict
+    graph: Dict[str, Node]
     root: str
 
     def __post_init__(self):
@@ -98,14 +98,13 @@ class Tree(Iterable):
             for joint in self.get_joint_list()
             if joint.name not in considered_joint_names
         ]
+        # set fixed joints to fixed
+        for joint in fixed_joints:
+            joint.type = "fixed"
 
         for f_joint in fixed_joints:
-
-            parent_node = self.graph[f_joint.parent]
-            child_node = self.graph[f_joint.child]
-
-            merged_node = parent_node
-            merged_neighbors = child_node
+            merged_node = self.graph[f_joint.parent]
+            merged_neighbors = self.graph[f_joint.child]
 
             merged_node.children.remove(merged_neighbors)
             merged_node.children.extend(merged_neighbors.children)
@@ -113,11 +112,20 @@ class Tree(Iterable):
             merged_node.arcs.remove(f_joint)
             merged_node.arcs.extend(merged_neighbors.arcs)
 
+            merged_node.link = merged_node.link.lump(
+                other=merged_neighbors.link, joint=f_joint
+            )
+
+            merged_joint = merged_node.parent_arc
+            removed_joint = merged_neighbors.parent_arc
+            # update the parent arc of the merged node
+            merged_node.parent_arc = merged_node.parent_arc.lump(removed_joint)
+
             # we need to updated the parents and child on the joints in fixed_joints
-            for joint in fixed_joints:
-                if joint.parent == child_node.name:
+            for joint in self.get_joint_list():
+                if joint.parent == merged_neighbors.name:
                     joint.parent = merged_node.name
-                if joint.child == child_node.name:
+                if joint.child == merged_neighbors.name:
                     joint.child = merged_node.name
 
             for child in merged_node.children:
