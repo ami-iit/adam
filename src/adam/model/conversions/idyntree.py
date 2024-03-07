@@ -139,6 +139,7 @@ def to_idyntree_model(model: Model) -> idyn_model:
     output = idyn_model()
     output_visuals = []
     links_map = {}
+
     for node in model.tree:
         link, visuals = to_idyntree_link(node.link)
         link_index = output.addLink(node.name, link)
@@ -146,8 +147,14 @@ def to_idyntree_model(model: Model) -> idyn_model:
         assert link_index == len(output_visuals)
         output_visuals.append(visuals)
         links_map[node.name] = link_index
+        for child in node.children:
+            if any([child.name == frame for frame in model.frames]):
+                print("Frame found: ", child)
 
-    # TODO: handle visuals
+    for i, visuals in enumerate(output_visuals):
+        output.visualSolidShapes().clearSingleLinkSolidShapes(i)
+        for visual in visuals:
+            output.visualSolidShapes().addSingleLinkSolidShape(i, visual)
 
     for node in model.tree:
         for j in node.arcs:
