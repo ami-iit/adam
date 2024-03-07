@@ -1,10 +1,4 @@
-import copy
 import idyntree.bindings
-from idyntree.bindings import IJoint as idyn_joint
-from idyntree.bindings import Link as idyn_link
-from idyntree.bindings import Model as idyn_model
-from idyntree.bindings import SolidShape as idyn_solid_shape
-from idyntree.bindings import RotationalInertia as idyn_rotational_inertia
 import numpy as np
 import urdf_parser_py.urdf
 from typing import List
@@ -14,7 +8,9 @@ from adam.model.model import Model
 from adam.model.abc_factories import Link, Joint
 
 
-def to_idyntree_solid_shape(visuals: urdf_parser_py.urdf.Visual) -> idyn_solid_shape:
+def to_idyntree_solid_shape(
+    visuals: urdf_parser_py.urdf.Visual,
+) -> idyntree.bindings.SolidShape:
     """
     Args:
         visuals (urdf_parser_py.urdf.Visual): the visual to convert
@@ -49,7 +45,9 @@ def to_idyntree_solid_shape(visuals: urdf_parser_py.urdf.Visual) -> idyn_solid_s
     )
 
 
-def to_idyntree_link(link: Link) -> [idyn_link, List[idyn_solid_shape]]:
+def to_idyntree_link(
+    link: Link,
+) -> [idyntree.bindings.Link, List[idyntree.bindings.SolidShape]]:
     """
     Args:
         link (Link): the link to convert
@@ -57,7 +55,7 @@ def to_idyntree_link(link: Link) -> [idyn_link, List[idyn_solid_shape]]:
     Returns:
         A tuple containing the iDynTree link and the iDynTree solid shapes
     """
-    output = idyn_link()
+    output = idyntree.bindings.Link()
     input_inertia = link.inertial.inertia
     inertia_matrix = np.array(
         [
@@ -67,7 +65,7 @@ def to_idyntree_link(link: Link) -> [idyn_link, List[idyn_solid_shape]]:
         ]
     )
     inertia_rotation = idyntree.bindings.Rotation.RPY(*link.inertial.origin.rpy)
-    idyn_spatial_rotational_inertia = idyn_rotational_inertia()
+    idyn_spatial_rotational_inertia = idyntree.bindings.RotationalInertia()
     for i in range(3):
         for j in range(3):
             idyn_spatial_rotational_inertia.setVal(i, j, inertia_matrix[i, j])
@@ -84,7 +82,9 @@ def to_idyntree_link(link: Link) -> [idyn_link, List[idyn_solid_shape]]:
     return output, [to_idyntree_solid_shape(v) for v in link.visuals]
 
 
-def to_idyntree_joint(joint: Joint, parent_index: int, child_index: int) -> idyn_joint:
+def to_idyntree_joint(
+    joint: Joint, parent_index: int, child_index: int
+) -> idyntree.bindings.IJoint:
     """
     Args:
         joint (Joint): the joint to convert
@@ -127,7 +127,7 @@ def to_idyntree_joint(joint: Joint, parent_index: int, child_index: int) -> idyn
     NotImplementedError(f"The joint type {joint.type} is not supported")
 
 
-def to_idyntree_model(model: Model) -> idyn_model:
+def to_idyntree_model(model: Model) -> idyntree.bindings.Model:
     """
     Args:
         model (Model): the model to convert
@@ -136,7 +136,7 @@ def to_idyntree_model(model: Model) -> idyn_model:
         iDynTree.Model: the iDynTree model
     """
 
-    output = idyn_model()
+    output = idyntree.bindings.Model()
     output_visuals = []
     links_map = {}
 
@@ -160,10 +160,10 @@ def to_idyntree_model(model: Model) -> idyn_model:
             joint_index = output.addJoint(j.name, joint)
             assert output.isValidJointIndex(joint_index)
 
-    frames_list = [f + "_fixed_joint" for f in model.frames] # noqa
+    frames_list = [f + "_fixed_joint" for f in model.frames]  # noqa
     for name in model.joints:
         if name in frames_list:
-            joint = model.joints[name] # noqa
+            joint = model.joints[name]  # noqa
             frame_position = idyntree.bindings.Position.FromPython(
                 joint.origin.xyz  # noqa
             )
