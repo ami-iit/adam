@@ -11,8 +11,8 @@ from adam.core.spatial_math import SpatialMath
 class Pose:
     """Pose class"""
 
-    xyz: npt.ArrayLike
-    rpy: npt.ArrayLike
+    xyz: List
+    rpy: List
 
 
 @dataclasses.dataclass
