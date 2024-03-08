@@ -7,21 +7,7 @@ from adam.core.spatial_math import SpatialMath
 from adam.model import Link
 
 import math
-from adam.model.abc_factories import Inertial
-
-
-class I_parametric:
-    """Inertia values parametric"""
-
-    def __init__(self) -> None:
-        self.ixx = 0.0
-        self.ixy = 0.0
-        self.ixz = 0.0
-        self.iyx = 0.0
-        self.iyy = 0.0
-        self.iyz = 0.0
-        self.izz = 0.0
-        self.ixz = 0.0
+from adam.model.abc_factories import Inertia, Inertial
 
 
 class Geometry(Enum):
@@ -61,10 +47,9 @@ class ParametricLink(Link):
         self.link_offset = self.compute_offset()
         (self.volume, self.visual_data_new) = self.compute_volume()
         self.mass = self.compute_mass()
-        self.I = self.compute_inertia_parametric()
         self.inertial = Inertial(self.mass)
         self.inertial.mass = self.mass
-        self.inertial.inertia = self.I
+        self.inertial.inertia = self.compute_inertia_parametric()
         self.inertial.origin = self.modify_origin()
         self.update_visuals()
 
@@ -144,12 +129,12 @@ class ParametricLink(Link):
         Returns:
             (Geometry, urdf geometry): the geometry of the link and the related urdf object
         """
-        if type(visual_obj.geometry) is urdf_parser_py.urdf.Box:
-            return (Geometry.BOX, visual_obj.geometry)
-        if type(visual_obj.geometry) is urdf_parser_py.urdf.Cylinder:
-            return (Geometry.CYLINDER, visual_obj.geometry)
-        if type(visual_obj.geometry) is urdf_parser_py.urdf.Sphere:
-            return (Geometry.SPHERE, visual_obj.geometry)
+        if isinstance(visual_obj.geometry, urdf_parser_py.urdf.Box):
+            return Geometry.BOX, visual_obj.geometry
+        if isinstance(visual_obj.geometry, urdf_parser_py.urdf.Cylinder):
+            return Geometry.CYLINDER, visual_obj.geometry
+        if isinstance(visual_obj.geometry, urdf_parser_py.urdf.Sphere):
+            return Geometry.SPHERE, visual_obj.geometry
 
     def compute_volume(self):
         """
@@ -157,15 +142,14 @@ class ParametricLink(Link):
             (npt.ArrayLike, npt.ArrayLike): the volume and the dimension parametric
         """
         volume = 0.0
+        visual_data_new = [0.0, 0.0, 0.0]
         """Modifies a link's volume by a given multiplier, in a manner that is logical with the link's geometry"""
         if self.geometry_type == Geometry.BOX:
-            visual_data_new = [0.0, 0.0, 0.0]
             visual_data_new[0] = self.visual_data.size[0]  # * self.length_multiplier[0]
             visual_data_new[1] = self.visual_data.size[1]  # * self.length_multiplier[1]
             visual_data_new[2] = self.visual_data.size[2] * self.length_multiplier
             volume = visual_data_new[0] * visual_data_new[1] * visual_data_new[2]
         elif self.geometry_type == Geometry.CYLINDER:
-            visual_data_new = [0.0, 0.0]
             visual_data_new[0] = self.visual_data.length * self.length_multiplier
             visual_data_new[1] = self.visual_data.radius  # * self.length_multiplier[1]
             volume = math.pi * visual_data_new[1] ** 2 * visual_data_new[0]
@@ -190,27 +174,18 @@ class ParametricLink(Link):
         Returns:
             (npt.ArrayLike): the link origin parametrized
         """
-        origin = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        xyz_rpy = [*self.original_visual.origin.xyz, *self.original_visual.origin.rpy]
-        v_o = xyz_rpy[2]
+        origin = self.original_visual.origin
+        if self.geometry_type == Geometry.SPHERE:
+            "in case of a sphere the origin of the link does not change"
+            return origin
+
+        v_o = self.original_visual.origin.xyz[2]
         length = self.get_principal_length_parametric()
         if v_o < 0:
-            origin[2] = self.link_offset - length / 2
-            origin[0] = xyz_rpy[0]
-            origin[1] = xyz_rpy[1]
-            origin[3] = xyz_rpy[3]
-            origin[4] = xyz_rpy[4]
-            origin[5] = xyz_rpy[5]
+            origin.xyz[2] = self.link_offset - length / 2
         else:
-            origin[2] = length / 2 + self.link_offset
-            origin[0] = xyz_rpy[0]
-            origin[1] = xyz_rpy[1]
-            origin[3] = xyz_rpy[3]
-            origin[4] = xyz_rpy[4]
-            origin[5] = xyz_rpy[5]
-        if self.geometry_type == Geometry.SPHERE:
-            "in case of a sphere the origin of the framjoint_name_list[0]:link_parametric.JointCharacteristics(0.0295),e does not change"
-            origin = xyz_rpy
+            origin.xyz[2] = length / 2 + self.link_offset
+
         return origin
 
     def compute_inertia_parametric(self):
@@ -219,7 +194,7 @@ class ParametricLink(Link):
             Inertia Parametric: inertia (ixx, iyy and izz) with the formula that corresponds to the geometry
         Formulas retrieved from https://en.wikipedia.org/wiki/List_of_moments_of_inertia
         """
-        I = I_parametric()
+        I = Inertia(ixx=0.0, iyy=0.0, izz=0.0, ixy=0.0, ixz=0.0, iyz=0.0)
         xyz_rpy = [*self.original_visual.origin.xyz, *self.original_visual.origin.rpy]
         if self.geometry_type == Geometry.BOX:
             I.ixx = (
@@ -262,19 +237,17 @@ class ParametricLink(Link):
 
     def spatial_inertia(self) -> npt.ArrayLike:
         """
-        Args:
-            link (Link): Link
-
         Returns:
-            npt.ArrayLike: the 6x6 inertia matrix expressed at the origin of the link (with rotation)
+            npt.ArrayLike: the 6x6 inertia matrix expressed at the
+                           origin of the link (with rotation)
         """
-        I = self.I
+        I = self.inertial.inertia
         mass = self.mass
-        o = self.math.factory.zeros(3)
-        o[0] = self.inertial.origin[0]
-        o[1] = self.inertial.origin[1]
-        o[2] = self.inertial.origin[2]
-        rpy = self.inertial.origin[3:]
+        o = self.math.factory.zeros(3)  # To specify that the components are not floats
+        o[0] = self.inertial.origin.xyz[0]
+        o[1] = self.inertial.origin.xyz[1]
+        o[2] = self.inertial.origin.xyz[2]
+        rpy = self.inertial.origin.rpy
         return self.math.spatial_inertial_with_parameters(I, mass, o, rpy)
 
     def homogeneous(self) -> npt.ArrayLike:
@@ -283,11 +256,11 @@ class ParametricLink(Link):
             npt.ArrayLike: the homogeneous transform of the link
         """
 
-        o = self.math.factory.zeros(3)
-        o[0] = self.inertial.origin[0]
-        o[1] = self.inertial.origin[1]
-        o[2] = self.inertial.origin[2]
-        rpy = self.inertial.origin[3:]
+        o = self.math.factory.zeros(3)  # To specify that the components are not floats
+        o[0] = self.inertial.origin.xyz[0]
+        o[1] = self.inertial.origin.xyz[1]
+        o[2] = self.inertial.origin.xyz[2]
+        rpy = self.inertial.origin.rpy
         return self.math.H_from_Pos_RPY(
             o,
             rpy,
@@ -296,9 +269,9 @@ class ParametricLink(Link):
     def update_visuals(self):
         if self.geometry_type == Geometry.BOX:
             self.visuals[0].geometry.size = self.visual_data_new
-            self.visuals[0].origin.xyz[2] = self.inertial.origin[2]
+            self.visuals[0].origin.xyz[2] = self.inertial.origin.xyz[2]
         elif self.geometry_type == Geometry.CYLINDER:
             self.visuals[0].geometry.length = self.visual_data_new[0]
-            self.visuals[0].origin.xyz[2] = self.inertial.origin[2]
+            self.visuals[0].origin.xyz[2] = self.inertial.origin.xyz[2]
         elif self.geometry_type == Geometry.SPHERE:
             self.visuals[0].geometry.radius = self.visual_data_new
