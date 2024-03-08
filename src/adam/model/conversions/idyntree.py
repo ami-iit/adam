@@ -18,8 +18,8 @@ def to_idyntree_solid_shape(
     Returns:
         iDynTree.SolidShape: the iDynTree solid shape
     """
-    visual_position = idyntree.bindings.Position.FromPython(visual.origin.xyz)  # noqa
-    visual_rotation = idyntree.bindings.Rotation.RPY(*visual.origin.rpy)  # noqa
+    visual_position = idyntree.bindings.Position.FromPython(visual.origin.xyz)
+    visual_rotation = idyntree.bindings.Rotation.RPY(*visual.origin.rpy)
     visual_transform = idyntree.bindings.Transform()
     visual_transform.setRotation(visual_rotation)
     visual_transform.setPosition(visual_position)
@@ -110,8 +110,8 @@ def to_idyntree_joint(
         iDynTree.bindings.IJoint: the iDynTree joint
     """
 
-    rest_position = idyntree.bindings.Position.FromPython(joint.origin.xyz)  # noqa
-    rest_rotation = idyntree.bindings.Rotation.RPY(*joint.origin.rpy)  # noqa
+    rest_position = idyntree.bindings.Position.FromPython(joint.origin.xyz)
+    rest_rotation = idyntree.bindings.Rotation.RPY(*joint.origin.rpy)
     rest_transform = idyntree.bindings.Transform()
     rest_transform.setRotation(rest_rotation)
     rest_transform.setPosition(rest_position)
@@ -131,9 +131,7 @@ def to_idyntree_joint(
         output.setRestTransform(rest_transform)
         output.setAxis(axis, child_index, parent_index)
         if joint.limit is not None and joint.type == "revolute":
-            min = joint.limit.lower
-            max = joint.limit.upper
-            output.setPosLimits(0, min, max)
+            output.setPosLimits(0, joint.limit.lower, joint.limit.upper)
         return output
     if joint.type in ["prismatic"]:
         output = idyntree.bindings.PrismaticJoint()
@@ -141,9 +139,7 @@ def to_idyntree_joint(
         output.setRestTransform(rest_transform)
         output.setAxis(axis, child_index, parent_index)
         if joint.limit is not None:
-            min = joint.limit.lower
-            max = joint.limit.upper
-            output.setPosLimits(0, min, max)
+            output.setPosLimits(0, joint.limit.lower, joint.limit.upper)
         return output
 
     NotImplementedError(f"The joint type {joint.type} is not supported")
@@ -182,13 +178,11 @@ def to_idyntree_model(model: Model) -> idyntree.bindings.Model:
             joint_index = output.addJoint(j.name, joint)
             assert output.isValidJointIndex(joint_index)
 
-    frames_list = [f + "_fixed_joint" for f in model.frames]  # noqa
+    frames_list = [f + "_fixed_joint" for f in model.frames]
     for name in model.joints:
         if name in frames_list:
-            joint = model.joints[name]  # noqa
-            frame_position = idyntree.bindings.Position.FromPython(
-                joint.origin.xyz  # noqa
-            )
+            joint = model.joints[name]
+            frame_position = idyntree.bindings.Position.FromPython(joint.origin.xyz)
             frame_transform = idyntree.bindings.Transform()
             frame_transform.setRotation(
                 idyntree.bindings.Rotation.RPY(*joint.origin.rpy)

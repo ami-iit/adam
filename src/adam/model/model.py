@@ -1,5 +1,4 @@
 import dataclasses
-import pathlib
 from typing import Dict, List
 
 from adam.model.abc_factories import Joint, Link, ModelFactory
@@ -12,9 +11,9 @@ class Model:
     Model class. It describes the robot using links and frames and their connectivity"""
 
     name: str
-    links: List[Link]
-    frames: List[Link]
-    joints: List[Joint]
+    links: Dict[str, Link]
+    frames: Dict[str, Link]
+    joints: Dict[str, Joint]
     tree: Tree
     NDoF: int
     actuated_joints: List[str]
@@ -35,36 +34,38 @@ class Model:
             Model: the model describing the robot
         """
 
-        joints = factory.get_joints()
-        links = factory.get_links()
-        frames = factory.get_frames()
+        joints_list = factory.get_joints()
+        links_list = factory.get_links()
+        frames_list = factory.get_frames()
 
         # if the joints_name_list is None, set it to the list of all the joints that are not fixed
         if joints_name_list is None:
-            joints_name_list = [joint.name for joint in joints if joint.type != "fixed"]
+            joints_name_list = [
+                joint.name for joint in joints_list if joint.type != "fixed"
+            ]
             print(
                 f"joints_name_list is None. Setting it to the list of all the joints that are not fixed: {joints_name_list}"
             )
 
         # check if the joints in the list are in the model
         for joint_str in joints_name_list:
-            if joint_str not in [joint.name for joint in joints]:
+            if joint_str not in [joint.name for joint in joints_list]:
                 raise ValueError(
                     f"{joint_str} is not in the robot model. Check the joints_name_list"
                 )
 
         # set idx to the actuated joints
         for [idx, joint_str] in enumerate(joints_name_list):
-            for joint in joints:
+            for joint in joints_list:
                 if joint.name == joint_str:
                     joint.idx = idx
 
-        tree = Tree.build_tree(links=links, joints=joints)
+        tree = Tree.build_tree(links=links_list, joints=joints_list)
 
         # generate some useful dict
-        joints: Dict(str, Joint) = {joint.name: joint for joint in joints}
-        links: Dict(str, Link) = {link.name: link for link in links}
-        frames: Dict(str, Link) = {frame.name: frame for frame in frames}
+        joints: Dict[str, Joint] = {joint.name: joint for joint in joints_list}
+        links: Dict[str, Link] = {link.name: link for link in links_list}
+        frames: Dict[str, Link] = {frame.name: frame for frame in frames_list}
 
         return Model(
             name=factory.name,

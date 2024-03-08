@@ -28,6 +28,16 @@ class Inertia:
 
 
 @dataclasses.dataclass
+class Limits:
+    """Limits class"""
+
+    lower: npt.ArrayLike
+    upper: npt.ArrayLike
+    effort: npt.ArrayLike
+    velocity: npt.ArrayLike
+
+
+@dataclasses.dataclass
 class Joint(abc.ABC):
     """Base Joint class. You need to fill at least these fields"""
 
@@ -38,7 +48,7 @@ class Joint(abc.ABC):
     type: str
     axis: List
     origin: Pose
-    limit: List
+    limit: Limits
     idx: int
     """
     Abstract base class for all joints.
