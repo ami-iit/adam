@@ -124,7 +124,7 @@ class Model:
             List[Joint]: the list of the joints
         """
 
-        if target not in list(self.links) and target not in list(self.tree.graph):
+        if target not in list(self.frames) and target not in list(self.tree.graph):
             raise ValueError(f"{target} is not not in the robot model.")
 
         if target == root:
