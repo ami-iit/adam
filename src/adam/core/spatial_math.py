@@ -417,7 +417,7 @@ class SpatialMath:
         R_temp = self.R_from_RPY(rpy)
         inertia_matrix = self.vertcat(
             self.horzcat(I.ixx, I.ixy, I.ixz),
-            self.horzcat(I.iyx, I.iyy, I.iyz),
+            self.horzcat(I.ixy, I.iyy, I.iyz),
             self.horzcat(I.ixz, I.iyz, I.izz),
         )
 
