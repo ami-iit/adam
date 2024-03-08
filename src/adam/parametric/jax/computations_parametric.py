@@ -2,6 +2,8 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
+from typing import List
+
 import jax.numpy as jnp
 import numpy as np
 from jax import grad, jit, vmap
@@ -10,7 +12,7 @@ from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.core.constants import Representations
 from adam.jax.jax_like import SpatialMath
 from adam.model import Model
-from adam.parametric.model import URDFParametricModelFactory
+from adam.parametric.model import URDFParametricModelFactory, ParametricLink
 
 
 class KinDynComputationsParametric:
@@ -446,3 +448,17 @@ class KinDynComputationsParametric:
         self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = self.rbdalgos.NDoF
         return self.rbdalgos.get_total_mass()
+
+    def get_original_densities(self) -> List[float]:
+        """Returns the original densities of the links
+
+        Returns:
+            densities: The original densities
+        """
+        densities = []
+        model = self.rbdalgos.model
+        for name in self.links_name_list:
+            link = model.links[name]
+            assert isinstance(link, ParametricLink)
+            densities.append(link.original_density)
+        return densities

@@ -43,8 +43,12 @@ class ParametricLink(Link):
         self.original_visual = copy.deepcopy(link.visual)
         self.visuals = [copy.deepcopy(link.visual)]
         self.geometry_type, self.visual_data = self.get_geometry(self.original_visual)
+        original_volume, _ = self.compute_volume(length_multiplier=1.0)
+        self.original_density = link.inertial.mass / original_volume
         self.link_offset = self.compute_offset()
-        (self.volume, self.visual_data_new) = self.compute_volume()
+        (self.volume, self.visual_data_new) = self.compute_volume(
+            length_multiplier=self.length_multiplier
+        )
         self.mass = self.compute_mass()
         self.inertial = Inertial(self.mass)
         self.inertial.mass = self.mass
@@ -139,7 +143,7 @@ class ParametricLink(Link):
             f"The visual type {visual_obj.geometry.__class__} is not supported"
         )
 
-    def compute_volume(self):
+    def compute_volume(self, length_multiplier):
         """
         Returns:
             (npt.ArrayLike, npt.ArrayLike): the volume and the dimension parametric
@@ -150,21 +154,20 @@ class ParametricLink(Link):
         if self.geometry_type == Geometry.BOX:
             visual_data_new[0] = self.visual_data.size[0]  # * self.length_multiplier[0]
             visual_data_new[1] = self.visual_data.size[1]  # * self.length_multiplier[1]
-            visual_data_new[2] = self.visual_data.size[2] * self.length_multiplier
+            visual_data_new[2] = self.visual_data.size[2] * length_multiplier
             volume = visual_data_new[0] * visual_data_new[1] * visual_data_new[2]
         elif self.geometry_type == Geometry.CYLINDER:
-            visual_data_new[0] = self.visual_data.length * self.length_multiplier
+            visual_data_new[0] = self.visual_data.length * length_multiplier
             visual_data_new[1] = self.visual_data.radius  # * self.length_multiplier[1]
             volume = math.pi * visual_data_new[1] ** 2 * visual_data_new[0]
         elif self.geometry_type == Geometry.SPHERE:
-            visual_data_new = self.visual_data.radius * self.length_multiplier
+            visual_data_new = self.visual_data.radius * length_multiplier
             volume = 4 * math.pi * visual_data_new**3 / 3
         return volume, visual_data_new
 
-    """Function that computes the mass starting from the densities, the length multiplier and the link"""
-
     def compute_mass(self):
         """
+        Function that computes the mass starting from the densities, and the link volume
         Returns:
             (npt.ArrayLike): the link mass
         """

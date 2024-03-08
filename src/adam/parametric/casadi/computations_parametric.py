@@ -1,6 +1,7 @@
 # Copyright (C) 2021 Istituto Italiano di Tecnologia (IIT). All rights reserved.
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
+from typing import List
 
 import casadi as cs
 import numpy as np
@@ -9,7 +10,7 @@ from adam.casadi.casadi_like import SpatialMath
 from adam.core import RBDAlgorithms
 from adam.core.constants import Representations
 from adam.model import Model
-from adam.parametric.model import URDFParametricModelFactory
+from adam.parametric.model import URDFParametricModelFactory, ParametricLink
 
 
 class KinDynComputationsParametric:
@@ -37,6 +38,7 @@ class KinDynComputationsParametric:
         n_param_links = len(links_name_list)
         self.densities = cs.SX.sym("densities", n_param_links)
         self.length_multiplier = cs.SX.sym("length_multiplier", n_param_links)
+        self.links_name_list = links_name_list
         factory = URDFParametricModelFactory(
             path=urdfstring,
             math=math,
@@ -258,3 +260,17 @@ class KinDynComputationsParametric:
         return cs.Function(
             "m", [self.length_multiplier, self.densities], [m], self.f_opts
         )
+
+    def get_original_densities(self) -> List[float]:
+        """Returns the original densities of the links
+
+        Returns:
+            densities: The original densities
+        """
+        densities = []
+        model = self.rbdalgos.model
+        for name in self.links_name_list:
+            link = model.links[name]
+            assert isinstance(link, ParametricLink)
+            densities.append(link.original_density)
+        return densities

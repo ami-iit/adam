@@ -3,11 +3,12 @@
 # GNU Lesser General Public License v2.1 or any later version.
 
 import numpy as np
+from typing import List
 
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.core.constants import Representations
 from adam.model import Model
-from adam.parametric.model import URDFParametricModelFactory
+from adam.parametric.model import URDFParametricModelFactory, ParametricLink
 from adam.numpy.numpy_like import SpatialMath
 
 
@@ -441,3 +442,17 @@ class KinDynComputationsParametric:
         self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = model.NDoF
         return self.rbdalgos.get_total_mass()
+
+    def get_original_densities(self) -> List[float]:
+        """Returns the original densities of the links
+
+        Returns:
+            densities: The original densities
+        """
+        densities = []
+        model = self.rbdalgos.model
+        for name in self.links_name_list:
+            link = model.links[name]
+            assert isinstance(link, ParametricLink)
+            densities.append(link.original_density)
+        return densities
