@@ -136,6 +136,10 @@ class ParametricLink(Link):
         if isinstance(visual_obj.geometry, urdf_parser_py.urdf.Sphere):
             return Geometry.SPHERE, visual_obj.geometry
 
+        raise NotImplementedError(
+            f"The visual type {visual_obj.geometry.__class__} is not supported"
+        )
+
     def compute_volume(self):
         """
         Returns:
@@ -165,7 +169,6 @@ class ParametricLink(Link):
         Returns:
             (npt.ArrayLike): the link mass
         """
-        mass = 0.0
         mass = self.volume * self.densities
         return mass
 
