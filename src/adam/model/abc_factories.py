@@ -92,6 +92,19 @@ class Link(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def lump(self, other: "Link", relative_transform: npt.ArrayLike) -> "Link":
+        """lump two links together
+
+        Args:
+            other (Link): the other link
+            relative_transform (npt.ArrayLike): the transform between the two links
+
+        Returns:
+            Link: the lumped link
+        """
+        pass
+
 
 @dataclasses.dataclass
 class ModelFactory(abc.ABC):
