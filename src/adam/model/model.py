@@ -120,14 +120,6 @@ class Model:
             mass += link.inertial.mass
         return mass
 
-    def get_ordered_link_list(self):
-        """get the ordered list of the link, based on the direction of the graph
-
-        Returns:
-            list: ordered link list
-        """
-        return self.tree.get_ordered_nodes_list()
-
     def print_table(self):
         """print the table that describes the connectivity between the elements.
         You need rich to use it
