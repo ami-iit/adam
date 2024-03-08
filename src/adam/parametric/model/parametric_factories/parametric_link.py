@@ -43,7 +43,6 @@ class ParametricLink(Link):
         self.original_visual = copy.deepcopy(link.visual)
         self.visuals = [copy.deepcopy(link.visual)]
         self.geometry_type, self.visual_data = self.get_geometry(self.original_visual)
-        self.link = link
         self.link_offset = self.compute_offset()
         (self.volume, self.visual_data_new) = self.compute_volume()
         self.mass = self.compute_mass()

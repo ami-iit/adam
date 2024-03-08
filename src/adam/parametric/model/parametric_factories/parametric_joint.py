@@ -20,7 +20,7 @@ class ParametricJoint(Joint):
     ) -> None:
         self.math = math
         self.name = joint.name
-        self.parent = parent_link.link.name
+        self.parent = parent_link.name
         self.parent_parametric = parent_link
         self.child = joint.child
         self.type = joint.joint_type
