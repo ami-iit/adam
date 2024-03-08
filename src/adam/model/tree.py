@@ -112,12 +112,12 @@ class Tree(Iterable):
             saved_node.arcs.remove(fixed_j)
             saved_node.arcs.extend(removing_node.arcs)
 
-            saved_node.link = saved_node.link.lump(
-                other=removing_node.link, joint=fixed_j
-            )
+            # saved_node.link = saved_node.link.lump(
+            #     other=removing_node.link, joint=fixed_j
+            # )
 
-            merged_joint = saved_node.parent_arc
-            removed_joint = removing_node.parent_arc
+            # merged_joint = saved_node.parent_arc
+            # removed_joint = removing_node.parent_arc
             # update the parent arc of the merged node
             # saved_node.parent_arc = saved_node.parent_arc.lump(removed_joint)
 
