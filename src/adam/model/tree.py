@@ -12,8 +12,8 @@ class Node:
     link: Link
     arcs: List[Joint]
     children: List["Node"]
-    parent: Link | None = None
-    parent_arc: Joint | None = None
+    parent: Union[Link, None] = None
+    parent_arc: Union[Joint, None] = None
 
     def __hash__(self) -> int:
         return hash(self.name)
