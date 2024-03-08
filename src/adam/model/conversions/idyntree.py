@@ -9,39 +9,55 @@ from adam.model.abc_factories import Link, Joint
 
 
 def to_idyntree_solid_shape(
-    visuals: urdf_parser_py.urdf.Visual,
+    visual: urdf_parser_py.urdf.Visual,
 ) -> idyntree.bindings.SolidShape:
     """
     Args:
-        visuals (urdf_parser_py.urdf.Visual): the visual to convert
+        visual (urdf_parser_py.urdf.Visual): the visual to convert
 
     Returns:
         iDynTree.SolidShape: the iDynTree solid shape
     """
-    if isinstance(visuals.geometry, urdf_parser_py.urdf.Box):
+    visual_position = idyntree.bindings.Position.FromPython(visual.origin.xyz)  # noqa
+    visual_rotation = idyntree.bindings.Rotation.RPY(*visual.origin.rpy)  # noqa
+    visual_transform = idyntree.bindings.Transform()
+    visual_transform.setRotation(visual_rotation)
+    visual_transform.setPosition(visual_position)
+    material = idyntree.bindings.Material(visual.material.name)
+    if visual.material.color is not None:
+        color = idyntree.bindings.Vector4()
+        color[0] = visual.material.color.rgba[0]
+        color[1] = visual.material.color.rgba[1]
+        color[2] = visual.material.color.rgba[2]
+        color[3] = visual.material.color.rgba[3]
+        material.setColor(color)
+    if isinstance(visual.geometry, urdf_parser_py.urdf.Box):
         output = idyntree.bindings.Box()
-        output.setX(visuals.geometry.size[0])
-        output.setY(visuals.geometry.size[1])
-        output.setZ(visuals.geometry.size[2])
+        output.setX(visual.geometry.size[0])
+        output.setY(visual.geometry.size[1])
+        output.setZ(visual.geometry.size[2])
+        output.setLink_H_geometry(visual_transform)
         return output
-    if isinstance(visuals.geometry, urdf_parser_py.urdf.Cylinder):
+    if isinstance(visual.geometry, urdf_parser_py.urdf.Cylinder):
         output = idyntree.bindings.Cylinder()
-        output.setRadius(visuals.geometry.radius)
-        output.setLength(visuals.geometry.length)
+        output.setRadius(visual.geometry.radius)
+        output.setLength(visual.geometry.length)
+        output.setLink_H_geometry(visual_transform)
         return output
-
-    if isinstance(visuals.geometry, urdf_parser_py.urdf.Sphere):
+    if isinstance(visual.geometry, urdf_parser_py.urdf.Sphere):
         output = idyntree.bindings.Sphere()
-        output.setRadius(visuals.geometry.radius)
+        output.setRadius(visual.geometry.radius)
+        output.setLink_H_geometry(visual_transform)
         return output
-    if isinstance(visuals.geometry, urdf_parser_py.urdf.Mesh):
+    if isinstance(visual.geometry, urdf_parser_py.urdf.Mesh):
         output = idyntree.bindings.ExternalMesh()
-        output.setFilename(visuals.geometry.filename)
-        output.setScale(visuals.geometry.scale)
+        output.setFilename(visual.geometry.filename)
+        output.setScale(visual.geometry.scale)
+        output.setLink_H_geometry(visual_transform)
         return output
 
     raise NotImplementedError(
-        f"The visual type {visuals.geometry.__class__} is not supported"
+        f"The visual type {visual.geometry.__class__} is not supported"
     )
 
 
@@ -94,8 +110,6 @@ def to_idyntree_joint(
         iDynTree.bindings.IJoint: the iDynTree joint
     """
 
-    # TODO: consider limits
-
     rest_position = idyntree.bindings.Position.FromPython(joint.origin.xyz)  # noqa
     rest_rotation = idyntree.bindings.Rotation.RPY(*joint.origin.rpy)  # noqa
     rest_transform = idyntree.bindings.Transform()
@@ -116,12 +130,20 @@ def to_idyntree_joint(
         output.setAttachedLinks(parent_index, child_index)
         output.setRestTransform(rest_transform)
         output.setAxis(axis, child_index, parent_index)
+        if joint.limit is not None and joint.type == "revolute":
+            min = joint.limit.lower
+            max = joint.limit.upper
+            output.setPosLimits(0, min, max)
         return output
     if joint.type in ["prismatic"]:
         output = idyntree.bindings.PrismaticJoint()
         output.setAttachedLinks(parent_index, child_index)
         output.setRestTransform(rest_transform)
         output.setAxis(axis, child_index, parent_index)
+        if joint.limit is not None:
+            min = joint.limit.lower
+            max = joint.limit.upper
+            output.setPosLimits(0, min, max)
         return output
 
     NotImplementedError(f"The joint type {joint.type} is not supported")
