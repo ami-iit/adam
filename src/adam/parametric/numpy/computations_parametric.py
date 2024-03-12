@@ -444,10 +444,10 @@ class KinDynComputationsParametric:
         return self.rbdalgos.get_total_mass()
 
     def get_original_densities(self) -> List[float]:
-        """Returns the original densities of the links
+        """Returns the original densities of the parametric links
 
         Returns:
-            densities: The original densities
+            densities: The original densities of the parametric links
         """
         densities = []
         model = self.rbdalgos.model
