@@ -8,7 +8,7 @@ from adam.model import Joint
 from adam.parametric.model.parametric_factories.parametric_link import ParametricLink
 
 
-class ParmetricJoint(Joint):
+class ParametricJoint(Joint):
     """Parametric Joint class"""
 
     def __init__(
@@ -20,7 +20,7 @@ class ParmetricJoint(Joint):
     ) -> None:
         self.math = math
         self.name = joint.name
-        self.parent = parent_link.link.name
+        self.parent = parent_link.name
         self.parent_parametric = parent_link
         self.child = joint.child
         self.type = joint.joint_type
@@ -43,22 +43,16 @@ class ParmetricJoint(Joint):
             npt.ArrayLike: the origin of the joint, parametric with respect to the parent link dimensions
         """
 
-        length = self.parent_parametric.get_principal_lenght_parametric()
+        length = self.parent_parametric.get_principal_length_parametric()
         # Ack for avoiding depending on casadi
-        vo = self.parent_parametric.origin[2]
-        xyz_rpy = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        xyz_rpy[0] = self.joint.origin.xyz[0]
-        xyz_rpy[1] = self.joint.origin.xyz[1]
-        xyz_rpy[2] = self.joint.origin.xyz[2]
-        xyz_rpy[3] = self.joint.origin.rpy[0]
-        xyz_rpy[4] = self.joint.origin.rpy[1]
-        xyz_rpy[5] = self.joint.origin.rpy[2]
+        vo = self.parent_parametric.inertial.origin.xyz[2]
+        modified = self.joint.origin
 
-        if xyz_rpy[2] < 0:
-            xyz_rpy[2] = -length + parent_joint_offset - self.offset
+        if modified.xyz[2] < 0:
+            modified.xyz[2] = -length + parent_joint_offset - self.offset
         else:
-            xyz_rpy[2] = vo + length / 2 - self.offset
-        return xyz_rpy
+            modified.xyz[2] = vo + length / 2 - self.offset
+        return modified
 
     def homogeneous(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -70,10 +64,10 @@ class ParmetricJoint(Joint):
         """
 
         o = self.math.factory.zeros(3)
-        o[0] = self.origin[0]
-        o[1] = self.origin[1]
-        o[2] = self.origin[2]
-        rpy = self.origin[3:]
+        o[0] = self.origin.xyz[0]
+        o[1] = self.origin.xyz[1]
+        o[2] = self.origin.xyz[2]
+        rpy = self.origin.rpy
 
         if self.type == "fixed":
             return self.math.H_from_Pos_RPY(o, rpy)
@@ -101,15 +95,15 @@ class ParmetricJoint(Joint):
             npt.ArrayLike: spatial transform of the joint given q
         """
         if self.type == "fixed":
-            return self.math.X_fixed_joint(self.origin[:3], self.origin[3:])
+            return self.math.X_fixed_joint(self.origin.xyz, self.origin.rpy)
         elif self.type in ["revolute", "continuous"]:
             return self.math.X_revolute_joint(
-                self.origin[:3], self.origin[3:], self.axis, q
+                self.origin.xyz, self.origin.rpy, self.axis, q
             )
         elif self.type in ["prismatic"]:
             return self.math.X_prismatic_joint(
-                self.origin[:3],
-                self.origin[3:],
+                self.origin.xyz,
+                self.origin.rpy,
                 self.axis,
                 q,
             )

@@ -1,6 +1,7 @@
 # Copyright (C) 2021 Istituto Italiano di Tecnologia (IIT). All rights reserved.
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
+from typing import List
 
 import casadi as cs
 import numpy as np
@@ -9,7 +10,7 @@ from adam.casadi.casadi_like import SpatialMath
 from adam.core import RBDAlgorithms
 from adam.core.constants import Representations
 from adam.model import Model
-from adam.parametric.model import URDFParametricModelFactory
+from adam.parametric.model import URDFParametricModelFactory, ParametricLink
 
 
 class KinDynComputationsParametric:
@@ -37,6 +38,7 @@ class KinDynComputationsParametric:
         n_param_links = len(links_name_list)
         self.densities = cs.SX.sym("densities", n_param_links)
         self.length_multiplier = cs.SX.sym("length_multiplier", n_param_links)
+        self.links_name_list = links_name_list
         factory = URDFParametricModelFactory(
             path=urdfstring,
             math=math,
@@ -248,21 +250,7 @@ class KinDynComputationsParametric:
             self.f_opts,
         )
 
-    def forward_kinematics(self, frame, T_b, s) -> cs.Function:
-        """Computes the forward kinematics relative to the specified frame
-
-        Args:
-            frame (str): The frame to which the fk will be computed
-
-        Returns:
-            T_fk (casADi function): The fk represented as Homogenous transformation matrix
-        """
-
-        return self.rbdalgos.forward_kinematics(
-            frame, T_b, s, self.length_multiplier, self.densities
-        )
-
-    def get_total_mass(self) -> float:
+    def get_total_mass(self) -> cs.Function:
         """Returns the total mass of the robot
 
         Returns:
@@ -270,6 +258,19 @@ class KinDynComputationsParametric:
         """
         m = self.rbdalgos.get_total_mass()
         return cs.Function(
-            "m", [self.densities, self.length_multiplier], [m], self.f_opts
+            "m", [self.length_multiplier, self.densities], [m], self.f_opts
         )
-        return self.rbdalgos.get_total_mass()
+
+    def get_original_densities(self) -> List[float]:
+        """Returns the original densities of the parametric links
+
+        Returns:
+            densities: The original densities of the parametric links
+        """
+        densities = []
+        model = self.rbdalgos.model
+        for name in self.links_name_list:
+            link = model.links[name]
+            assert isinstance(link, ParametricLink)
+            densities.append(link.original_density)
+        return densities

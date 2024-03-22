@@ -4,11 +4,12 @@
 
 import numpy as np
 import torch
+from typing import List
 
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.core.constants import Representations
-from adam.model import Model, URDFModelFactory
-from adam.parametric.model import URDFParametricModelFactory
+from adam.model import Model
+from adam.parametric.model import URDFParametricModelFactory, ParametricLink
 from adam.pytorch.torch_like import SpatialMath
 
 
@@ -445,3 +446,17 @@ class KinDynComputationsParametric:
         self.rbdalgos.set_frame_velocity_representation(self.representation)
         self.NDoF = self.rbdalgos.NDoF
         return self.rbdalgos.get_total_mass()
+
+    def get_original_densities(self) -> List[float]:
+        """Returns the original densities of the parametric links
+
+        Returns:
+            densities: The original densities of the parametric links
+        """
+        densities = []
+        model = self.rbdalgos.model
+        for name in self.links_name_list:
+            link = model.links[name]
+            assert isinstance(link, ParametricLink)
+            densities.append(link.original_density)
+        return densities

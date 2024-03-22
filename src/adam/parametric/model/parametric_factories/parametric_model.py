@@ -2,10 +2,10 @@ import pathlib
 from typing import List
 
 import urdf_parser_py.urdf
-
 from adam.core.spatial_math import SpatialMath
 from adam.model import ModelFactory, StdJoint, StdLink, Link, Joint
-from adam.parametric.model import ParmetricJoint, ParametricLink
+from adam.model.std_factories.std_model import urdf_remove_sensors_tags
+from adam.parametric.model import ParametricJoint, ParametricLink
 
 
 class URDFParametricModelFactory(ModelFactory):
@@ -29,7 +29,22 @@ class URDFParametricModelFactory(ModelFactory):
         if not path.exists():
             raise FileExistsError(path)
         self.links_name_list = links_name_list
-        self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_file(path)
+
+        # Read URDF, but before passing it to urdf_parser_py get rid of all sensor tags
+        # sensor tags are valid elements of URDF (see ),
+        # but they are ignored by urdf_parser_py, that complains every time it sees one.
+        # As there is nothing to be fixed in the used models, and it is not useful
+        # to have a useless and noisy warning, let's remove before hands all the sensor elements,
+        # that anyhow are not parser by urdf_parser_py or adam
+        # See https://github.com/ami-iit/ADAM/issues/59
+        xml_file = open(path, "r")
+        xml_string = xml_file.read()
+        xml_file.close()
+        xml_string_without_sensors_tags = urdf_remove_sensors_tags(xml_string)
+
+        self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_string(
+            xml_string_without_sensors_tags
+        )
         self.name = self.urdf_desc.name
         self.length_multiplier = length_multiplier
         self.densities = densities
@@ -74,7 +89,7 @@ class URDFParametricModelFactory(ModelFactory):
                 self.length_multiplier[index_link],
                 self.densities[index_link],
             )
-            return ParmetricJoint(joint, self.math, parent_link_parametric)
+            return ParametricJoint(joint, self.math, parent_link_parametric)
 
         return StdJoint(joint, self.math)
 

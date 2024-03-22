@@ -11,9 +11,9 @@ class Node:
     name: str
     link: Link
     arcs: List[Joint]
-    children: List[Link]
-    parent: Link = None
-    parent_arc: Joint = None
+    children: List["Node"]
+    parent: Union[Link, None] = None
+    parent_arc: Union[Joint, None] = None
 
     def __hash__(self) -> int:
         return hash(self.name)
@@ -48,7 +48,7 @@ class Tree(Iterable):
         Returns:
             Tree: the directed tree
         """
-        nodes: Dict(str, Node) = {
+        nodes: Dict[str, Node] = {
             l.name: Node(
                 name=l.name, link=l, arcs=[], children=[], parent=None, parent_arc=None
             )
@@ -71,7 +71,7 @@ class Tree(Iterable):
             raise ValueError("The model has more than one root link")
         return Tree(nodes, root_link[0])
 
-    def print(self, root) -> str:
+    def print(self, root):
         """prints the tree
 
         Args:

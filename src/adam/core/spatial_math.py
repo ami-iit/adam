@@ -107,7 +107,7 @@ class SpatialMath:
         return self._factory
 
     @abc.abstractmethod
-    def vertcat(x: npt.ArrayLike) -> npt.ArrayLike:
+    def vertcat(self, x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             x (npt.ArrayLike): elements
@@ -118,7 +118,7 @@ class SpatialMath:
         pass
 
     @abc.abstractmethod
-    def horzcat(x: npt.ArrayLike) -> npt.ArrayLike:
+    def horzcat(self, x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             x (npt.ArrayLike): elements
@@ -129,11 +129,11 @@ class SpatialMath:
         pass
 
     @abc.abstractmethod
-    def mtimes(x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+    def mtimes(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
         pass
 
     @abc.abstractmethod
-    def sin(x: npt.ArrayLike) -> npt.ArrayLike:
+    def sin(self, x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             x (npt.ArrayLike): angle value
@@ -144,7 +144,7 @@ class SpatialMath:
         pass
 
     @abc.abstractmethod
-    def cos(x: npt.ArrayLike) -> npt.ArrayLike:
+    def cos(self, x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             x (npt.ArrayLike): angle value
@@ -155,7 +155,7 @@ class SpatialMath:
         pass
 
     @abc.abstractmethod
-    def skew(x):
+    def skew(self, x):
         pass
 
     def R_from_axis_angle(self, axis: npt.ArrayLike, q: npt.ArrayLike) -> npt.ArrayLike:
@@ -417,7 +417,7 @@ class SpatialMath:
         R_temp = self.R_from_RPY(rpy)
         inertia_matrix = self.vertcat(
             self.horzcat(I.ixx, I.ixy, I.ixz),
-            self.horzcat(I.iyx, I.iyy, I.iyz),
+            self.horzcat(I.ixy, I.iyy, I.iyz),
             self.horzcat(I.ixz, I.iyz, I.izz),
         )
 

@@ -8,6 +8,36 @@ from adam.core.spatial_math import SpatialMath
 
 
 @dataclasses.dataclass
+class Pose:
+    """Pose class"""
+
+    xyz: List
+    rpy: List
+
+
+@dataclasses.dataclass
+class Inertia:
+    """Inertia class"""
+
+    ixx: npt.ArrayLike
+    ixy: npt.ArrayLike
+    ixz: npt.ArrayLike
+    iyy: npt.ArrayLike
+    iyz: npt.ArrayLike
+    izz: npt.ArrayLike
+
+
+@dataclasses.dataclass
+class Limits:
+    """Limits class"""
+
+    lower: npt.ArrayLike
+    upper: npt.ArrayLike
+    effort: npt.ArrayLike
+    velocity: npt.ArrayLike
+
+
+@dataclasses.dataclass
 class Joint(abc.ABC):
     """Base Joint class. You need to fill at least these fields"""
 
@@ -17,8 +47,8 @@ class Joint(abc.ABC):
     child: str
     type: str
     axis: List
-    origin: List
-    limit: List
+    origin: Pose
+    limit: Limits
     idx: int
     """
     Abstract base class for all joints.
@@ -58,8 +88,8 @@ class Inertial:
     """Inertial description"""
 
     mass: npt.ArrayLike
-    inertia = npt.ArrayLike
-    origin = npt.ArrayLike
+    inertia = Inertia
+    origin = Pose
 
 
 @dataclasses.dataclass
@@ -71,16 +101,13 @@ class Link(abc.ABC):
     visuals: List
     inertial: Inertial
     collisions: List
-    origin: List
 
     @abc.abstractmethod
     def spatial_inertia(self) -> npt.ArrayLike:
         """
-        Args:
-            link (Link): Link
-
         Returns:
-            npt.ArrayLike: the 6x6 inertia matrix expressed at the origin of the link (with rotation)
+            npt.ArrayLike: the 6x6 inertia matrix expressed at
+                           the origin of the link (with rotation)
         """
         pass
 
@@ -88,7 +115,7 @@ class Link(abc.ABC):
     def homogeneous(self) -> npt.ArrayLike:
         """
         Returns:
-            npt.ArrayLike: the homogeneus transform of the link
+            npt.ArrayLike: the homogeneous transform of the link
         """
         pass
 

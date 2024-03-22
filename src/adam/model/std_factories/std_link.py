@@ -14,7 +14,6 @@ class StdLink(Link):
         self.visuals = link.visuals
         self.inertial = link.inertial
         self.collisions = link.collisions
-        self.origin = link.origin
 
         # if the link has inertial properties, but the origin is None, let's add it
         if link.inertial is not None and link.inertial.origin is None:
@@ -23,11 +22,9 @@ class StdLink(Link):
 
     def spatial_inertia(self) -> npt.ArrayLike:
         """
-        Args:
-            link (Link): Link
-
         Returns:
-            npt.ArrayLike: the 6x6 inertia matrix expressed at the origin of the link (with rotation)
+            npt.ArrayLike: the 6x6 inertia matrix expressed at
+                           the origin of the link (with rotation)
         """
         I = self.inertial.inertia
         mass = self.inertial.mass
@@ -38,7 +35,7 @@ class StdLink(Link):
     def homogeneous(self) -> npt.ArrayLike:
         """
         Returns:
-            npt.ArrayLike: the homogeneus transform of the link
+            npt.ArrayLike: the homogeneous transform of the link
         """
         return self.math.H_from_Pos_RPY(
             self.inertial.origin.xyz,
