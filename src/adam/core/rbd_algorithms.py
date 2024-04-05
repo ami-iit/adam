@@ -167,16 +167,22 @@ class RBDAlgorithms:
         chain = self.model.get_joints_chain(self.root_link, frame)
         eye = self.math.factory.eye(4)
         B_H_j = eye
-        J = self.math.factory.zeros(6, self.NDoF)
         B_H_L = self.forward_kinematics(frame, eye, joint_positions)
         L_H_B = self.math.homogeneous_inverse(B_H_L)
-        for joint in chain:
-            q = joint_positions[joint.idx] if joint.idx is not None else 0.0
-            H_j = joint.homogeneous(q=q)
-            B_H_j = B_H_j @ H_j
-            L_H_j = L_H_B @ B_H_j
-            if joint.idx is not None:
-                J[:, joint.idx] = self.math.adjoint(L_H_j) @ joint.motion_subspace()
+        J_list = []
+        for i in range(self.NDoF):
+            joint = next((joint for joint in chain if joint.idx == i), None)
+            #Check if the joint with i as idx is in the chain
+            if (joint is not None) and (joint.idx is not None):
+                q = joint_positions[joint.idx] if joint.idx is not None else 0.0
+                H_j = joint.homogeneous(q=q)
+                B_H_j = B_H_j @ H_j
+                L_H_j = L_H_B @ B_H_j
+                J_list.append(self.math.adjoint(L_H_j) @ joint.motion_subspace())
+            else:
+                J_list.append(self.math.factory.zeros(6))
+
+        J = self.math.stack_list(J_list)
         return J
 
     def jacobian(
@@ -186,9 +192,7 @@ class RBDAlgorithms:
         J = self.joints_jacobian(frame, joint_positions)
         B_H_L = self.forward_kinematics(frame, eye, joint_positions)
         L_X_B = self.math.adjoint_inverse(B_H_L)
-        J_tot = self.math.factory.zeros(6, self.NDoF + 6)
-        J_tot[:6, :6] = L_X_B
-        J_tot[:, 6:] = J
+        J_tot = self.math.vcat_inputs(L_X_B, J)
 
         if (
             self.frame_velocity_representation
@@ -202,7 +206,8 @@ class RBDAlgorithms:
             w_H_L = base_transform @ B_H_L
             LI_X_L = self.math.adjoint_mixed(w_H_L)
             X = self.math.factory.eye(6 + self.NDoF)
-            X[:6, :6] = self.math.adjoint_mixed_inverse(base_transform)
+            X = self.math.compose_blocks(self.math.adjoint_mixed_inverse(base_transform), self.math.factory.zeros(6, self.NDoF),
+                                         self.math.factory.zeros(self.NDoF, 6), self.math.factory.eye(self.NDoF))
             J_tot = LI_X_L @ J_tot @ X
             return J_tot
         else:

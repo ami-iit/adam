@@ -239,12 +239,9 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: Homogeneous transform
         """
-        T = self.factory.eye(4)
         R = self.R_from_RPY(rpy) @ self.R_from_axis_angle(axis, q)
-        T[:3, :3] = R
-        T[0, 3] = xyz[0]
-        T[1, 3] = xyz[1]
-        T[2, 3] = xyz[2]
+        T = self.transform(xyz, R)
+
         return T
 
     def H_prismatic_joint(
@@ -460,10 +457,8 @@ class SpatialMath:
         """
         R = H[:3, :3]
         p = H[:3, 3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R
-        X[3:6, 3:6] = R
-        X[:3, 3:6] = self.skew(p) @ R
+        X = self.compose_blocks(R, self.skew(p) @ R,
+                                self.factory.zeros(3, 3), R)
         return X
 
     def adjoint_derivative(self, H: npt.ArrayLike, v: npt.ArrayLike) -> npt.ArrayLike:
@@ -494,10 +489,9 @@ class SpatialMath:
         """
         R = H[:3, :3]
         p = H[:3, 3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R.T
-        X[3:6, 3:6] = R.T
-        X[:3, 3:6] = -R.T @ self.skew(p)
+        skew_block = -R.T @ self.skew(p)
+        X = self.compose_blocks(R.T, -R.T @ self.skew(p),
+                                self.factory.zeros(3, 3), R.T)
         return X
 
     def adjoint_inverse_derivative(
@@ -528,9 +522,9 @@ class SpatialMath:
             npt.ArrayLike: adjoint matrix
         """
         R = H[:3, :3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R
-        X[3:6, 3:6] = R
+        R = H[:3, :3]
+        X = self.compose_blocks(R, self.factory.zeros(3,3),
+                                self.factory.zeros(3,3), R)
         return X
 
     def adjoint_mixed_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
@@ -541,9 +535,8 @@ class SpatialMath:
             npt.ArrayLike: adjoint matrix
         """
         R = H[:3, :3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R.T
-        X[3:6, 3:6] = R.T
+        X = self.compose_blocks(R.T, self.factory.zeros(3,3),
+                                self.factory.zeros(3,3), R.T)
         return X
 
     def adjoint_mixed_derivative(
@@ -589,7 +582,5 @@ class SpatialMath:
         """
         R = H[:3, :3]
         p = H[:3, 3]
-        T = self.factory.eye(4)
-        T[:3, :3] = R.T
-        T[:3, 3] = -R.T @ p
+        T = self.transform(-R.T @ p, R.T)
         return T
