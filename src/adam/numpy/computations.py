@@ -29,7 +29,7 @@ class KinDynComputations:
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
         math = SpatialMath()
-        factory = URDFModelFactory(path=urdfstring, math=math)
+        factory = URDFModelFactory(urdf_string=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = model.NDoF
