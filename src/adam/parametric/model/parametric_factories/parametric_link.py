@@ -162,7 +162,7 @@ class ParametricLink(Link):
             volume = math.pi * visual_data_new[1] ** 2 * visual_data_new[0]
         elif self.geometry_type == Geometry.SPHERE:
             visual_data_new = self.visual_data.radius * length_multiplier
-            volume = 4 * math.pi * visual_data_new**3 / 3
+            volume = 4 * math.pi * visual_data_new ** 3 / 3
         return volume, visual_data_new
 
     def compute_mass(self):
@@ -235,7 +235,7 @@ class ParametricLink(Link):
                 I.izz = I.iyy
             return I
         elif self.geometry_type == Geometry.SPHERE:
-            I.ixx = 2 * self.mass * self.visual_data_new**2 / 5
+            I.ixx = 2 * self.mass * self.visual_data_new ** 2 / 5
             I.iyy = I.ixx
             I.izz = I.ixx
         return I
