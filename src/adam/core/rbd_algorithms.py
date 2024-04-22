@@ -170,18 +170,20 @@ class RBDAlgorithms:
         B_H_L = self.forward_kinematics(frame, eye, joint_positions)
         L_H_B = self.math.homogeneous_inverse(B_H_L)
         J_list = []
+        joint_J_dict = {}
+        for joint in chain:
+            q = joint_positions[joint.idx] if joint.idx is not None else 0.0
+            H_j = joint.homogeneous(q=q)
+            B_H_j = B_H_j @ H_j
+            L_H_j = L_H_B @ B_H_j
+            if joint.idx is not None:
+                joint_J_dict[joint.idx] = self.math.adjoint(L_H_j) @ joint.motion_subspace()
+
         for i in range(self.NDoF):
-            joint = next((joint for joint in chain if joint.idx == i), None)
-            #Check if the joint with i as idx is in the chain
-            if (joint is not None) and (joint.idx is not None):
-                q = joint_positions[joint.idx] if joint.idx is not None else 0.0
-                H_j = joint.homogeneous(q=q)
-                B_H_j = B_H_j @ H_j
-                L_H_j = L_H_B @ B_H_j
-                J_list.append(self.math.adjoint(L_H_j) @ joint.motion_subspace())
+            if i in joint_J_dict:
+                J_list.append(joint_J_dict[i])
             else:
                 J_list.append(self.math.factory.zeros(6))
-
         J = self.math.stack_list(J_list)
         return J
 
