@@ -288,8 +288,10 @@ class RBDAlgorithms:
 
         v = self.math.adjoint(L_H_B) @ B_v_IB
         a = self.math.adjoint_derivative(L_H_B, v) @ B_v_IB
-        J[:, :6] = self.math.adjoint(L_H_B)
-        J_dot[:, :6] = self.math.adjoint_derivative(L_H_B, v)
+        joint_J_list = []
+        joint_J_dict = {}
+        joint_J_dot_list = []
+        joint_J_dot_dict = {}
         for joint in chain:
             q = joint_positions[joint.idx] if joint.idx is not None else 0.0
             q_dot = joint_velocities[joint.idx] if joint.idx is not None else 0.0
@@ -301,8 +303,21 @@ class RBDAlgorithms:
             J_dot_j = self.math.adjoint_derivative(L_H_j, v) @ joint.motion_subspace()
             a += J_dot_j * q_dot
             if joint.idx is not None:
-                J[:, joint.idx + 6] = J_j
-                J_dot[:, joint.idx + 6] = J_dot_j
+                joint_J_dict[joint.idx] = J_j
+                joint_J_dot_dict[joint.idx] = J_dot_j
+
+        for i in range(self.NDoF):
+            if i in joint_J_dict:
+                joint_J_list.append(joint_J_dict[i])
+                joint_J_dot_list.append(joint_J_dot_dict[i])
+            else:
+                joint_J_list.append(self.math.factory.zeros(6))
+                joint_J_dot_list.append(self.math.factory.zeros(6))
+        joint_J = self.math.stack_list(joint_J_list)
+        joint_J_dot = self.math.stack_list(joint_J_dot_list)
+
+        J = self.math.vcat_inputs(self.math.adjoint(L_H_B), joint_J)
+        J_dot = self.math.vcat_inputs(self.math.adjoint_derivative(L_H_B, v), joint_J_dot)
 
         if (
             self.frame_velocity_representation
