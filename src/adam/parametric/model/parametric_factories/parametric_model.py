@@ -15,6 +15,7 @@ class URDFParametricModelFactory(ModelFactory):
         ModelFactory: the Model factory
     """
 
+    # TODO: path can be either a path and an urdf-string, leaving path for back compatibility, to be changed to meaningfull name
     def __init__(
         self,
         path: str,
@@ -24,10 +25,35 @@ class URDFParametricModelFactory(ModelFactory):
         densities,
     ):
         self.math = math
-        if type(path) is not pathlib.Path:
-            path = pathlib.Path(path)
-        if not path.exists():
-            raise FileExistsError(path)
+        isPath = False
+        isUrdf = False
+        # Checking if it is a path or an urdf
+        if type(urdf_string) is not (pathlib.Path):
+            if os.path.exists(urdf_string):
+                urdf_string = pathlib.Path(urdf_string)
+                isPath = True
+            else:
+                root = ET.fromstring(urdf_string)
+                robot_el = None
+                for elem in root.iter():
+                    if elem.tag == "robot":
+                        xml_string = urdf_string
+                        isUrdf = True
+        elif urdf_string.exists():
+            isPath = True
+
+        if not (isPath) and not (isUrdf):
+            raise ValueError(
+                f"Invalid urdf string: {urdf_string}. It is neither a path nor a urdf string"
+            )
+
+        if isPath:
+            if not (urdf_string.exists()):
+                raise FileExistsError(path)
+            urdf_string = pathlib.Path(urdf_string)
+            xml_file = open(urdf_string, "r")
+            xml_string = xml_file.read()
+            xml_file.close()
         self.links_name_list = links_name_list
 
         # Read URDF, but before passing it to urdf_parser_py get rid of all sensor tags
@@ -37,9 +63,6 @@ class URDFParametricModelFactory(ModelFactory):
         # to have a useless and noisy warning, let's remove before hands all the sensor elements,
         # that anyhow are not parser by urdf_parser_py or adam
         # See https://github.com/ami-iit/ADAM/issues/59
-        xml_file = open(path, "r")
-        xml_string = xml_file.read()
-        xml_file.close()
         xml_string_without_sensors_tags = urdf_remove_sensors_tags(xml_string)
 
         self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_string(

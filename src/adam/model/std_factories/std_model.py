@@ -29,7 +29,8 @@ class URDFModelFactory(ModelFactory):
     Args:
         ModelFactory: the Model factory
     """
-    #TODO: path can be either a path and an urdf-string, leaving path for back compatibility, to be changed to meaningfull name  
+
+    # TODO: path can be either a path and an urdf-string, leaving path for back compatibility, to be changed to meaningfull name
     def __init__(self, path: str, math: SpatialMath):
         self.math = math
         isPath = False
