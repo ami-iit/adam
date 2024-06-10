@@ -66,7 +66,7 @@ class URDFModelFactory(ModelFactory):
             List[StdLink]: build the list of the links
         """
         return [
-            self.build_link(l) for l in self.urdf_desc.links if l.inertial is not None
+            self.build_link(l) for l in self.urdf_desc.links
         ]
 
     def get_frames(self) -> List[StdLink]:
@@ -74,7 +74,7 @@ class URDFModelFactory(ModelFactory):
         Returns:
             List[StdLink]: build the list of the links
         """
-        return [self.build_link(l) for l in self.urdf_desc.links if l.inertial is None]
+        return [self.build_link(l) for l in self.urdf_desc.links]
 
     def build_joint(self, joint: urdf_parser_py.urdf.Joint) -> StdJoint:
         """
