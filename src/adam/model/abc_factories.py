@@ -88,8 +88,24 @@ class Inertial:
     """Inertial description"""
 
     mass: npt.ArrayLike
-    inertia = Inertia
-    origin = Pose
+    inertia: Inertia
+    origin: Pose
+
+    @staticmethod
+    def zero() -> "Inertial":
+        """Returns an Inertial object with zero mass and inertia"""
+        return Inertial(
+            mass=0.0,
+            inertia=Inertia(
+                ixx=0.0,
+                ixy=0.0,
+                ixz=0.0,
+                iyy=0.0,
+                iyz=0.0,
+                izz=0.0,
+            ),
+            origin=Pose(xyz=[0.0, 0.0, 0.0], rpy=[0.0, 0.0, 0.0]),
+        )
 
 
 @dataclasses.dataclass
