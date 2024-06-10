@@ -1,5 +1,6 @@
 import pathlib
 from typing import List
+import os
 
 import urdf_parser_py.urdf
 from adam.core.spatial_math import SpatialMath
