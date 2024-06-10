@@ -30,7 +30,7 @@ class KinDynComputationsParametric:
     ) -> None:
         """
         Args:
-            urdfstring (str): path of the urdf
+            urdfstring (str): either path or string of the urdf
             joints_name_list (list): list of the actuated joints
             links_name_list (list): list of parametric links
             root_link (str, optional): the first link. Defaults to 'root_link'.

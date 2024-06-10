@@ -27,12 +27,12 @@ class KinDynComputations:
     ) -> None:
         """
         Args:
-            urdfstring (str): path of the urdf
+            urdfstring (str): either path or string of the urdf
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
         math = SpatialMath()
-        factory = URDFModelFactory(urdf_string=urdfstring, math=math)
+        factory = URDFModelFactory(path=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
