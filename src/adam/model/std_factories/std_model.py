@@ -36,30 +36,30 @@ class URDFModelFactory(ModelFactory):
         isPath = False
         isUrdf = False
         # Checking if it is a path or an urdf
-        if type(urdf_string) is not (pathlib.Path):
-            if os.path.exists(urdf_string):
-                urdf_string = pathlib.Path(urdf_string)
+        if type(path) is not (pathlib.Path):
+            if os.path.exists(path):
+                path = pathlib.Path(path)
                 isPath = True
             else:
-                root = ET.fromstring(urdf_string)
+                root = ET.fromstring(path)
                 robot_el = None
                 for elem in root.iter():
                     if elem.tag == "robot":
-                        xml_string = urdf_string
+                        xml_string = path
                         isUrdf = True
-        elif urdf_string.exists():
+        elif path.exists():
             isPath = True
 
         if not (isPath) and not (isUrdf):
             raise ValueError(
-                f"Invalid urdf string: {urdf_string}. It is neither a path nor a urdf string"
+                f"Invalid urdf string: {path}. It is neither a path nor a urdf string"
             )
 
         if isPath:
-            if not (urdf_string.exists()):
+            if not (path.exists()):
                 raise FileExistsError(path)
-            urdf_string = pathlib.Path(urdf_string)
-            xml_file = open(urdf_string, "r")
+            path = pathlib.Path(path)
+            xml_file = open(path, "r")
             xml_string = xml_file.read()
             xml_file.close()
         # Read URDF, but before passing it to urdf_parser_py get rid of all sensor tags
