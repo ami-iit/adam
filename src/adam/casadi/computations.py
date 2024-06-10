@@ -22,6 +22,7 @@ class KinDynComputations:
         urdfstring: str,
         joints_name_list: list = None,
         root_link: str = "root_link",
+        cs_type: Union[cs.SX, cs.DM] = cs.SX,
         gravity: np.array = np.array([0.0, 0.0, -9.80665, 0.0, 0.0, 0.0]),
         f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast")),
     ) -> None:
@@ -31,7 +32,7 @@ class KinDynComputations:
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
-        math = SpatialMath()
+        math = SpatialMath(cs_type)
         factory = URDFModelFactory(path=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
