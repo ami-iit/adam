@@ -29,8 +29,8 @@ class URDFModelFactory(ModelFactory):
     Args:
         ModelFactory: the Model factory
     """
-
-    def __init__(self, urdf_string: str, math: SpatialMath):
+    #TODO: path can be either a path and an urdf-string, leaving path for back compatibility, to be changed to meaningfull name  
+    def __init__(self, path: str, math: SpatialMath):
         self.math = math
         isPath = False
         isUrdf = False
@@ -46,7 +46,6 @@ class URDFModelFactory(ModelFactory):
                     if elem.tag == "robot":
                         xml_string = urdf_string
                         isUrdf = True
-                        # raise ValueError(f"Invalid urdf string: {urdf_string}. It is neither a path nor a urdf string")
         elif urdf_string.exists():
             isPath = True
 
