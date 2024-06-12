@@ -63,22 +63,44 @@ class URDFModelFactory(ModelFactory):
         """
         Returns:
             List[StdLink]: build the list of the links
+
+        A link is considered a "real" link if
+        - it has an inertial
+        - it has children
+        - if it has no children and no inertial, it is at lest connected to the parent with a non fixed joint
         """
         return [
             self.build_link(l)
             for l in self.urdf_desc.links
-            if (l.inertial is not None or l.name in self.urdf_desc.child_map.keys())
+            if (
+                l.inertial is not None
+                or l.name in self.urdf_desc.child_map.keys()
+                or any(
+                    j.type != "fixed"
+                    for j in self.urdf_desc.joints
+                    if j.child == l.name
+                )
+            )
         ]
 
     def get_frames(self) -> List[StdLink]:
         """
         Returns:
             List[StdLink]: build the list of the links
+
+        A link is considered a "fake" link (frame) if
+        - it has no inertial
+        - it does not have children
+        - it is connected to the parent with a fixed joint
         """
         return [
             self.build_link(l)
             for l in self.urdf_desc.links
-            if l.inertial is None and l.name not in self.urdf_desc.child_map.keys()
+            if l.inertial is None
+            and l.name not in self.urdf_desc.child_map.keys()
+            and all(
+                j.type == "fixed" for j in self.urdf_desc.joints if j.child == l.name
+            )
         ]
 
     def build_joint(self, joint: urdf_parser_py.urdf.Joint) -> StdJoint:
