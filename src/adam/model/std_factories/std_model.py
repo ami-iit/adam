@@ -44,9 +44,8 @@ class URDFModelFactory(ModelFactory):
         # to have a useless and noisy warning, let's remove before hands all the sensor elements,
         # that anyhow are not parser by urdf_parser_py or adam
         # See https://github.com/ami-iit/ADAM/issues/59
-        xml_file = open(path, "r")
-        xml_string = xml_file.read()
-        xml_file.close()
+        with open(path, "r") as xml_file:
+            xml_string = xml_file.read()
         xml_string_without_sensors_tags = urdf_remove_sensors_tags(xml_string)
         self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_string(
             xml_string_without_sensors_tags
@@ -64,17 +63,45 @@ class URDFModelFactory(ModelFactory):
         """
         Returns:
             List[StdLink]: build the list of the links
+
+        A link is considered a "real" link if
+        - it has an inertial
+        - it has children
+        - if it has no children and no inertial, it is at lest connected to the parent with a non fixed joint
         """
         return [
-            self.build_link(l) for l in self.urdf_desc.links if l.inertial is not None
+            self.build_link(l)
+            for l in self.urdf_desc.links
+            if (
+                l.inertial is not None
+                or l.name in self.urdf_desc.child_map.keys()
+                or any(
+                    j.type != "fixed"
+                    for j in self.urdf_desc.joints
+                    if j.child == l.name
+                )
+            )
         ]
 
     def get_frames(self) -> List[StdLink]:
         """
         Returns:
             List[StdLink]: build the list of the links
+
+        A link is considered a "fake" link (frame) if
+        - it has no inertial
+        - it does not have children
+        - it is connected to the parent with a fixed joint
         """
-        return [self.build_link(l) for l in self.urdf_desc.links if l.inertial is None]
+        return [
+            self.build_link(l)
+            for l in self.urdf_desc.links
+            if l.inertial is None
+            and l.name not in self.urdf_desc.child_map.keys()
+            and all(
+                j.type == "fixed" for j in self.urdf_desc.joints if j.child == l.name
+            )
+        ]
 
     def build_joint(self, joint: urdf_parser_py.urdf.Joint) -> StdJoint:
         """
