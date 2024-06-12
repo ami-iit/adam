@@ -50,10 +50,11 @@ class ParametricLink(Link):
             length_multiplier=self.length_multiplier
         )
         self.mass = self.compute_mass()
-        self.inertial = Inertial(self.mass)
-        self.inertial.mass = self.mass
-        self.inertial.inertia = self.compute_inertia_parametric()
-        self.inertial.origin = self.modify_origin()
+        inertia_parametric = self.compute_inertia_parametric()
+        origin = self.modify_origin()
+        self.inertial = Inertial(
+            mass=self.mass, inertia=inertia_parametric, origin=origin
+        )
         self.update_visuals()
 
     def get_principal_length(self):

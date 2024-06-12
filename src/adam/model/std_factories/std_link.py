@@ -2,7 +2,7 @@ import numpy.typing as npt
 import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
-from adam.model import Link
+from adam.model import Link, Inertial, Pose
 
 
 class StdLink(Link):
@@ -15,10 +15,15 @@ class StdLink(Link):
         self.inertial = link.inertial
         self.collisions = link.collisions
 
+        # if the link has no inertial properties (a connecting frame), let's add them
+        if link.inertial is None:
+            link.inertial = Inertial.zero()
+
         # if the link has inertial properties, but the origin is None, let's add it
         if link.inertial is not None and link.inertial.origin is None:
-            link.inertial.origin.xyz = [0, 0, 0]
-            link.inertial.origin.rpy = [0, 0, 0]
+            link.inertial.origin = Pose(xyz=[0, 0, 0], rpy=[0, 0, 0])
+
+        self.inertial = link.inertial
 
     def spatial_inertia(self) -> npt.ArrayLike:
         """
