@@ -37,6 +37,13 @@ class URDFModelFactory(ModelFactory):
         if not path.exists():
             raise FileExistsError(path)
 
+        # Read URDF, but before passing it to urdf_parser_py get rid of all sensor tags
+        # sensor tags are valid elements of URDF (see ),
+        # but they are ignored by urdf_parser_py, that complains every time it sees one.
+        # As there is nothing to be fixed in the used models, and it is not useful
+        # to have a useless and noisy warning, let's remove before hands all the sensor elements,
+        # that anyhow are not parser by urdf_parser_py or adam
+        # See https://github.com/ami-iit/ADAM/issues/59
         with open(path, "r") as xml_file:
             xml_string = xml_file.read()
         xml_string_without_sensors_tags = urdf_remove_sensors_tags(xml_string)
