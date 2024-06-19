@@ -24,7 +24,7 @@ class KinDynComputations:
         root_link: str = "root_link",
         cs_type: Union[cs.SX, cs.DM] = cs.SX,
         gravity: np.array = np.array([0.0, 0.0, -9.80665, 0.0, 0.0, 0.0]),
-        f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast")),
+        f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast"), cse=True),
     ) -> None:
         """
         Args:
