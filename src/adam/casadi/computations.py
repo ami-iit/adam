@@ -240,6 +240,11 @@ class KinDynComputations:
         Returns:
             M (Union[cs.SX, cs.DM]): Mass Matrix
         """
+        if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.mass_matrix_fun()"
+            )
+
         [M, _] = self.rbdalgos.crba(base_transform, joint_positions)
         return M.array
 
@@ -255,6 +260,11 @@ class KinDynComputations:
         Returns:
             Jcc (Union[cs.SX, cs.DM]): Centroidal Momentum matrix
         """
+        if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.centroidal_momentum_matrix_fun()"
+            )
+
         [_, Jcm] = self.rbdalgos.crba(base_transform, joint_positions)
         return Jcm.array
 
@@ -268,6 +278,11 @@ class KinDynComputations:
         Returns:
             J (Union[cs.SX, cs.DM]): The Jacobian between the root and the frame
         """
+        if isinstance(joint_positions, cs.MX):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.relative_jacobian_fun()"
+            )
+
         return self.rbdalgos.relative_jacobian(frame, joint_positions).array
 
     def jacobian_dot(
@@ -290,6 +305,15 @@ class KinDynComputations:
         Returns:
             Jdot (Union[cs.SX, cs.DM]): The Jacobian derivative relative to the frame
         """
+        if (
+            isinstance(base_transform, cs.MX)
+            and isinstance(joint_positions, cs.MX)
+            and isinstance(base_velocity, cs.MX)
+            and isinstance(joint_velocities, cs.MX)
+        ):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.jacobian_dot_fun()"
+            )
         return self.rbdalgos.jacobian_dot(
             frame, base_transform, joint_positions, base_velocity, joint_velocities
         ).array
@@ -310,6 +334,11 @@ class KinDynComputations:
         Returns:
             H (Union[cs.SX, cs.DM]): The fk represented as Homogenous transformation matrix
         """
+        if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.forward_kinematics_fun()"
+            )
+
         return self.rbdalgos.forward_kinematics(
             frame, base_transform, joint_positions
         ).array
@@ -325,6 +354,11 @@ class KinDynComputations:
         Returns:
             J_tot (Union[cs.SX, cs.DM]): The Jacobian relative to the frame
         """
+        if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.jacobian_fun()"
+            )
+
         return self.rbdalgos.jacobian(frame, base_transform, joint_positions).array
 
     def bias_force(
@@ -346,6 +380,16 @@ class KinDynComputations:
         Returns:
             h (Union[cs.SX, cs.DM]): the bias force
         """
+        if (
+            isinstance(base_transform, cs.MX)
+            and isinstance(joint_positions, cs.MX)
+            and isinstance(base_velocity, cs.MX)
+            and isinstance(joint_velocities, cs.MX)
+        ):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.bias_force_fun()"
+            )
+
         return self.rbdalgos.rnea(
             base_transform, joint_positions, base_velocity, joint_velocities, self.g
         ).array
@@ -369,6 +413,16 @@ class KinDynComputations:
         Returns:
             C (Union[cs.SX, cs.DM]): the Coriolis term
         """
+        if (
+            isinstance(base_transform, cs.MX)
+            and isinstance(joint_positions, cs.MX)
+            and isinstance(base_velocity, cs.MX)
+            and isinstance(joint_velocities, cs.MX)
+        ):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.coriolis_term_fun()"
+            )
+
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
@@ -390,6 +444,11 @@ class KinDynComputations:
         Returns:
             G (Union[cs.SX, cs.DM]): the gravity term
         """
+        if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.gravity_term_fun()"
+            )
+
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
@@ -410,4 +469,9 @@ class KinDynComputations:
         Returns:
             CoM (Union[cs.SX, cs.DM]): The CoM position
         """
+        if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.CoM_position_fun()"
+            )
+
         return self.rbdalgos.CoM_position(base_transform, joint_positions).array
