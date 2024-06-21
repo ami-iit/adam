@@ -211,6 +211,20 @@ w_H_b = np.eye(4)
 joints = np.ones(len(joints_name_list))
 M = kinDyn.mass_matrix_fun()
 print(M(w_H_b, joints))
+
+# If you want to use the symbolic version
+w_H_b = cs.SX.eye(4)
+joints = cs.SX.sym('joints', len(joints_name_list))
+M = kinDyn.mass_matrix_fun()
+print(M(w_H_b, joints))
+
+# This is usable also with casadi.MX
+w_H_b = cs.MX.eye(4)
+joints = cs.MX.sym('joints', len(joints_name_list))
+M = kinDyn.mass_matrix_fun()
+print(M(w_H_b, joints))
+
+
 ```
 
 ### PyTorch interface
