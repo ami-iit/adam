@@ -104,17 +104,16 @@ class CasadiLike(ArrayLike):
 
 class CasadiLikeFactory(ArrayLikeFactory):
 
-    def __init__(self, cs_type: Union[cs.SX, cs.DM]):
-        self.cs_type = cs_type
-
-    def zeros(self, *x: int) -> "CasadiLike":
+    @staticmethod
+    def zeros(*x: int) -> "CasadiLike":
         """
         Returns:
             CasadiLike: Matrix of zeros of dim *x
         """
-        return CasadiLike(self.cs_type.zeros(*x))
+        return CasadiLike(cs.SX.zeros(*x))
 
-    def eye(self, x: int) -> "CasadiLike":
+    @staticmethod
+    def eye(x: int) -> "CasadiLike":
         """
         Args:
             x (int): matrix dimension
@@ -122,20 +121,21 @@ class CasadiLikeFactory(ArrayLikeFactory):
         Returns:
             CasadiLike: Identity matrix
         """
-        return CasadiLike(self.cs_type.eye(x))
+        return CasadiLike(cs.SX.eye(x))
 
-    def array(self, *x) -> "CasadiLike":
+    @staticmethod
+    def array(*x) -> "CasadiLike":
         """
         Returns:
             CasadiLike: Vector wrapping *x
         """
-        return CasadiLike(self.cs_type(*x))
+        return CasadiLike(cs.SX(*x))
 
 
 class SpatialMath(SpatialMath):
 
-    def __init__(self, cs_type: Union[cs.SX, cs.DM]):
-        super().__init__(CasadiLikeFactory(cs_type))
+    def __init__(self):
+        super().__init__(CasadiLikeFactory)
 
     @staticmethod
     def skew(x: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
