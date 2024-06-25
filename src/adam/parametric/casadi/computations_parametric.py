@@ -24,7 +24,6 @@ class KinDynComputationsParametric:
         joints_name_list: list,
         links_name_list: list,
         root_link: str = "root_link",
-        cs_type: Union[cs.SX, cs.DM] = cs.SX,
         gravity: np.array = np.array([0.0, 0.0, -9.80665, 0.0, 0.0, 0.0]),
         f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast")),
     ) -> None:
@@ -35,7 +34,7 @@ class KinDynComputationsParametric:
             links_name_list (list): list of the parametrized links
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
-        math = SpatialMath(cs_type)
+        math = SpatialMath()
         n_param_links = len(links_name_list)
         self.densities = cs.SX.sym("densities", n_param_links)
         self.length_multiplier = cs.SX.sym("length_multiplier", n_param_links)
