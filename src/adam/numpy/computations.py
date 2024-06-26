@@ -11,9 +11,7 @@ from adam.numpy.numpy_like import SpatialMath
 
 
 class KinDynComputations:
-    """This is a small class that retrieves robot quantities using NumPy
-    in mixed representation, for Floating Base systems - as humanoid robots.
-    """
+    """This is a small class that retrieves robot quantities using NumPy for Floating Base systems."""
 
     def __init__(
         self,
@@ -135,7 +133,7 @@ class KinDynComputations:
             frame (str): The frame to which the jacobian will be computed
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
-            base_velocity (np.ndarray): The base velocity in mixed representation
+            base_velocity (np.ndarray): The base velocity
             joint_velocities (np.ndarray): The joint velocities
 
         Returns:
@@ -174,7 +172,7 @@ class KinDynComputations:
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
-            base_velocity (np.ndarray): The base velocity in mixed representation
+            base_velocity (np.ndarray): The base velocity
             joint_velocities (np.ndarray): The joint velocities
 
         Returns:
@@ -201,7 +199,7 @@ class KinDynComputations:
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
-            base_velocity (np.ndarray): The base velocity in mixed representation
+            base_velocity (np.ndarray): The base velocity
             joint_velocities (np.ndarray): The joint velocities
 
         Returns:

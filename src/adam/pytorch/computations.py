@@ -12,9 +12,7 @@ from adam.pytorch.torch_like import SpatialMath
 
 
 class KinDynComputations:
-    """This is a small class that retrieves robot quantities using Pytorch
-    in mixed representation, for Floating Base systems - as humanoid robots.
-    """
+    """This is a small class that retrieves robot quantities using Pytorch for Floating Base systems."""
 
     def __init__(
         self,
@@ -143,7 +141,7 @@ class KinDynComputations:
             frame (str): The frame to which the jacobian will be computed
             base_transform (torch.Tensor): The homogenous transform from base to world frame
             joint_positions (torch.Tensor): The joints position
-            base_velocity (torch.Tensor): The base velocity in mixed representation
+            base_velocity (torch.Tensor): The base velocity
             joint_velocities (torch.Tensor): The joint velocities
 
         Returns:
@@ -182,7 +180,7 @@ class KinDynComputations:
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             joint_positions (torch.tensor): The joints position
-            base_velocity (torch.tensor): The base velocity in mixed representation
+            base_velocity (torch.tensor): The base velocity
             joint_velocities (torch.tensor): The joints velocity
 
         Returns:
@@ -209,7 +207,7 @@ class KinDynComputations:
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             joint_positions (torch.tensor): The joints position
-            base_velocity (torch.tensor): The base velocity in mixed representation
+            base_velocity (torch.tensor): The base velocity
             joint_velocities (torch.tensor): The joints velocity
 
         Returns:

@@ -12,9 +12,7 @@ from adam.model import Model, URDFModelFactory
 
 
 class KinDynComputations:
-    """This is a small class that retrieves robot quantities using Jax
-    in mixed representation, for Floating Base systems - as humanoid robots.
-    """
+    """This is a small class that retrieves robot quantities using Jax for Floating Base systems."""
 
     def __init__(
         self,
@@ -100,7 +98,7 @@ class KinDynComputations:
             frame (str): The frame to which the jacobian will be computed
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
-            base_velocity (jnp.array): The base velocity in mixed representation
+            base_velocity (jnp.array): The base velocity
             joint_velocities (jnp.array): The joint velocities
 
         Returns:
@@ -158,7 +156,7 @@ class KinDynComputations:
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
-            base_velocity (jnp.array): The base velocity in mixed representation
+            base_velocity (jnp.array): The base velocity
             joint_velocities (jnp.array): The joints velocity
 
         Returns:
@@ -181,7 +179,7 @@ class KinDynComputations:
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
-            base_velocity (jnp.array): The base velocity in mixed representation
+            base_velocity (jnp.array): The base velocity
             joint_velocities (jnp.array): The joints velocity
 
         Returns:

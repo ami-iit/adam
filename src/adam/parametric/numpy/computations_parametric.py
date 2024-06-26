@@ -13,8 +13,8 @@ from adam.numpy.numpy_like import SpatialMath
 
 
 class KinDynComputationsParametric:
-    """This is a small class that retrieves robot quantities using NumPy
-    in mixed representation, for Floating Base systems - as humanoid robots. This is parametric w.r.t the link length and denisties
+    """This is a small class that retrieves robot quantities using NumPy for Floating Base systems.
+    This is parametric w.r.t the link length and densities.
     """
 
     def __init__(
@@ -235,7 +235,7 @@ class KinDynComputationsParametric:
             frame (str): The frame to which the jacobian will be computed
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
-            base_velocity (np.ndarray): The base velocity in mixed representation
+            base_velocity (np.ndarray): The base velocity
             joint_velocities (np.ndarray): The joint velocities
             length_multiplier (np.ndarray): The length multiplier of the parametrized links
             densities (np.ndarray): The densities of the parametrized links
@@ -307,7 +307,7 @@ class KinDynComputationsParametric:
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
-            base_velocity (np.ndarray): The base velocity in mixed representation
+            base_velocity (np.ndarray): The base velocity
             joint_velocities (np.ndarray): The joint velocities
             length_multiplier (np.ndarray): The length multiplier of the parametrized links
             densities (np.ndarray): The densities of the parametrized links
@@ -350,7 +350,7 @@ class KinDynComputationsParametric:
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
             joint_positions (np.ndarray): The joints position
-            base_velocity (np.ndarray): The base velocity in mixed representation
+            base_velocity (np.ndarray): The base velocity
             joint_velocities (np.ndarray): The joint velocities
             length_multiplier (np.ndarray): The length multiplier of the parametrized links
             densities (np.ndarray): The densities of the parametrized links

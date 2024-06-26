@@ -16,8 +16,8 @@ from adam.parametric.model import URDFParametricModelFactory, ParametricLink
 
 
 class KinDynComputationsParametric:
-    """This is a small class that retrieves robot quantities using Jax
-    in mixed representation, for Floating Base systems - as humanoid robots. This is parametric w.r.t the link length and denisties
+    """This is a small class that retrieves robot quantities using Jax for Floating Base systems.
+    This is parametric w.r.t the link length and densities.
     """
 
     def __init__(
@@ -166,7 +166,7 @@ class KinDynComputationsParametric:
             frame (str): The frame to which the jacobian will be computed
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
-            base_velocity (jnp.array): The base velocity in mixed representation
+            base_velocity (jnp.array): The base velocity
             joint_velocities (jnp.array): The joint velocities
             length_multiplier (jnp.array): The length multiplier of the parametrized links
             densities (jnp.array): The densities of the parametrized links
@@ -283,7 +283,7 @@ class KinDynComputationsParametric:
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
-            base_velocity (jnp.array): The base velocity in mixed representation
+            base_velocity (jnp.array): The base velocity
             s_dot (jnp.array): The joints velocity
             length_multiplier (jnp.array): The length multiplier of the parametrized links
             densities (jnp.array): The densities of the parametrized links
@@ -323,7 +323,7 @@ class KinDynComputationsParametric:
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame
             joint_positions (jnp.array): The joints position
-            base_velocity (jnp.array): The base velocity in mixed representation
+            base_velocity (jnp.array): The base velocity
             s_dot (jnp.array): The joints velocity
             length_multiplier (jnp.array): The length multiplier of the parametrized links
             densities (jnp.array): The densities of the parametrized links
