@@ -16,7 +16,7 @@
 
 **adam** is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
 
-- [adam](#adam)
+### Table of content
   - [🐍 Dependencies](#-dependencies)
   - [💾 Installation](#-installation)
     - [🐍 Installation with pip](#-installation-with-pip)
