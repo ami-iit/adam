@@ -16,6 +16,20 @@
 
 **adam** is based on Roy Featherstone's Rigid Body Dynamics Algorithms.
 
+- [adam](#adam)
+  - [🐍 Dependencies](#-dependencies)
+  - [💾 Installation](#-installation)
+    - [🐍 Installation with pip](#-installation-with-pip)
+    - [📦 Installation with conda](#-installation-with-conda)
+      - [Installation from conda-forge package](#installation-from-conda-forge-package)
+    - [🔨 Installation from repo](#-installation-from-repo)
+  - [🚀 Usage](#-usage)
+    - [Jax interface](#jax-interface)
+    - [CasADi interface](#casadi-interface)
+    - [PyTorch interface](#pytorch-interface)
+  - [🦸‍♂️ Contributing](#️-contributing)
+  - [Todo](#todo)
+
 ## 🐍 Dependencies
 
 - [`python3`](https://wiki.python.org/moin/BeginnersGuide)
