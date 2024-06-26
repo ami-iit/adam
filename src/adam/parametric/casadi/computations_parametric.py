@@ -14,8 +14,8 @@ from adam.parametric.model import URDFParametricModelFactory, ParametricLink
 
 
 class KinDynComputationsParametric:
-    """This is a small class that retrieves robot quantities represented in a symbolic fashion using CasADi
-    in mixed representation, for Floating Base systems - as humanoid robots. This is parametric w.r.t the link length and denisties
+    """This is a small class that retrieves robot quantities represented in a symbolic fashion using CasADi for Floating Base systems.
+    This is parametric w.r.t the link length and densities.
     """
 
     def __init__(

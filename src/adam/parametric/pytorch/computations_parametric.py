@@ -14,8 +14,8 @@ from adam.pytorch.torch_like import SpatialMath
 
 
 class KinDynComputationsParametric:
-    """This is a small class that retrieves robot quantities using Pytorch
-    in mixed representation, for Floating Base systems - as humanoid robots. This is parametric w.r.t the link length and denisties
+    """This is a small class that retrieves robot quantities using Pytorch for Floating Base systems.
+    This is parametric w.r.t the link length and densities.
     """
 
     def __init__(
@@ -240,7 +240,7 @@ class KinDynComputationsParametric:
             frame (str): The frame to which the jacobian will be computed
             base_transform (torch.Tensor): The homogenous transform from base to world frame
             joint_positions (torch.Tensor): The joints position
-            base_velocity (torch.Tensor): The base velocity in mixed representation
+            base_velocity (torch.Tensor): The base velocity
             joint_velocities (torch.Tensor): The joint velocities
             length_multiplier (torch.tensor): The length multiplier of the parametrized links
             densities (torch.tensor): The densities of the parametrized links
@@ -312,7 +312,7 @@ class KinDynComputationsParametric:
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             s (torch.tensor): The joints position
-            base_velocity (torch.tensor): The base velocity in mixed representation
+            base_velocity (torch.tensor): The base velocity
             joint_velocities (torch.tensor): The joints velocity
             length_multiplier (torch.tensor): The length multiplier of the parametrized links
             densities (torch.tensor): The densities of the parametrized links
@@ -355,7 +355,7 @@ class KinDynComputationsParametric:
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
             joint_positions (torch.tensor): The joints position
-            base_velocity (torch.tensor): The base velocity in mixed representation
+            base_velocity (torch.tensor): The base velocity
             joint_velocities (torch.tensor): The joints velocity
             length_multiplier (torch.tensor): The length multiplier of the parametrized links
             densities (torch.tensor): The densities of the parametrized links
