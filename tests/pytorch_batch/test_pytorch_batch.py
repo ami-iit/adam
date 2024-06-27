@@ -82,13 +82,8 @@ def test_mass_matrix():
     mass_matrix_np = comp_np.mass_matrix(H_b, joints_val)
     assert np.allclose(mass_matrix[0].detach().numpy(), mass_matrix_np)
     assert mass_matrix.shape == (n_samples, n_dofs + 6, n_dofs + 6)
-    # check if the gradient is computable
     mass_matrix.sum().backward()
     return True
-    # assert torch.autograd.gradcheck(
-    #     comp.mass_matrix, (H_b_batch, joints_val_batch), eps=1e-6, atol=1e-4
-    # )
-    # return True
 
 
 def test_centroidal_momentum_matrix():
