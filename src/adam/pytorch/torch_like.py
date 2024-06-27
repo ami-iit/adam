@@ -23,6 +23,7 @@ class TorchLike(ArrayLike):
         if self.array.dtype != torch.float64:
             self.array = self.array.double()
 
+    #TODO retry the index_put_ override, the error with no len() is due to it already being a tensor usually
     def __setitem__(self, idx, value: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides set item operator"""
         if type(self) is type(value):
@@ -149,6 +150,9 @@ class TorchLikeFactory(ArrayLikeFactory):
         Returns:
             TorchLike: vector wrapping x
         """
+
+        if isinstance(x, torch.Tensor):
+            return TorchLike(x)
         return TorchLike(torch.tensor(x))
 
 
@@ -205,13 +209,17 @@ class SpatialMath(SpatialMath):
             TorchLike: skew matrix from x
         """
         if not isinstance(x, TorchLike):
+            x0, x1, x2 = x
             return TorchLike(
-                torch.tensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
+                torch.tensor([[0, -x2, x1], [x2, 0, -x0], [-x1, x0, 0]])
             )
+
         x = x.array
-        return TorchLike(
-            torch.tensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
-        )
+        x0, x1, x2 = x.unbind(dim=-1)
+        skew_x = torch.stack([torch.tensor(0), -x2, x1,
+                              x2, torch.tensor(0), -x0,
+                              -x1, x0, torch.tensor(0)], dim=-1).reshape(x.shape[:-1] + (3, 3))
+        return TorchLike(skew_x)
 
     @staticmethod
     def vertcat(*x: ntp.ArrayLike) -> "TorchLike":
@@ -236,3 +244,70 @@ class SpatialMath(SpatialMath):
         else:
             v = torch.tensor(x)
         return TorchLike(v)
+
+    @staticmethod
+    def transform(p: Union["TorchLike", ntp.ArrayLike], R: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: composition of 4x4 transformation matrix from translation vector and rotation matrix
+        """
+        R = R.array
+
+        if not isinstance(p, TorchLike):
+            T = torch.cat([
+                torch.cat([R, torch.tensor([p]).T], dim=-1),
+                torch.tensor([[0, 0, 0, 1]])
+                ], dim=-2)
+            return TorchLike(T)
+
+        p = p.array.unsqueeze(0)
+
+        T = torch.cat([
+                torch.cat([R, p.T], dim=-1),
+                torch.tensor([[0, 0, 0, 1]])
+                ], dim=-2)
+        return TorchLike(T)
+
+    @staticmethod
+    def compose_blocks(B00: Union["TorchLike", ntp.ArrayLike],
+                       B01: Union["TorchLike", ntp.ArrayLike],
+                       B10: Union["TorchLike", ntp.ArrayLike],
+                       B11: Union["TorchLike", ntp.ArrayLike],) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: put together 4 matrix blocks in a single matrix
+        """
+        first_row = torch.cat([B00.array, B01.array], dim=-1)
+        second_row = torch.cat([B10.array, B11.array], dim=-1)
+
+        X = torch.cat([
+                first_row,
+                second_row
+                ], dim=-2)
+
+        return TorchLike(X)
+
+    @staticmethod
+    def stack_list(tensor_list: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: take a list of tensors and stack them together
+        """
+        if isinstance(tensor_list[0], TorchLike):
+            tensor_list = [t.array for t in tensor_list]
+
+        stacked_list = torch.stack(tensor_list, dim=1)
+
+        return TorchLike(stacked_list)
+
+    @staticmethod
+    def vcat_inputs(a: Union["TorchLike", ntp.ArrayLike], b: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """
+        Returns:
+            TorchLike: take the base and joint components of the Jacobian to build the full Jacobian matrix
+        """
+        a = a.array
+        b = b.array
+        c = torch.cat([a, b], dim=-1)
+
+        return TorchLike(c)
