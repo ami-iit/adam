@@ -214,8 +214,8 @@ jitted_vmapped_frame_fk = jit(vmapped_frame_fk)
 # and called on a batch of data
 joints_batch = jnp.tile(joints, (1024, 1))
 w_H_b_batch = jnp.tile(w_H_b, (1024, 1, 1))
-
 w_H_f_batch = jitted_vmapped_frame_fk(w_H_b_batch, joints_batch)
+# Note that the first call of the jitted function can be slow, since JAX needs to compile the function. Than it will be fast.
 
 ```
 
@@ -325,6 +325,7 @@ joints_batch = torch.tensor(np.tile(joints, (num_samples, 1)), dtype=torch.float
 
 M = kinDyn.mass_matrix(w_H_b_batch, joints_batch)
 w_H_f = kinDyn.forward_kinematics('frame_name', w_H_b_batch, joints_batch)
+# Note that the first call of the jitted function can be slow, since JAX needs to compile the function. Than it will be fast.
 ```
 
 ## 🦸‍♂️ Contributing
