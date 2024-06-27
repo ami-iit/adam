@@ -83,7 +83,6 @@ def test_mass_matrix():
     assert np.allclose(mass_matrix[0].detach().numpy(), mass_matrix_np)
     assert mass_matrix.shape == (n_samples, n_dofs + 6, n_dofs + 6)
     mass_matrix.sum().backward()
-    return True
 
 
 def test_centroidal_momentum_matrix():
@@ -96,7 +95,6 @@ def test_centroidal_momentum_matrix():
     )
     assert centroidal_momentum_matrix.shape == (n_samples, 6, n_dofs + 6)
     centroidal_momentum_matrix.sum().backward()
-    return True
 
 
 def test_relative_jacobian():
@@ -108,7 +106,6 @@ def test_relative_jacobian():
     )
     assert relative_jacobian.shape == (n_samples, 6, n_dofs)
     relative_jacobian.sum().backward()
-    return True
 
 
 def test_jacobian_dot():
@@ -122,7 +119,6 @@ def test_jacobian_dot():
     )
     assert jacobian_dot.shape == (n_samples, 6, n_dofs + 6)
     jacobian_dot.sum().backward()
-    return True
 
 
 def test_forward_kineamtics():
@@ -134,7 +130,6 @@ def test_forward_kineamtics():
     )
     assert forward_kinematics.shape == (n_samples, 4, 4)
     forward_kinematics.sum().backward()
-    return True
 
 
 def test_jacobian():
@@ -145,7 +140,6 @@ def test_jacobian():
     )
     assert jacobian.shape == (n_samples, 6, n_dofs + 6)
     jacobian.sum().backward()
-    return True
 
 
 def test_bias_force():
@@ -158,7 +152,6 @@ def test_bias_force():
     )
     assert bias_force.shape == (n_samples, n_dofs + 6)
     bias_force.sum().backward()
-    return True
 
 
 def test_coriolis_term():
@@ -171,7 +164,6 @@ def test_coriolis_term():
     )
     assert coriolis_term.shape == (n_samples, n_dofs + 6)
     coriolis_term.sum().backward()
-    return True
 
 
 def test_gravity_term():
@@ -181,7 +173,6 @@ def test_gravity_term():
     )
     assert gravity_term.shape == (n_samples, n_dofs + 6)
     gravity_term.sum().backward()
-    return True
 
 
 def test_CoM_position():
@@ -191,4 +182,3 @@ def test_CoM_position():
     )
     assert CoM_position.shape == (n_samples, 3)
     CoM_position.sum().backward()
-    return True
