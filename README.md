@@ -222,8 +222,6 @@ w_H_f_batch = jitted_vmapped_frame_fk(w_H_b_batch, joints_batch)
 > [!NOTE]
 > The first call of the jitted function can be slow, since JAX needs to compile the function. Than it will be fast!
 
-```python
-
 ### CasADi interface
 
 ```python
