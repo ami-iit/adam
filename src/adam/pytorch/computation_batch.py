@@ -2,16 +2,16 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
+import jax
 import jax.numpy as jnp
 import numpy as np
+import torch
+from jax2torch import jax2torch
 
 from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.jax.jax_like import SpatialMath
 from adam.model import Model, URDFModelFactory
-from jax2torch import jax2torch
-import torch
-import jax
 
 
 class KinDynComputationsBatch:
