@@ -43,6 +43,7 @@ Other requisites are:
 - `casadi`
 - `pytorch`
 - `numpy`
+- `jax2torch`
 
 They will be installed in the installation step!
 
@@ -116,6 +117,9 @@ mamba create -n adamenv -c conda-forge adam-robotics
 
 If you want to use `jax` or `pytorch`, just install the corresponding package as well.
 
+> [!NOTE]
+> Check also the conda JAX installation guide [here](https://jax.readthedocs.io/en/latest/installation.html#conda-community-supported)
+
 ### 🔨 Installation from repo
 
 Install in a conda environment the required dependencies:
@@ -135,13 +139,13 @@ Install in a conda environment the required dependencies:
 - **PyTorch** interface dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge pytorch numpy lxml prettytable matplotlib urdfdom-py
+  mamba create -n adamenv -c conda-forge pytorch numpy lxml prettytable matplotlib urdfdom-py jax2torch
   ```
 
 - **ALL** interfaces dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge jax casadi pytorch numpy lxml prettytable matplotlib urdfdom-py
+  mamba create -n adamenv -c conda-forge jax casadi pytorch numpy lxml prettytable matplotlib urdfdom-py jax2torch
   ```
 
 Activate the environment, clone the repo and install the library:
@@ -156,9 +160,12 @@ pip install --no-deps .
 ## 🚀 Usage
 
 The following are small snippets of the use of **adam**. More examples are arriving!
-Have also a look at te `tests` folder.
+Have also a look at the `tests` folder.
 
 ### Jax interface
+
+> [!NOTE]
+> Check also the Jax installation guide [here](https://jax.readthedocs.io/en/latest/installation.html#)
 
 ```python
 import adam
