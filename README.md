@@ -220,7 +220,7 @@ w_H_f_batch = jitted_vmapped_frame_fk(w_H_b_batch, joints_batch)
 ```
 
 > [!NOTE]
-> The first call of the jitted function can be slow, since JAX needs to compile the function. Than it will be fast!
+> The first call of the jitted function can be slow, since JAX needs to compile the function. Then it will be faster!
 
 ### CasADi interface
 
@@ -298,7 +298,7 @@ print(M)
 ### PyTorch Batched interface
 
 > [!NOTE]
-> When using this interface, note that the first call of the jitted function can be slow, since JAX needs to compile the function. Than it will be fast!
+> When using this interface, note that the first call of the jitted function can be slow, since JAX needs to compile the function. Then it will be faster!
 
 ```python
 import adam
