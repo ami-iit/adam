@@ -12,3 +12,4 @@ sphinx_rtd_theme
 sphinx-toolbox
 furo
 myst-parser
+sphinx-copybutton
