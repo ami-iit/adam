@@ -4,7 +4,7 @@ PyTorch batched usage
 The following example shows how to call an instance of the ``adam.pytorch.KinDynComputationsBatch`` class and use it to compute the mass matrix and forward dynamics of a floating-base robot.
 
 .. note::
-    The first time you run a function from this module, it will take a bit longer to execute as they are being compiled by Jax.
+    The first time you run a function from this module, it will take a bit longer to execute as they are being compiled by JAX.
 
 .. code-block:: python
 
