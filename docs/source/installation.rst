@@ -10,7 +10,7 @@ adam requires python 3.7 or later.
 
 
 🐍 Conda installation
-------------------
+---------------------
 
 We suggest to install adam using `conda <https://anaconda.org/>`_:
 
@@ -19,7 +19,7 @@ We suggest to install adam using `conda <https://anaconda.org/>`_:
     conda install adam-robotics -c conda-forge
 
 📦 Pip installation
-------------------
+--------------------
 
 You can also install adam using `pip <https://pypi.org/project/pip/>`_:
 
