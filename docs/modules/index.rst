@@ -16,4 +16,3 @@ This section contains the documentation for the different modules of the library
     model
     model.conversions
     adam.parametric
-    adam.core
