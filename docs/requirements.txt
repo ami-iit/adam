@@ -13,3 +13,5 @@ sphinx-toolbox
 furo
 myst-parser
 graphviz
+mock
+sphinx-autoapi
