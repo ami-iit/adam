@@ -7,7 +7,6 @@ This module provides an interface to CasADi, a symbolic framework for automatic 
 
 .. currentmodule:: adam.casadi
 
-
 .. automodule:: adam.casadi.computations
    :members:
    :undoc-members:

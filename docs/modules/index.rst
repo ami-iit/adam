@@ -5,9 +5,6 @@ This section contains the documentation for the different modules of the library
 
 .. _modules:
 
-.. Modules
-.. -------
-
 .. toctree::
     :maxdepth: 2
 
