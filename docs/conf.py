@@ -7,6 +7,8 @@ import os
 import subprocess
 import sys
 
+import adam
+
 sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, os.path.abspath("../"))
 sys.path.insert(0, os.path.abspath("../../"))
