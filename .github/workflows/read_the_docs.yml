@@ -1,5 +1,3 @@
-# .github/workflows/documentation-links.yml
-
 name: Read the Docs
 on:
   pull_request_target:
