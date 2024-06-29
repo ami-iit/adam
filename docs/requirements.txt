@@ -15,4 +15,5 @@ myst-parser
 graphviz
 mock
 sphinx-autoapi
-adam-robotics
+adam-robotics[all]
+idyntree
