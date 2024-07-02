@@ -1,10 +1,11 @@
 import pathlib
 from typing import List
+import os
 
 import urdf_parser_py.urdf
 from adam.core.spatial_math import SpatialMath
 from adam.model import ModelFactory, StdJoint, StdLink, Link, Joint
-from adam.model.std_factories.std_model import urdf_remove_sensors_tags
+from adam.model.std_factories.std_model import urdf_remove_sensors_tags, get_xml_string
 from adam.parametric.model import ParametricJoint, ParametricLink
 
 
@@ -15,6 +16,7 @@ class URDFParametricModelFactory(ModelFactory):
         ModelFactory: the Model factory
     """
 
+    # TODO: path can be either a path and an urdf-string, leaving path for back compatibility, to be changed to meaningfull name
     def __init__(
         self,
         path: str,
@@ -24,10 +26,7 @@ class URDFParametricModelFactory(ModelFactory):
         densities,
     ):
         self.math = math
-        if type(path) is not pathlib.Path:
-            path = pathlib.Path(path)
-        if not path.exists():
-            raise FileExistsError(path)
+        xml_string = get_xml_string(path)
         self.links_name_list = links_name_list
 
         # Read URDF, but before passing it to urdf_parser_py get rid of all sensor tags
@@ -37,9 +36,6 @@ class URDFParametricModelFactory(ModelFactory):
         # to have a useless and noisy warning, let's remove before hands all the sensor elements,
         # that anyhow are not parser by urdf_parser_py or adam
         # See https://github.com/ami-iit/ADAM/issues/59
-        xml_file = open(path, "r")
-        xml_string = xml_file.read()
-        xml_file.close()
         xml_string_without_sensors_tags = urdf_remove_sensors_tags(xml_string)
 
         self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_string(
