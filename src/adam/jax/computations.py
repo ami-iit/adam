@@ -52,7 +52,7 @@ class KinDynComputations:
             joint_positions (jnp.array): The joints position
 
         Returns:
-            M (jax): Mass Matrix
+            M (jnp.array): Mass Matrix
         """
         [M, _] = self.rbdalgos.crba(base_transform, joint_positions)
         return M.array
@@ -125,12 +125,9 @@ class KinDynComputations:
             frame, base_transform, joint_positions
         ).array
 
-    def forward_kinematics_fun(self, frame):
-        return lambda T, joint_positions: self.forward_kinematics(
-            frame, T, joint_positions
-        )
-
-    def jacobian(self, frame: str, base_transform, joint_positions):
+    def jacobian(
+        self, frame: str, base_transform: jnp.array, joint_positions: jnp.array
+    ):
         """Returns the Jacobian relative to the specified frame
 
         Args:
