@@ -23,6 +23,39 @@ def urdf_remove_sensors_tags(xml_string):
     return modified_xml_string
 
 
+def get_xml_string(path: str):
+    isPath = False
+    isUrdf = False
+    # Checking if it is a path or an urdf
+    if type(path) is not (pathlib.Path):
+        if os.path.exists(path):
+            path = pathlib.Path(path)
+            isPath = True
+        else:
+            root = ET.fromstring(path)
+            robot_el = None
+            for elem in root.iter():
+                if elem.tag == "robot":
+                    xml_string = path
+                    isUrdf = True
+    elif path.exists():
+        isPath = True
+
+    if not (isPath) and not (isUrdf):
+        raise ValueError(
+            f"Invalid urdf string: {path}. It is neither a path nor a urdf string"
+        )
+
+    if isPath:
+        if not (path.exists()):
+            raise FileExistsError(path)
+        path = pathlib.Path(path)
+        with open(path, "r") as xml_file:
+            xml_string = xml_file.read()
+            xml_file.close()
+    return xml_string
+
+
 class URDFModelFactory(ModelFactory):
     """This factory generates robot elements from urdf_parser_py
 
@@ -33,35 +66,8 @@ class URDFModelFactory(ModelFactory):
     # TODO: path can be either a path and an urdf-string, leaving path for back compatibility, to be changed to meaningfull name
     def __init__(self, path: str, math: SpatialMath):
         self.math = math
-        isPath = False
-        isUrdf = False
-        # Checking if it is a path or an urdf
-        if type(path) is not (pathlib.Path):
-            if os.path.exists(path):
-                path = pathlib.Path(path)
-                isPath = True
-            else:
-                root = ET.fromstring(path)
-                robot_el = None
-                for elem in root.iter():
-                    if elem.tag == "robot":
-                        xml_string = path
-                        isUrdf = True
-        elif path.exists():
-            isPath = True
+        xml_string = get_xml_string(path)
 
-        if not (isPath) and not (isUrdf):
-            raise ValueError(
-                f"Invalid urdf string: {path}. It is neither a path nor a urdf string"
-            )
-
-        if isPath:
-            if not (path.exists()):
-                raise FileExistsError(path)
-            path = pathlib.Path(path)
-            xml_file = open(path, "r")
-            xml_string = xml_file.read()
-            xml_file.close()
         # Read URDF, but before passing it to urdf_parser_py get rid of all sensor tags
         # sensor tags are valid elements of URDF (see ),
         # but they are ignored by urdf_parser_py, that complains every time it sees one.
@@ -69,8 +75,7 @@ class URDFModelFactory(ModelFactory):
         # to have a useless and noisy warning, let's remove before hands all the sensor elements,
         # that anyhow are not parser by urdf_parser_py or adam
         # See https://github.com/ami-iit/ADAM/issues/59
-        with open(path, "r") as xml_file:
-            xml_string = xml_file.read()
+
         xml_string_without_sensors_tags = urdf_remove_sensors_tags(xml_string)
         self.urdf_desc = urdf_parser_py.urdf.URDF.from_xml_string(
             xml_string_without_sensors_tags
