@@ -1,6 +1,5 @@
 from typing import Dict, List, Optional
 
-import numpy.typing as npt
 from scipy.spatial.transform import Rotation
 
 from adam.core.spatial_math import SpatialMath

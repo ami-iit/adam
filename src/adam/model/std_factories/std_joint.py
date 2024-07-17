@@ -1,6 +1,5 @@
 from typing import Union
 
-import numpy.typing as npt
 import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
