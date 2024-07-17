@@ -16,9 +16,8 @@ class RBDAlgorithms:
     def __init__(self, model: Model, math: SpatialMath) -> None:
         """
         Args:
-            urdfstring (str): path of the urdf
-            joints_name_list (list): list of the actuated joints
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            model (Model): The robot model
+            math (SpatialMath): The spatial math object
         """
 
         self.model = model
