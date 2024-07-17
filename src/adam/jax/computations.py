@@ -2,13 +2,16 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
+from pathlib import Path
+from typing import Union
+
 import jax.numpy as jnp
 import numpy as np
 
 from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.jax.jax_like import SpatialMath
-from adam.model import Model, URDFModelFactory
+from adam.model import Model, utils
 
 
 class KinDynComputations:
@@ -16,23 +19,65 @@ class KinDynComputations:
 
     def __init__(
         self,
-        urdfstring: str,
+        model_string: str,
         joints_name_list: list = None,
         root_link: str = "root_link",
         gravity: np.array = jnp.array([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
         Args:
-            urdfstring (str): either path or string of the urdf
+            model_string (Union[str, Path]): the path or string of the URDF, or MuJoCo XML file
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
         math = SpatialMath()
-        factory = URDFModelFactory(path=urdfstring, math=math)
+        factory = utils.get_factory_from_string(model_string, math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
+
+    @staticmethod
+    def from_urdf(
+        urdf_string: Union[str, Path],
+        joints_name_list: list = None,
+        gravity: np.array = jnp.array([0, 0, -9.80665, 0, 0, 0]),
+    ):
+        """Creates a KinDynComputations object from a URDF string
+
+        Args:
+            urdf_string (Union[str, Path]): The URDF path or string
+            joints_name_list (list, optional): The actuated joints. Defaults to None.
+            root_link (str, optional): The root link. Defaults to "root_link".
+            gravity (np.array, optional): The gravity vector. Defaults to jnp.array([0, 0, -9.80665, 0, 0, 0]).
+
+        Returns:
+            KinDynComputations: The KinDynComputations object
+        """
+        return KinDynComputations(
+            model_string=urdf_string, joints_name_list=joints_name_list, gravity=gravity
+        )
+
+    @staticmethod
+    def from_mujoco_xml(
+        xml_string: Union[str, Path],
+        joints_name_list: list = None,
+        gravity: np.array = jnp.array([0, 0, -9.80665, 0, 0, 0]),
+    ):
+        """Creates a KinDynComputations object from a MuJoCo XML string
+
+        Args:
+            xml_string (Union[str, Path]): The MuJoCo XML path
+            joints_name_list (list, optional): The actuated joints. Defaults to None.
+            root_link (str, optional): The root link. Defaults to "root_link".
+            gravity (np.array, optional): The gravity vector. Defaults to jnp.array([0, 0, -9.80665, 0, 0, 0]).
+
+        Returns:
+            KinDynComputations: The KinDynComputations object
+        """
+        return KinDynComputations(
+            model_string=xml_string, joints_name_list=joints_name_list, gravity=gravity
+        )
 
     def set_frame_velocity_representation(
         self, representation: Representations
