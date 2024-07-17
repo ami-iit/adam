@@ -62,6 +62,10 @@ def build_tree(root):
                 "limit": joint.get("range", "0 0") if joint is not None else "0 0",
                 "orientation": link_info["quat"],
             }
+            # raise error if joint type is not supported
+            if joint_info["joint_type"] not in ["revolute", "prismatic", "fixed"]:
+                raise ValueError(f"Joint type {joint_info['joint_type']} not supported")
+
             joints[joint_info["name"]] = joint_info
             tree_structure[body_name] = (parent, joint_info["name"])
             child_map[parent] = body_name
