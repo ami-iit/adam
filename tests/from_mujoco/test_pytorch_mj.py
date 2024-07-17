@@ -115,9 +115,9 @@ def test_total_mass():
 
 def test_jacobian():
     iDyntreeJ_ = idyntree.MatrixDynSize(6, n_dofs + 6)
-    kinDyn.getFrameFreeFloatingJacobian("l_sole", iDyntreeJ_)
+    kinDyn.getFrameFreeFloatingJacobian("l_ankle_2", iDyntreeJ_)
     iDynNumpyJ_ = iDyntreeJ_.toNumPy()
-    J_test = comp.jacobian("l_sole", H_b, joints_val)
+    J_test = comp.jacobian("l_ankle_2", H_b, joints_val)
     assert iDynNumpyJ_ - np.asarray(J_test) == pytest.approx(0.0, abs=1e-5)
 
 
@@ -130,18 +130,18 @@ def test_jacobian_non_actuated():
 
 
 def test_jacobian_dot():
-    J_dot = comp.jacobian_dot("l_sole", H_b, joints_val, base_vel, joints_dot_val)
-    Jdotnu = kinDyn.getFrameBiasAcc("l_sole")
+    J_dot = comp.jacobian_dot("l_ankle_2", H_b, joints_val, base_vel, joints_dot_val)
+    Jdotnu = kinDyn.getFrameBiasAcc("l_ankle_2")
     Jdot_nu = Jdotnu.toNumPy()
     J_dot_nu_test = J_dot @ np.concatenate((base_vel, joints_dot_val))
     assert Jdot_nu - np.asarray(J_dot_nu_test) == pytest.approx(0.0, abs=1e-5)
 
 
 def test_fk():
-    H_idyntree = kinDyn.getWorldTransform("l_sole")
+    H_idyntree = kinDyn.getWorldTransform("l_ankle_2")
     p_idy2np = H_idyntree.getPosition().toNumPy()
     R_idy2np = H_idyntree.getRotation().toNumPy()
-    H_test = np.asarray(comp.forward_kinematics("l_sole", H_b, joints_val))
+    H_test = np.asarray(comp.forward_kinematics("l_ankle_2", H_b, joints_val))
     assert R_idy2np - H_test[:3, :3] == pytest.approx(0.0, abs=1e-5)
     assert p_idy2np - H_test[:3, 3] == pytest.approx(0.0, abs=1e-5)
 
