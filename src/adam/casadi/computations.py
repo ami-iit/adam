@@ -2,14 +2,15 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
+from typing import Union
+
 import casadi as cs
 import numpy as np
-from typing import Union
 
 from adam.casadi.casadi_like import SpatialMath
 from adam.core import RBDAlgorithms
 from adam.core.constants import Representations
-from adam.model import Model, URDFModelFactory
+from adam.model import MJModelFactory, Model, URDFModelFactory
 
 
 class KinDynComputations:
@@ -32,12 +33,45 @@ class KinDynComputations:
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
         math = SpatialMath()
-        factory = URDFModelFactory(path=urdfstring, math=math)
+        if urdfstring.endswith(".xml"):
+            factory = MJModelFactory(path=urdfstring, math=math)
+        elif urdfstring.endswith(".urdf"):
+            factory = URDFModelFactory(path=urdfstring, math=math)
+        else:
+            raise ValueError(f"The file format of {urdfstring} is not supported")
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
         self.f_opts = f_opts
+
+    @staticmethod
+    def from_mujoco_xml(
+        xml_string: str,
+        joints_name_list: list = None,
+        root_link: str = "root_link",
+        gravity: np.array = np.array([0.0, 0.0, -9.80665, 0.0, 0.0, 0.0]),
+        f_opts: dict = dict(jit=False, jit_options=dict(flags="-Ofast"), cse=True),
+    ) -> "KinDynComputations":
+        """Creates a KinDynComputations object from a Mujoco XML string
+
+        Args:
+            xml_string (str): The Mujoco XML string
+            joints_name_list (list, optional): List of the actuated joints. Defaults to None.
+            root_link (str, optional): The root link. Defaults to "root_link".
+            gravity (np.array, optional): The gravity vector. Defaults to np.array([0.0, 0.0, -9.80665, 0.0, 0.0, 0.0]).
+            f_opts (dict, optional): The function options. Defaults to dict(jit=False, jit_options=dict(flags="-Ofast"), cse=True).
+
+        Returns:
+            KinDynComputations: The KinDynComputations object
+        """
+        return KinDynComputations(
+            urdfstring=xml_string,
+            joints_name_list=joints_name_list,
+            root_link=root_link,
+            gravity=gravity,
+            f_opts=f_opts,
+        )
 
     def set_frame_velocity_representation(
         self, representation: Representations
