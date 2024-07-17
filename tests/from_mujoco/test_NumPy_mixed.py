@@ -8,13 +8,6 @@ import icub_models
 import idyntree.swig as idyntree
 import numpy as np
 import pytest
-from robot_descriptions import (
-    anymal_c_description,
-    anymal_c_mj_description,
-    cassie_description,
-    cassie_mj_description,
-)
-from scipy.spatial.transform import Rotation
 
 from adam import Representations
 from adam.geometry import utils
