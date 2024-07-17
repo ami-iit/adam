@@ -17,8 +17,6 @@ np.random.seed(42)
 
 model_path = str(icub_models.get_model_file("iCubGazeboV2_5"))
 model_path_xml = "iCubGazeboV2_5.xml"
-print(model_path)
-print(model_path_xml)
 
 joints_name_list = [
     "torso_pitch",
@@ -63,9 +61,6 @@ logging.debug("Showing the robot tree.")
 comp = KinDynComputations.from_mujoco_xml(
     xml_string=model_path_xml, joints_name_list=joints_name_list
 )
-# comp = KinDynComputations(model_path_xml)
-comp.rbdalgos.model.print_table()
-comp.rbdalgos.model.tree.show()
 robot_iDyn = idyntree.ModelLoader()
 robot_iDyn.loadReducedModelFromFile(model_path, joints_name_list)
 # robot_iDyn.loadModelFromFile(model_path)
