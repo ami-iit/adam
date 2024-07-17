@@ -19,10 +19,11 @@ def get_factory_from_string(
     """
 
     if Path(model_string).exists():
-        if model_string.endswith(".xml"):
+        model_string = Path(model_string)
+        if model_string.suffix == ".xml":
             print("Loading the model from MJCF file")
             return MJModelFactory(path=model_string, math=math)
-        elif model_string.endswith(".urdf"):
+        elif model_string.suffix == ".urdf":
             print("Loading the model from URDF file")
             return URDFModelFactory(path=model_string, math=math)
         else:
