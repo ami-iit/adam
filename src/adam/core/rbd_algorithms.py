@@ -439,7 +439,7 @@ class RBDAlgorithms:
                 pi = self.model.tree.get_idx_from_name(link_pi.name)
                 # pi = self.tree.links.index(link_pi)
                 v[i] = X_p[i] @ v[pi] + Phi[i] * q_dot
-                a[i] = X_p[i] @ a[pi] + self.math.spatial_skew(v[i]) @ Phi[i] * q_dot
+                a[i] = X_p[i] @ a[pi] + self.math.spatial_skew(v[i]) @ Phi[i] * q_dot + Phi[i]* q_dot_dot 
 
             f[i] = Ic[i] @ a[i] + self.math.spatial_skew_star(v[i]) @ Ic[i] @ v[i]
 
