@@ -363,6 +363,7 @@ class RBDAlgorithms:
         joint_positions: npt.ArrayLike,
         base_velocity: npt.ArrayLike,
         joint_velocities: npt.ArrayLike,
+        joint_accelerations: npt.ArrayLike,
         g: npt.ArrayLike,
     ) -> npt.ArrayLike:
         """Implementation of reduced Recursive Newton-Euler algorithm
@@ -374,6 +375,7 @@ class RBDAlgorithms:
             joint_positions (T): The joints position
             base_velocity (T): The base velocity in mixed representation
             joint_velocities (T): The joints velocity
+            joint_accelerations (T): The joints acceleration
             g (T): The 6D gravity acceleration
 
         Returns:
@@ -433,6 +435,9 @@ class RBDAlgorithms:
                 q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
                 q_dot = (
                     joint_velocities[joint_i.idx] if joint_i.idx is not None else 0.0
+                )
+                q_dot_dot = (
+                    joint_accelerations[joint_i.idx] if joint_i.idx is not None else 0.0
                 )
                 X_p[i] = joint_i.spatial_transform(q)
                 Phi[i] = joint_i.motion_subspace()
