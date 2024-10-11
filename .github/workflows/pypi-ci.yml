@@ -25,7 +25,7 @@ jobs:
       - run: git fetch --prune --unshallow
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -36,7 +36,7 @@ jobs:
         run: python -m build --sdist --wheel --outdir dist/ .
 
       - name: Archive artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist
@@ -48,7 +48,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
@@ -66,7 +66,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags')
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
