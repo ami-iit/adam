@@ -273,4 +273,4 @@ class KinDynComputations:
             joint_velocities,
             joint_torques,
             self.g,
-        ).array.squeeze()
+        )

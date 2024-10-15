@@ -8,14 +8,19 @@ import icub_models
 import idyntree.swig as idyntree
 import numpy as np
 import pytest
-
+from pathlib import Path
 from adam import Representations
 from adam.geometry import utils
 from adam.numpy import KinDynComputations
 
 np.random.seed(42)
-
+#
 model_path = str(icub_models.get_model_file("iCubGazeboV2_5"))
+# import robot_descriptions.ur10_description
+
+# model_path = str(robot_descriptions.ur10_description.URDF_PATH)
+# model_path = "/home/flferretti/git/element_rl-for-codesign/assets/model/Cartpole.urdf"
+
 
 joints_name_list = [
     "torso_pitch",
@@ -42,6 +47,7 @@ joints_name_list = [
     "r_ankle_pitch",
     "r_ankle_roll",
 ]
+# joints_name_list = ["linear", "pivot"]
 
 
 def H_from_Pos_RPY_idyn(xyz, rpy):
@@ -193,13 +199,42 @@ def test_gravity_term():
 
 def test_fd():
     joint_torques = np.random.rand(n_dofs)
-    joints_vel = np.random.rand(n_dofs)
-    reference_acc = np.linalg.inv(comp.mass_matrix(H_b, joints_val)) @ (
-        np.concatenate((np.zeros(6), joint_torques))
-        - comp.bias_force(H_b, joints_val, base_vel, joints_vel)
+    joints_vel = np.zeros(n_dofs)
+    joints_val = np.zeros(n_dofs)
+    base_vel = np.zeros(6)
+
+    M = comp.mass_matrix(base_transform=H_b, joint_positions=joints_vel)
+    h = comp.bias_force(
+        base_transform=H_b,
+        joint_positions=joints_val,
+        base_velocity=base_vel,
+        joint_velocities=joints_vel,
+    )
+    kinDyn.setRobotState(H_b, joints_val, base_vel, joints_vel, g)
+
+    mass_idyn = idyntree.MatrixDynSize()
+    kinDyn.getFreeFloatingMassMatrix(mass_idyn)
+    M_iDyn = mass_idyn.toNumPy()
+
+    h_iDyn = idyntree.FreeFloatingGeneralizedTorques(kinDyn.model())
+    assert kinDyn.generalizedBiasForces(h_iDyn)
+    h_iDyn_np = np.concatenate(
+        (h_iDyn.baseWrench().toNumPy(), h_iDyn.jointTorques().toNumPy())
+    )
+
+    reference_acc = np.linalg.inv(M_iDyn) @ (
+        np.concatenate((np.zeros(6), joint_torques)) - h_iDyn_np
     )
     base_acc, joint_acc = comp.forward_dynamics(
-        H_b, base_vel, joints_vel, joints_vel, joint_torques
+        base_transform=H_b,
+        base_velocity=base_vel,
+        joint_positions=joints_val,
+        joint_velocities=joints_vel,
+        joint_torques=joint_torques,
     )
+
     assert base_acc - reference_acc[:6] == pytest.approx(0.0, abs=1e-4)
     assert joint_acc - reference_acc[6:] == pytest.approx(0.0, abs=1e-4)
+
+
+test_fd()

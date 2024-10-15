@@ -73,11 +73,11 @@ class Tree(Iterable):
             raise ValueError("The model has more than one root link")
         return Tree(nodes, root_link[0])
 
-    def reduce(self, considered_joint_names: List[str]) -> "Tree":
+    def reduce(self, considered_joint_names: List[Joint]) -> "Tree":
         """reduces the tree to the considered joints
 
         Args:
-            considered_joint_names (List[str]): the list of the considered joints
+            considered_joint_names (List[Joint]): the list of the considered joints
 
         Returns:
             Tree: the reduced tree
@@ -143,7 +143,7 @@ class Tree(Iterable):
             )
         tree = Tree(self.graph, self.root)
         tree.print(self.root)
-        return Tree(self.graph, self.root)
+        return tree
 
     def print(self, root) -> str:
         """prints the tree
@@ -168,8 +168,7 @@ class Tree(Iterable):
         self.get_children(self.graph[start], ordered_list)
         return ordered_list
 
-    @classmethod
-    def get_children(cls, node: Node, list: List):
+    def get_children(self, node: Node, list: List):
         """Recursive method that finds children of child of child
         Args:
             node (Node): the analized node
@@ -178,7 +177,7 @@ class Tree(Iterable):
         if node.children is not []:
             for child in node.children:
                 list.append(child.name)
-                cls.get_children(child, list)
+                self.get_children(child, list)
 
     def get_idx_from_name(self, name: str) -> int:
         """
@@ -242,7 +241,7 @@ class Tree(Iterable):
         Yields:
             Iterator[Node]: the reversed nodes list
         """
-        yield from reversed(self)
+        yield from reversed([self.graph[name] for name in self.ordered_nodes_list])
 
     def __getitem__(self, key) -> Node:
         """get the item at key in the model

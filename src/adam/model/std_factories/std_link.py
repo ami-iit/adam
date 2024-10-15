@@ -55,6 +55,12 @@ class StdLink(Link):
         Returns:
             StdLink: the lumped link
         """
+        # compute origin from inertia
+        origin = self.math.vee(self.spatial_inertia()[3:, :3]) / self.inertial.mass
+
+        # compute rotation matrix from RPY
+        R = self.math.R_from_RPY(self.inertial.origin.rpy)
+
         other_inertia = (
             relative_transform.T @ other.spatial_inertia() @ relative_transform
         )
@@ -63,8 +69,18 @@ class StdLink(Link):
         lumped_mass = self.inertial.mass + other.inertial.mass
         lumped_inertia = self.spatial_inertia() + other_inertia
 
-        self.mass = lumped_mass
-        self.inertia = lumped_inertia
+        inertia_matrix = (
+            lumped_inertia[3:, :3]
+            - lumped_mass * self.math.skew(origin) @ self.math.skew(origin).T
+        )
+
+        self.inertial.mass = lumped_mass
+        self.inertial.inertia.ixx = inertia_matrix[0, 0].array
+        self.inertial.inertia.ixy = inertia_matrix[0, 1].array
+        self.inertial.inertia.ixz = inertia_matrix[0, 2].array
+        self.inertial.inertia.iyy = inertia_matrix[1, 1].array
+        self.inertial.inertia.iyz = inertia_matrix[1, 2].array
+        self.inertial.inertia.izz = inertia_matrix[2, 2].array
 
         return self
 
