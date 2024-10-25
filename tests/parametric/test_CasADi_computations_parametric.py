@@ -22,14 +22,17 @@ git_url = "https://github.com/icub-tech-iit/ergocub-gazebo-simulations.git"
 Repo.clone_from(git_url, temp_dir.name)
 model_path = temp_dir.name + "/models/stickBot/model.urdf"
 
-## Ack to remove the encoding urdf, see https://github.com/icub-tech-iit/ergocub-gazebo-simulations/issues/49
-robot_file_read = open(model_path, "r")
-robot_urdf_string = robot_file_read.read()
-robot_urdf_string = robot_urdf_string.replace("<?xml", "")
-robot_urdf_string = robot_urdf_string.replace("version='1.0'", "")
-robot_urdf_string = robot_urdf_string.replace("encoding='UTF-8'?>", "")
-robot_file_write = open(model_path, "w")
-robot_file_write.write(robot_urdf_string)
+## Hack to remove the encoding urdf, see https://github.com/icub-tech-iit/ergocub-gazebo-simulations/issues/49
+with open(model_path, "r", encoding="utf-8") as robot_file:
+    robot_urdf_string = (
+        robot_file.read()
+        .replace("<?xml", "")
+        .replace("version='1.0'", "")
+        .replace("encoding='UTF-8'?>", "")
+    )
+
+with open(model_path, "w") as robot_file:
+    robot_file.write(robot_urdf_string)
 
 joints_name_list = [
     "torso_pitch",

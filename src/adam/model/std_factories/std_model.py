@@ -23,36 +23,43 @@ def urdf_remove_sensors_tags(xml_string):
     return modified_xml_string
 
 
-def get_xml_string(path: str):
-    isPath = False
+def get_xml_string(path: str | pathlib.Path):
+
+    isPath = isinstance(path, pathlib.Path)
     isUrdf = False
+
+    # Extract the maximum path length for the current OS
+    try:
+        from ctypes.wintypes import MAX_PATH
+    except ValueError:
+        MAX_PATH = os.pathconf("/", "PC_PATH_MAX")
+
     # Checking if it is a path or an urdf
-    if type(path) is not (pathlib.Path):
-        if os.path.exists(path):
+    if not isPath:
+        if len(path) <= MAX_PATH and os.path.exists(path):
             path = pathlib.Path(path)
             isPath = True
         else:
             root = ET.fromstring(path)
-            robot_el = None
+
             for elem in root.iter():
                 if elem.tag == "robot":
                     xml_string = path
                     isUrdf = True
-    elif path.exists():
-        isPath = True
+                    break
 
-    if not (isPath) and not (isUrdf):
+    if isPath:
+        if not path.is_file():
+            raise FileExistsError(path)
+
+        with path.open() as xml_file:
+            xml_string = xml_file.read()
+
+    if not isPath and not isUrdf:
         raise ValueError(
             f"Invalid urdf string: {path}. It is neither a path nor a urdf string"
         )
 
-    if isPath:
-        if not (path.exists()):
-            raise FileExistsError(path)
-        path = pathlib.Path(path)
-        with open(path, "r") as xml_file:
-            xml_string = xml_file.read()
-            xml_file.close()
     return xml_string
 
 
