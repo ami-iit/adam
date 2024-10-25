@@ -54,7 +54,34 @@ class Joint(abc.ABC):
     Abstract base class for all joints.
     """
 
-    @abc.abstractmethod
+    def homogeneous(self, q: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            q (npt.ArrayLike): joint value
+
+        Returns:
+            npt.ArrayLike: the homogenous transform of a joint, given q
+        """
+
+        if self.type == "fixed":
+            xyz = self.origin.xyz
+            rpy = self.origin.rpy
+            return self.math.H_from_Pos_RPY(xyz, rpy)
+        elif self.type in ["revolute", "continuous"]:
+            return self.math.H_revolute_joint(
+                self.origin.xyz,
+                self.origin.rpy,
+                self.axis,
+                q,
+            )
+        elif self.type in ["prismatic"]:
+            return self.math.H_prismatic_joint(
+                self.origin.xyz,
+                self.origin.rpy,
+                self.axis,
+                q,
+            )
+
     def spatial_transform(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
@@ -63,24 +90,48 @@ class Joint(abc.ABC):
         Returns:
             npt.ArrayLike: spatial transform of the joint given q
         """
-        pass
+        if self.type == "fixed":
+            return self.math.X_fixed_joint(self.origin.xyz, self.origin.rpy)
+        elif self.type in ["revolute", "continuous"]:
+            return self.math.X_revolute_joint(
+                self.origin.xyz, self.origin.rpy, self.axis, q
+            )
+        elif self.type in ["prismatic"]:
+            return self.math.X_prismatic_joint(
+                self.origin.xyz,
+                self.origin.rpy,
+                self.axis,
+                q,
+            )
 
-    @abc.abstractmethod
     def motion_subspace(self) -> npt.ArrayLike:
         """
+        Args:
+            joint (Joint): Joint
+
         Returns:
             npt.ArrayLike: motion subspace of the joint
         """
-
-    @abc.abstractmethod
-    def homogeneous(self, q: npt.ArrayLike) -> npt.ArrayLike:
-        """
-        Args:
-            q (npt.ArrayLike): joint value
-        Returns:
-            npt.ArrayLike: homogeneous transform given the joint value
-        """
-        pass
+        if self.type == "fixed":
+            return self.math.vertcat(0, 0, 0, 0, 0, 0)
+        elif self.type in ["revolute", "continuous"]:
+            return self.math.vertcat(
+                0,
+                0,
+                0,
+                self.axis[0],
+                self.axis[1],
+                self.axis[2],
+            )
+        elif self.type in ["prismatic"]:
+            return self.math.vertcat(
+                self.axis[0],
+                self.axis[1],
+                self.axis[2],
+                0,
+                0,
+                0,
+            )
 
 
 @dataclasses.dataclass
@@ -130,22 +181,27 @@ class Link(abc.ABC):
     inertial: Inertial
     collisions: List
 
-    @abc.abstractmethod
     def spatial_inertia(self) -> npt.ArrayLike:
         """
         Returns:
             npt.ArrayLike: the 6x6 inertia matrix expressed at
                            the origin of the link (with rotation)
         """
-        pass
+        I = self.inertial.inertia
+        mass = self.inertial.mass
+        o = self.inertial.origin.xyz
+        rpy = self.inertial.origin.rpy
+        return self.math.spatial_inertia(I, mass, o, rpy)
 
-    @abc.abstractmethod
     def homogeneous(self) -> npt.ArrayLike:
         """
         Returns:
             npt.ArrayLike: the homogeneous transform of the link
         """
-        pass
+        return self.math.H_from_Pos_RPY(
+            self.inertial.origin.xyz,
+            self.inertial.origin.rpy,
+        )
 
 
 @dataclasses.dataclass
