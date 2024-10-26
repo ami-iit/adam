@@ -1,0 +1,349 @@
+<mujoco model="iCub">
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072" />
+    <texture name="plane" type="2d" builtin="checker" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" width="128" height="128" mark="cross" markrgb=".8 .8 .8" />
+    <material name="plane" reflectance="0.2" texture="plane" texrepeat="5 5" texuniform="true" />
+  </asset>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0" />
+    <rgba haze="0.15 0.25 0.35 1" />
+    <global azimuth="120" elevation="-20" />
+  </visual>
+
+  <option cone="elliptic" impratio="10" />
+
+  <compiler angle="radian" meshdir="../robot_descriptions/icub-models/iCub/meshes/simmechanics" />
+  <statistic meansize="0.109932" extent="1.2571" center="0.0450931 -6.00196e-05 -0.0979711" />
+  <asset>
+    <mesh name="sim_sea_2-5_root_link_prt-binary" file="sim_sea_2-5_root_link_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_hip_1_prt-binary" file="sim_sea_2-5_r_hip_1_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_hip_2_prt-binary" file="sim_sea_2-5_r_hip_2_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_upper_thigh_prt-binary" file="sim_sea_2-5_r_upper_thigh_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_thigh_prt-binary" file="sim_sea_2-5_r_thigh_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_shank_prt-binary" file="sim_sea_2-5_r_shank_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_ankle_prt-binary" file="sim_sea_2-5_r_ankle_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_foot_prt-binary" file="sim_sea_2-5_r_foot_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_sole_prt-binary" file="sim_sea_2-5_r_sole_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_lap_belt_1_prt-binary" file="sim_sea_2-5_lap_belt_1_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_lap_belt_2_prt-binary" file="sim_sea_2-5_lap_belt_2_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_chest_bb_prt-binary" file="sim_sea_2-5_chest_bb_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_neck_1_prt-binary" file="sim_sea_2-5_neck_1_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_neck_2_prt-binary" file="sim_sea_2-5_neck_2_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_head_prt-binary" file="sim_sea_2-5_head_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_shoulder_1_prt-binary" file="sim_sea_2-5_r_shoulder_1_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_shoulder_2_prt-binary" file="sim_sea_2-5_r_shoulder_2_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_upper_arm_prt-binary" file="sim_sea_2-5_r_upper_arm_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_elbow_prt-binary" file="sim_sea_2-5_r_elbow_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_elbow_prosup_prt-binary" file="sim_sea_2-5_r_elbow_prosup_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_forearm_prt-binary" file="sim_sea_2-5_r_forearm_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_wrist_pitch_prt-binary" file="sim_sea_2-5_r_wrist_pitch_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_r_hand_prt-binary" file="sim_sea_2-5_r_hand_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_shoulder_1_prt-binary" file="sim_sea_2-5_l_shoulder_1_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_shoulder_2_prt-binary" file="sim_sea_2-5_l_shoulder_2_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_upper_arm_prt-binary" file="sim_sea_2-5_l_upper_arm_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_elbow_prt-binary" file="sim_sea_2-5_l_elbow_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_elbow_prosup_prt-binary" file="sim_sea_2-5_l_elbow_prosup_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_forearm_prt-binary" file="sim_sea_2-5_l_forearm_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_wrist_pitch_prt-binary" file="sim_sea_2-5_l_wrist_pitch_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_hand_prt-binary" file="sim_sea_2-5_l_hand_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_hip_1_prt-binary" file="sim_sea_2-5_l_hip_1_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_hip_2_prt-binary" file="sim_sea_2-5_l_hip_2_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_upper_thigh_prt-binary" file="sim_sea_2-5_l_upper_thigh_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_thigh_prt-binary" file="sim_sea_2-5_l_thigh_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_shank_prt-binary" file="sim_sea_2-5_l_shank_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_ankle_prt-binary" file="sim_sea_2-5_l_ankle_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_foot_prt-binary" file="sim_sea_2-5_l_foot_prt-binary.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_sea_2-5_l_sole_prt-binary" file="sim_sea_2-5_l_sole_prt-binary.stl" scale="0.001 0.001 0.001" />
+  </asset>
+  <worldbody>
+    <body name="root_link">
+      <inertial pos="0.0248821 0.000103947 -0.0440806" quat="-0.110211 -0.1112 -0.697807 0.698966" mass="5.09143" diaginertia="0.0254684 0.0196552 0.0139679" />
+      <joint name="floating_joint" type="free" />
+      <geom pos="-0.0364 0 0.032" quat="0.5 0.5 -0.5 -0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_root_link_prt-binary" />
+      <geom pos="-0.0364 0 0.032" quat="0.5 0.5 -0.5 -0.5" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_root_link_prt-binary" />
+      <body name="r_hip_1" pos="0.0064515 0.026 -0.119913" quat="0 0 0 -1">
+        <inertial pos="-0.0005145 -0.0380753 -7.1e-05" quat="-0.707742 0.702832 -0.0481733 -0.0529812" mass="0.919978" diaginertia="0.000580144 0.000574638 0.000404252" />
+        <joint name="r_hip_pitch" pos="0 0 0" axis="0 -1 0" range="-0.785398 2.33874" damping="50" />
+        <geom pos="0.0428515 0.026 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_hip_1_prt-binary" />
+        <geom pos="0.0428515 0.026 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_hip_1_prt-binary" />
+        <body name="r_hip_2" pos="0 -0.0441 0">
+          <inertial pos="-0.0009614 7.55046e-05 -0.0537485" quat="0.707265 -0.00474132 -0.00746739 0.706893" mass="0.539454" diaginertia="0.0106103 0.0104451 0.0102771" />
+          <joint name="r_hip_roll" pos="0 0 0" axis="-1 0 0" range="-0.349066 2.0944" damping="50" />
+          <geom pos="0.0428515 0.0701 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_hip_2_prt-binary" />
+          <geom pos="0.0428515 0.0701 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_hip_2_prt-binary" />
+          <geom pos="0.0427727 0.0701139 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_upper_thigh_prt-binary" />
+          <geom pos="0.0427727 0.0701139 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_upper_thigh_prt-binary" />
+          <body name="r_upper_leg" pos="-0.0009363 1.39e-05 -0.0887">
+            <inertial pos="0.0034 -2.91e-05 -0.078954" quat="-0.0186283 0.770014 0.63775 -0.00226625" mass="1.8035" diaginertia="0.00648123 0.00647056 0.00145231" />
+            <joint name="r_hip_yaw" pos="0 0 0" axis="0 0 -1" range="-1.39626 1.39626" damping="50" />
+            <geom pos="0.043709 0.0701 0.240813" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_thigh_prt-binary" />
+            <geom pos="0.043709 0.0701 0.240813" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_thigh_prt-binary" />
+            <body name="r_lower_leg" pos="0 0 -0.145825">
+              <inertial pos="0.0012364 -0.0035131 -0.088794" quat="-0.0357732 0.992736 -0.105359 -0.045782" mass="1.472" diaginertia="0.00461204 0.00424223 0.0014802" />
+              <joint name="r_knee" pos="0 0 0" axis="0 -1 0" range="-2.16421 0.0698132" damping="50" />
+              <geom pos="0.043709 0.0701 0.386638" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_shank_prt-binary" />
+              <geom pos="0.043709 0.0701 0.386638" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_shank_prt-binary" />
+              <body name="r_ankle_1" pos="0 0 -0.2005">
+                <inertial pos="0.0151436 -0.0008686 4.2e-05" quat="-0.0974686 0.706465 0.0994599 0.693913" mass="0.6803" diaginertia="0.000448682 0.000413265 0.000299541" />
+                <joint name="r_ankle_pitch" pos="0 0 0" axis="0 1 0" range="-0.610865 0.610865" damping="50" />
+                <geom pos="0.043709 0.0701 0.587138" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_ankle_prt-binary" />
+                <geom pos="0.043709 0.0701 0.587138" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_ankle_prt-binary" />
+                <body name="r_ankle_2">
+                  <inertial pos="0.0182531 -0.00317253 -0.0508293" quat="-0.0553398 0.729613 -0.0372071 0.680602" mass="0.647988" diaginertia="0.0115584 0.0114072 0.0103395" />
+                  <joint name="r_ankle_roll" pos="0 0 0" axis="-1 0 0" range="-0.436332 0.436332" damping="50" />
+                  <geom pos="0.0437878 0.0700861 0.587138" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_foot_prt-binary" />
+                  <geom pos="0.0437878 0.0700861 0.587138" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_foot_prt-binary" />
+                  <geom pos="0.043709 0.0701 0.586938" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_sole_prt-binary" />
+                  <geom size="0.08 0.036 0.0005" pos="0.0265 -0.005 -0.0745" quat="0 1 0 0" type="box" rgba="0.635 0.137 0.114 1" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="torso_1" pos="0 0.0270463 0" quat="0.5 0.5 -0.5 -0.5">
+        <inertial pos="0.0270921 0.029148 -0.0004398" quat="0.99901 0.0379433 0.00514218 -0.0226347" mass="0.67144" diaginertia="0.000409169 0.000384587 0.00029894" />
+        <joint name="torso_pitch" pos="0 0 0" axis="1 0 0" range="-0.349066 1.22173" damping="50" />
+        <geom pos="0.0270463 0.032 0.0364" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_lap_belt_1_prt-binary" />
+        <geom pos="0.0270463 0.032 0.0364" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_lap_belt_1_prt-binary" />
+        <body name="torso_2" pos="0.0270463 0.032 -0.0573446">
+          <inertial pos="-0.000113508 0.0361525 0.0570963" quat="0.706739 0.707474 -0.000124378 0.000167074" mass="0.425685" diaginertia="0.000829234 0.000604802 0.000436517" />
+          <joint name="torso_roll" pos="0 0 0" axis="0 0 -1" range="-0.523599 0.523599" damping="50" />
+          <geom pos="0 0.1433 0.0386531" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_lap_belt_2_prt-binary" />
+          <geom pos="0 0.1433 0.0386531" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_lap_belt_2_prt-binary" />
+          <body name="chest" pos="0 0.05 0.0628421">
+            <inertial pos="0.000188619 0.073091 -0.0472381" quat="0.715214 -0.0122675 0.00447107 0.698784" mass="7.638" diaginertia="0.0440944 0.0430339 0.0260442" />
+            <joint name="torso_yaw" pos="0 0 0" axis="0 -1 0" range="-0.872665 0.872665" damping="50" />
+            <geom pos="0 0.0928 -0.024189" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_chest_bb_prt-binary" />
+            <geom pos="0 0.0928 -0.024189" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_chest_bb_prt-binary" />
+            <body name="neck_1" pos="-0.0143 0.172797 0.0053118">
+              <inertial pos="0.0143706 0.006567 -0.0063842" quat="0.653136 0.273947 -0.267243 0.653412" mass="0.125793" diaginertia="0.0100094 0.01 0.0099906" />
+              <joint name="neck_pitch" pos="0 0 0" axis="-1 0 0" range="-0.698132 0.383972" damping="50" />
+              <geom pos="0.0143 -0.079997 -0.0295008" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_neck_1_prt-binary" />
+              <geom pos="0.0143 -0.079997 -0.0295008" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_neck_1_prt-binary" />
+              <body name="neck_2" pos="0.0143 0.0095 0.0208">
+                <inertial pos="-8.8573e-05 0.035225 -0.0195453" quat="0.661135 0.24664 -0.294213 0.644599" mass="0.177087" diaginertia="0.0100098 0.01 0.00999014" />
+                <joint name="neck_roll" pos="0 0 0" axis="0 0 1" range="-0.349066 0.349066" damping="50" />
+                <geom pos="0 -0.089497 -0.0503008" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_neck_2_prt-binary" />
+                <geom pos="0 -0.089497 -0.0503008" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_neck_2_prt-binary" />
+                <body name="head" pos="0 -0.022344 -0.0208">
+                  <inertial pos="-0.000574158 0.113511 -0.0075392" quat="0.995846 0.0892117 -0.017528 -0.00506802" mass="1.50691" diaginertia="0.00680747 0.00640004 0.00472579" />
+                  <joint name="neck_yaw" pos="0 0 0" axis="0 1 0" range="-0.872665 0.872665" damping="50" />
+                  <geom pos="0 -0.067153 -0.0295008" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="sim_sea_2-5_head_prt-binary" />
+                  <geom pos="0 -0.067153 -0.0295008" type="mesh" rgba="1 1 1 1" mesh="sim_sea_2-5_head_prt-binary" />
+                </body>
+              </body>
+            </body>
+            <body name="r_shoulder_1" pos="-0.120016 0.0928 0.0079693" quat="0 0.258819 0 0.965926">
+              <inertial pos="-0.0122656 3.2e-05 -0.00321064" quat="0.923843 -0.00544289 0.382668 0.00707733" mass="0.114862" diaginertia="0.0100036 0.01 0.00999644" />
+              <joint name="r_shoulder_pitch" pos="0 0 0" axis="-0.965926 0 0.258819" range="-1.66679 0.174533" damping="50" />
+              <geom pos="0.0990079 0 -0.0265292" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_shoulder_1_prt-binary" />
+              <geom pos="0.0990079 0 -0.0265292" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_shoulder_1_prt-binary" />
+              <body name="r_shoulder_2" pos="-0.00758047 0 0.0142102" quat="0.707107 -0.183013 1.00849e-07 -0.683013">
+                <inertial pos="-0.0214142 0.000271725 -0.0194402" quat="-0.0271128 0.922305 0.0516326 0.382037" mass="0.238162" diaginertia="0.0100103 0.01 0.00998966" />
+                <joint name="r_shoulder_roll" pos="0 0 0" axis="-0.258819 0 -0.965926" range="0 2.80649" damping="50" />
+                <geom pos="0.106588 2.31915e-07 -0.0407392" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_shoulder_2_prt-binary" />
+                <geom pos="0.106588 2.31915e-07 -0.0407392" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_shoulder_2_prt-binary" />
+                <body name="r_shoulder_3" pos="-0.0253461 2.3275e-07 -0.00538765" quat="0.991445 -0.126079 -9.78946e-09 0.0337826">
+                  <inertial pos="-0.0632158 8.27444e-05 0.0256137" quat="0.414102 0.578567 0.558885 0.425943" mass="1.10423" diaginertia="0.0114392 0.0113832 0.0104961" />
+                  <joint name="r_shoulder_yaw" pos="0 0 0" axis="0.965926 0 -0.258819" range="-0.645772 1.39626" damping="50" />
+                  <geom pos="0.131934 0 -0.0353516" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_upper_arm_prt-binary" />
+                  <geom pos="0.131934 0 -0.0353516" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_upper_arm_prt-binary" />
+                  <geom pos="0.131934 0 -0.0353516" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_elbow_prt-binary" />
+                  <geom pos="0.131934 0 -0.0353516" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_elbow_prt-binary" />
+                  <body name="r_elbow_1" pos="-0.127457 -0.0224999 0.049681">
+                    <inertial pos="-0.00673913 0.0188019 -0.00465769" quat="0.889627 0.287374 0.352074 0.0449803" mass="0.267903" diaginertia="0.0100112 0.0100037 0.00998517" />
+                    <joint name="r_elbow" pos="0 0 0" axis="0 1 0" range="0.261799 1.85005" damping="50" />
+                    <geom pos="0.25939 0.0224999 -0.0850326" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_elbow_prosup_prt-binary" />
+                    <geom pos="0.25939 0.0224999 -0.0850326" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_elbow_prosup_prt-binary" />
+                    <body name="r_forearm" pos="-0.0384624 0.0224999 -0.00522317">
+                      <inertial pos="-0.0404391 -0.000328 0.00532733" quat="0.380022 0.595027 0.594184 0.385319" mass="0.6347" diaginertia="0.000672292 0.000601594 0.000322074" />
+                      <joint name="r_wrist_prosup" pos="0 0 0" axis="0.965926 0 -0.258819" range="-1.0472 1.0472" damping="50" />
+                      <geom pos="0.296887 0 -0.0795506" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_forearm_prt-binary" />
+                      <geom pos="0.296887 0 -0.0795506" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_r_forearm_prt-binary" />
+                      <body name="r_wrist_1" pos="-0.103505 7e-06 0.0251977">
+                        <inertial pos="0.000986102 -0.001176 0.00410133" quat="0.920531 -0.046124 0.381345 0.0712175" mass="0.0362615" diaginertia="0.010001 0.01 0.00999904" />
+                        <joint name="r_wrist_pitch" pos="0 0 0" axis="0.258819 0 0.965926" range="-1.39626 0.436332" damping="50" />
+                        <geom pos="0.400392 -7e-06 -0.104748" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_wrist_pitch_prt-binary" />
+                        <geom pos="0.400392 -7e-06 -0.104748" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_wrist_pitch_prt-binary" />
+                        <body name="r_hand" pos="0.000634106 -0.0194999 0.00236652">
+                          <inertial pos="-0.0646682 0.0056002 0.0226813" quat="-0.112385 0.892032 0.231018 0.37186" mass="0.248289" diaginertia="0.0100407 0.010002 0.00995729" />
+                          <joint name="r_wrist_yaw" pos="0 0 0" axis="0 -1 0" range="-0.349066 0.436332" damping="50" />
+                          <geom pos="0.399758 0.0194929 -0.107115" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_hand_prt-binary" />
+                          <geom pos="0.399758 0.0194929 -0.107115" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_r_hand_prt-binary" />
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+            <body name="l_shoulder_1" pos="0.120016 0.0928 0.0079693">
+              <inertial pos="-0.008985 -3.3e-05 -0.0088998" quat="-0.00583024 0.923837 0.00758142 0.382666" mass="0.114882" diaginertia="0.0100036 0.01 0.00999644" />
+              <joint name="l_shoulder_pitch" pos="0 0 0" axis="0.965926 0 0.258819" range="-1.66679 0.174533" damping="50" />
+              <geom pos="-0.120257 0 -0.032223" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_shoulder_1_prt-binary" />
+              <geom pos="-0.120257 0 -0.032223" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_shoulder_1_prt-binary" />
+              <body name="l_shoulder_2" pos="-0.013671 0 0.0085204" quat="0.707107 0.183013 0 -0.683013">
+                <inertial pos="0.0214746 0.000268958 -0.0194107" quat="0.922885 0.021839 0.382274 -0.0409079" mass="0.238162" diaginertia="0.010013 0.01 0.00998696" />
+                <joint name="l_shoulder_roll" pos="0 0 0" axis="-0.258819 0 0.965926" range="0 2.80649" damping="50" />
+                <geom pos="-0.106587 1.10801e-07 -0.0407434" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_shoulder_2_prt-binary" />
+                <geom pos="-0.106587 1.10801e-07 -0.0407434" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_shoulder_2_prt-binary" />
+                <body name="l_shoulder_3" pos="0.0253143 1.11636e-07 -0.00540062" quat="0.991445 -0.126079 9.78946e-09 -0.0337826">
+                  <inertial pos="0.0633194 0.00012243 0.025614" quat="0.550833 0.431858 0.40853 0.585819" mass="1.10593" diaginertia="0.0114438 0.0113869 0.0104966" />
+                  <joint name="l_shoulder_yaw" pos="0 0 0" axis="0.965926 0 0.258819" range="-0.645772 1.39626" damping="50" />
+                  <geom pos="-0.131901 0 -0.0353428" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_upper_arm_prt-binary" />
+                  <geom pos="-0.131901 0 -0.0353428" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_upper_arm_prt-binary" />
+                  <geom pos="-0.131901 0 -0.0353428" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_elbow_prt-binary" />
+                  <geom pos="-0.131901 0 -0.0353428" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_elbow_prt-binary" />
+                  <body name="l_elbow_1" pos="0.127489 -0.0339999 0.0496898">
+                    <inertial pos="0.00673913 0.0303019 -0.00465769" quat="-0.287465 0.889618 -0.0449192 0.35203" mass="0.267903" diaginertia="0.0100112 0.0100037 0.00998517" />
+                    <joint name="l_elbow" pos="0 0 0" axis="0 -1 0" range="0.261799 1.85005" damping="50" />
+                    <geom pos="-0.25939 0.0339999 -0.0850326" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_elbow_prosup_prt-binary" />
+                    <geom pos="-0.25939 0.0339999 -0.0850326" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_elbow_prosup_prt-binary" />
+                    <body name="l_forearm" pos="0.0384624 0.0339999 -0.00522317">
+                      <inertial pos="0.0404512 -0.000686 0.00532363" quat="0.589221 0.393032 0.373008 0.599341" mass="0.636185" diaginertia="0.000674371 0.000605037 0.000323383" />
+                      <joint name="l_wrist_prosup" pos="0 0 0" axis="0.965926 0 0.258819" range="-1.0472 1.0472" damping="50" />
+                      <geom pos="-0.296887 0 -0.0795506" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_forearm_prt-binary" />
+                      <geom pos="-0.296887 0 -0.0795506" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_forearm_prt-binary" />
+                      <body name="l_wrist_1" pos="0.103428 7e-06 0.0254875">
+                        <inertial pos="-0.000981314 -0.001178 0.00408346" quat="0.0459991 0.920546 -0.0710737 0.381351" mass="0.0362152" diaginertia="0.010001 0.01 0.00999904" />
+                        <joint name="l_wrist_pitch" pos="0 0 0" axis="0.258819 0 -0.965926" range="-1.39626 0.436332" damping="50" />
+                        <geom pos="-0.400315 -7e-06 -0.105038" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_wrist_pitch_prt-binary" />
+                        <geom pos="-0.400315 -7e-06 -0.105038" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_wrist_pitch_prt-binary" />
+                        <body name="l_hand" pos="-0.000634106 -0.0194999 0.00236652">
+                          <inertial pos="0.064768 0.0056304 0.0226602" quat="0.893006 0.114436 0.372673 -0.224856" mass="0.247806" diaginertia="0.0100411 0.0100025 0.00995639" />
+                          <joint name="l_wrist_yaw" pos="0 0 0" axis="0 1 0" range="-0.349066 0.436332" damping="50" />
+                          <geom pos="-0.39968 0.0194929 -0.107405" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_hand_prt-binary" />
+                          <geom pos="-0.39968 0.0194929 -0.107405" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_hand_prt-binary" />
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="l_hip_1" pos="0.0064515 -0.026 -0.119913" quat="0 0 0 -1">
+        <inertial pos="-0.0005108 0.0380923 -8.3e-05" quat="-0.701948 0.706519 -0.0657574 -0.0614495" mass="0.919725" diaginertia="0.000579182 0.000573129 0.000404525" />
+        <joint name="l_hip_pitch" pos="0 0 0" axis="0 -1 0" range="-0.785398 2.33874" damping="50" />
+        <geom pos="0.0428515 -0.026 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_hip_1_prt-binary" />
+        <geom pos="0.0428515 -0.026 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_hip_1_prt-binary" />
+        <body name="l_hip_2" pos="0 0.0441 0">
+          <inertial pos="-0.00107064 9.64911e-05 -0.0535229" quat="0.706904 -0.0132372 -0.01704 0.70698" mass="0.542199" diaginertia="0.0106189 0.0104513 0.0102795" />
+          <joint name="l_hip_roll" pos="0 0 0" axis="1 0 0" range="-0.349066 2.0944" damping="50" />
+          <geom pos="0.0428515 -0.0701 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_hip_2_prt-binary" />
+          <geom pos="0.0428515 -0.0701 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_hip_2_prt-binary" />
+          <geom pos="0.0428789 -0.0700248 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_upper_thigh_prt-binary" />
+          <geom pos="0.0428789 -0.0700248 0.151913" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_upper_thigh_prt-binary" />
+          <body name="l_upper_leg" pos="-0.0008302 7.52e-05 -0.0887">
+            <inertial pos="0.0033869 0.0001018 -0.078916" quat="-0.00155135 0.681539 0.731551 -0.0183286" mass="1.8084" diaginertia="0.00648824 0.00647988 0.0014557" />
+            <joint name="l_hip_yaw" pos="0 0 0" axis="0 0 1" range="-1.39626 1.39626" damping="50" />
+            <geom pos="0.0437091 -0.0701 0.240813" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_thigh_prt-binary" />
+            <geom pos="0.0437091 -0.0701 0.240813" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_thigh_prt-binary" />
+            <body name="l_lower_leg" pos="0 0 -0.145825">
+              <inertial pos="0.0009998 0.0034969 -0.088567" quat="0.037701 0.991171 0.120144 -0.041511" mass="1.4724" diaginertia="0.0046085 0.00423616 0.00148461" />
+              <joint name="l_knee" pos="0 0 0" axis="0 -1 0" range="-2.16421 0.0698132" damping="50" />
+              <geom pos="0.0437091 -0.0701 0.386638" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_shank_prt-binary" />
+              <geom pos="0.0437091 -0.0701 0.386638" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_shank_prt-binary" />
+              <body name="l_ankle_1" pos="0 0 -0.2005">
+                <inertial pos="0.0151531 0.000902 4.2e-05" quat="0.0942725 0.706107 -0.103691 0.694099" mass="0.6798" diaginertia="0.000447943 0.000413255 0.000298766" />
+                <joint name="l_ankle_pitch" pos="0 0 0" axis="0 1 0" range="-0.610865 0.610865" damping="50" />
+                <geom pos="0.0437091 -0.0701 0.587138" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_ankle_prt-binary" />
+                <geom pos="0.0437091 -0.0701 0.587138" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_ankle_prt-binary" />
+                <body name="l_ankle_2">
+                  <inertial pos="0.0182944 0.00317677 -0.0508205" quat="0.0551391 0.729649 0.0369805 0.680591" mass="0.64809" diaginertia="0.0115617 0.0114107 0.0103396" />
+                  <joint name="l_ankle_roll" pos="0 0 0" axis="1 0 0" range="-0.436332 0.436332" damping="50" />
+                  <geom pos="0.0436817 -0.0701752 0.587138" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_foot_prt-binary" />
+                  <geom pos="0.0436817 -0.0701752 0.587138" quat="0.5 0.5 0.5 0.5" type="mesh" rgba="0.9 0.9 0.9 1" mesh="sim_sea_2-5_l_foot_prt-binary" />
+                  <geom pos="0.0437091 -0.0701 0.586938" quat="0.5 0.5 0.5 0.5" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.635 0.137 0.114 1" mesh="sim_sea_2-5_l_sole_prt-binary" />
+                  <geom size="0.08 0.036 0.0005" pos="0.0265 0.005 -0.0745" quat="0 1 0 0" type="box" rgba="0.635 0.137 0.114 1" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <contact>
+    <exclude body1="root_link" body2="r_hip_2" />
+    <exclude body1="root_link" body2="torso_2" />
+    <exclude body1="root_link" body2="r_shoulder_3" />
+    <exclude body1="root_link" body2="r_elbow_1" />
+    <exclude body1="root_link" body2="r_forearm" />
+    <exclude body1="root_link" body2="l_shoulder_3" />
+    <exclude body1="root_link" body2="l_elbow_1" />
+    <exclude body1="root_link" body2="l_forearm" />
+    <exclude body1="root_link" body2="l_hip_2" />
+    <exclude body1="r_hip_1" body2="r_forearm" />
+    <exclude body1="r_hip_1" body2="r_wrist_1" />
+    <exclude body1="r_hip_1" body2="r_hand" />
+    <exclude body1="r_hip_2" body2="r_forearm" />
+    <exclude body1="r_hip_2" body2="r_hand" />
+    <exclude body1="r_hip_2" body2="r_hand" />
+    <exclude body1="r_upper_leg" body2="r_hand" />
+    <exclude body1="r_lower_leg" body2="r_ankle_2" />
+    <exclude body1="torso_1" body2="chest" />
+    <exclude body1="chest" body2="neck_2" />
+    <exclude body1="chest" body2="head" />
+    <exclude body1="chest" body2="r_shoulder_2" />
+    <exclude body1="chest" body2="r_shoulder_3" />
+    <exclude body1="chest" body2="r_shoulder_3" />
+    <exclude body1="chest" body2="l_shoulder_2" />
+    <exclude body1="chest" body2="l_shoulder_3" />
+    <exclude body1="chest" body2="l_shoulder_3" />
+    <exclude body1="neck_1" body2="head" />
+    <exclude body1="r_shoulder_1" body2="r_shoulder_3" />
+    <exclude body1="r_shoulder_3" body2="r_forearm" />
+    <exclude body1="r_forearm" body2="r_hand" />
+    <exclude body1="l_shoulder_1" body2="l_shoulder_3" />
+    <exclude body1="l_shoulder_3" body2="l_forearm" />
+    <exclude body1="l_forearm" body2="l_hand" />
+    <exclude body1="l_forearm" body2="l_hip_1" />
+    <exclude body1="l_forearm" body2="l_hip_2" />
+    <exclude body1="l_wrist_1" body2="l_hip_1" />
+    <exclude body1="l_hand" body2="l_hip_1" />
+    <exclude body1="l_hand" body2="l_hip_2" />
+    <exclude body1="l_hand" body2="l_hip_2" />
+    <exclude body1="l_hand" body2="l_upper_leg" />
+    <exclude body1="l_lower_leg" body2="l_ankle_2" />
+  </contact>
+  <actuator>
+    <general name="r_hip_pitch" joint="r_hip_pitch" ctrlrange="-0.785398 2.33874" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_hip_roll" joint="r_hip_roll" ctrlrange="-0.349066 2.0944" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_hip_yaw" joint="r_hip_yaw" ctrlrange="-1.39626 1.39626" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_knee" joint="r_knee" ctrlrange="-2.16421 0.0698132" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_ankle_pitch" joint="r_ankle_pitch" ctrlrange="-0.610865 0.610865" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_ankle_roll" joint="r_ankle_roll" ctrlrange="-0.436332 0.436332" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="torso_pitch" joint="torso_pitch" ctrlrange="-0.349066 1.22173" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="torso_roll" joint="torso_roll" ctrlrange="-0.523599 0.523599" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="torso_yaw" joint="torso_yaw" ctrlrange="-0.872665 0.872665" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="neck_pitch" joint="neck_pitch" ctrlrange="-0.698132 0.383972" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="neck_roll" joint="neck_roll" ctrlrange="-0.349066 0.349066" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="neck_yaw" joint="neck_yaw" ctrlrange="-0.872665 0.872665" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_shoulder_pitch" joint="r_shoulder_pitch" ctrlrange="-1.66679 0.174533" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_shoulder_roll" joint="r_shoulder_roll" ctrlrange="0 2.80649" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_shoulder_yaw" joint="r_shoulder_yaw" ctrlrange="-0.645772 1.39626" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_elbow" joint="r_elbow" ctrlrange="0.261799 1.85005" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_wrist_prosup" joint="r_wrist_prosup" ctrlrange="-1.0472 1.0472" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_wrist_pitch" joint="r_wrist_pitch" ctrlrange="-1.39626 0.436332" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="r_wrist_yaw" joint="r_wrist_yaw" ctrlrange="-0.349066 0.436332" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_shoulder_pitch" joint="l_shoulder_pitch" ctrlrange="-1.66679 0.174533" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_shoulder_roll" joint="l_shoulder_roll" ctrlrange="0 2.80649" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_shoulder_yaw" joint="l_shoulder_yaw" ctrlrange="-0.645772 1.39626" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_elbow" joint="l_elbow" ctrlrange="0.261799 1.85005" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_wrist_prosup" joint="l_wrist_prosup" ctrlrange="-1.0472 1.0472" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_wrist_pitch" joint="l_wrist_pitch" ctrlrange="-1.39626 0.436332" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_wrist_yaw" joint="l_wrist_yaw" ctrlrange="-0.349066 0.436332" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_hip_pitch" joint="l_hip_pitch" ctrlrange="-0.785398 2.33874" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_hip_roll" joint="l_hip_roll" ctrlrange="-0.349066 2.0944" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_hip_yaw" joint="l_hip_yaw" ctrlrange="-1.39626 1.39626" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_knee" joint="l_knee" ctrlrange="-2.16421 0.0698132" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_ankle_pitch" joint="l_ankle_pitch" ctrlrange="-0.610865 0.610865" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+    <general name="l_ankle_roll" joint="l_ankle_roll" ctrlrange="-0.436332 0.436332" biastype="affine" gainprm="500 0 0 0 0 0 0 0 0 0" biasprm="0 -500 0 0 0 0 0 0 0 0" />
+  </actuator>
+</mujoco>

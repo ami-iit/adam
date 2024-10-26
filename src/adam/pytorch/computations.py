@@ -2,12 +2,15 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
+from pathlib import Path
+from typing import Union
+
 import numpy as np
 import torch
 
 from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
-from adam.model import Model, URDFModelFactory
+from adam.model import Model, utils
 from adam.pytorch.torch_like import SpatialMath
 
 
@@ -16,25 +19,69 @@ class KinDynComputations:
 
     def __init__(
         self,
-        urdfstring: str,
+        model_string: Union[str, Path],
         joints_name_list: list = None,
         root_link: str = "root_link",
-        gravity: np.array = torch.tensor(
+        gravity: torch.tensor = torch.tensor(
             [0, 0, -9.80665, 0, 0, 0], dtype=torch.float64
         ),
     ) -> None:
         """
         Args:
-            urdfstring (str): either path or string of the urdf
+            model_string (Union[str, Path]): path or string of the URDF model, or the Mujoco XML file
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): the first link. Defaults to 'root_link'.
         """
         math = SpatialMath()
-        factory = URDFModelFactory(path=urdfstring, math=math)
+        factory = utils.get_factory_from_string(model_string=model_string, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
+
+    @staticmethod
+    def from_urdf(
+        urdf_string: Union[str, Path],
+        joints_name_list: list = None,
+        gravity: torch.tensor = torch.tensor(
+            [0, 0, -9.80665, 0, 0, 0], dtype=torch.float64
+        ),
+    ) -> "KinDynComputations":
+        """Creates a KinDynComputations object from a URDF string
+
+        Args:
+            urdf_string (Union[str, Path]): The URDF string or path
+            joints_name_list (list): list of the actuated joints
+            gravity (torch.tensor, optional): The gravity vector. Defaults to torch.tensor([0, 0, -9.80665, 0, 0, 0], dtype=torch.float64).
+
+        Returns:
+            KinDynComputations: The KinDynComputations object
+        """
+        return KinDynComputations(
+            model_string=urdf_string, joints_name_list=joints_name_list, gravity=gravity
+        )
+
+    @staticmethod
+    def from_mujoco_xml(
+        xml_string: Union[str, Path],
+        joints_name_list: list = None,
+        gravity: torch.tensor = torch.tensor(
+            [0, 0, -9.80665, 0, 0, 0], dtype=torch.float64
+        ),
+    ) -> "KinDynComputations":
+        """Creates a KinDynComputations object from a Mujoco XML string
+
+        Args:
+            xml_string (Union[str, Path]): The Mujoco XML path
+            joints_name_list (list): list of the actuated joints
+            gravity (torch.tensor, optional): The gravity vector. Defaults to torch.tensor([0, 0, -9.80665, 0, 0, 0], dtype=torch.float64).
+
+        Returns:
+            KinDynComputations: The KinDynComputations object
+        """
+        return KinDynComputations(
+            model_string=xml_string, joints_name_list=joints_name_list, gravity=gravity
+        )
 
     def set_frame_velocity_representation(
         self, representation: Representations
