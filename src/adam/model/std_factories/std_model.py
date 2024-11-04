@@ -36,7 +36,7 @@ def get_xml_string(path: str | pathlib.Path):
 
     # Checking if it is a path or an urdf
     if not isPath:
-        if len(path) <= MAX_PATH and os.path.exists(path):
+        if len(path) <= MAX_PATH:
             path = pathlib.Path(path)
             isPath = True
         else:
