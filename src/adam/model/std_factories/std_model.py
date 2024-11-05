@@ -1,7 +1,8 @@
-import pathlib
-from typing import List
-import xml.etree.ElementTree as ET
 import os
+import pathlib
+import xml.etree.ElementTree as ET
+from typing import List
+
 import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
@@ -36,9 +37,12 @@ def get_xml_string(path: str | pathlib.Path):
 
     # Checking if it is a path or an urdf
     if not isPath:
-        if len(path) <= MAX_PATH and os.path.exists(path):
-            path = pathlib.Path(path)
-            isPath = True
+        if len(path) <= MAX_PATH:
+            if os.path.exists(path):
+                path = pathlib.Path(path)
+                isPath = True
+            else:
+                raise FileExistsError(path)
         else:
             root = ET.fromstring(path)
 
