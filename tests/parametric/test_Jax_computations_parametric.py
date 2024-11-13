@@ -66,11 +66,6 @@ joints_name_list = [
     "r_ankle_roll",
 ]
 
-
-def SX2DM(x):
-    return cs.DM(x)
-
-
 logging.basicConfig(level=logging.DEBUG)
 logging.debug("Showing the robot tree.")
 
