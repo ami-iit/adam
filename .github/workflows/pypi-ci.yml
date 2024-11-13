@@ -44,9 +44,9 @@ jobs:
   deploy_test_PyPI:
     name: 📦 Deploy to TestPyPI
     runs-on: ubuntu-22.04
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     permissions:
-        id-token: write
-      
+      id-token: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -63,8 +63,9 @@ jobs:
   deploy_PyPI:
     name: 📦 Deploy to PyPI
     runs-on: ubuntu-22.04
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
     permissions:
-        id-token: write
+      id-token: write
     
     steps:
       - name: Download artifacts
