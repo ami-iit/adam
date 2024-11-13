@@ -8,10 +8,12 @@ import pytest
 from jax import config
 
 import adam
-from adam.geometry import utils
 from adam.pytorch import KinDynComputationsBatch
 from adam.numpy import KinDynComputations
+from adam.numpy.numpy_like import SpatialMath
+
 import torch
+
 
 np.random.seed(42)
 config.update("jax_enable_x64", True)
@@ -61,7 +63,7 @@ joints_val = (np.random.rand(n_dofs) - 0.5) * 5
 joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
 
 g = np.array([0, 0, -9.80665])
-H_b = utils.H_from_Pos_RPY(xyz, rpy)
+H_b = SpatialMath().H_from_Pos_RPY(xyz, rpy).array
 n_samples = 10
 
 H_b_batch = torch.tile(torch.tensor(H_b), (n_samples, 1, 1)).requires_grad_()

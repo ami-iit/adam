@@ -10,11 +10,12 @@ import math
 import numpy as np
 from adam.parametric.numpy import KinDynComputationsParametric
 from adam.numpy import KinDynComputations
+from adam.numpy.numpy_like import SpatialMath
 
-from adam.geometry import utils
 import tempfile
 from git import Repo
 from adam import Representations
+
 
 np.random.seed(42)
 
@@ -95,7 +96,7 @@ base_vel = (np.random.rand(6) - 0.5) * 5
 joints_val = (np.random.rand(n_dofs) - 0.5) * 5
 joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
 
-H_b = utils.H_from_Pos_RPY(xyz, rpy)
+H_b = SpatialMath().H_from_Pos_RPY(xyz, rpy).array
 vb_ = base_vel
 s_ = joints_val
 s_dot_ = joints_dot_val

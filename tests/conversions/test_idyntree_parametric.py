@@ -15,10 +15,11 @@ from adam.parametric.model.parametric_factories.parametric_model import (
 )
 from adam.model.conversions.idyntree import to_idyntree_model
 from adam.core.constants import Representations
+from adam.numpy.numpy_like import SpatialMath
 
-from adam.geometry import utils
 import tempfile
 from git import Repo
+
 
 # Getting stickbot urdf file
 temp_dir = tempfile.TemporaryDirectory()
@@ -96,7 +97,7 @@ base_vel = (np.random.rand(6) - 0.5) * 5
 joints_val = (np.random.rand(n_dofs) - 0.5) * 5
 joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
 
-H_b = utils.H_from_Pos_RPY(xyz, rpy)
+H_b = SpatialMath().H_from_Pos_RPY(xyz, rpy).array
 vb_ = base_vel
 s_ = joints_val
 s_dot_ = joints_dot_val
