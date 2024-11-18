@@ -36,7 +36,7 @@ def get_xml_string(path: str | pathlib.Path):
 
     # Checking if it is a path or an urdf
     if not isPath:
-        if len(path) <= MAX_PATH:
+        if len(path) <= MAX_PATH and "<robot" not in path:
             path = pathlib.Path(path)
             isPath = True
         else:
@@ -49,11 +49,7 @@ def get_xml_string(path: str | pathlib.Path):
                     break
 
     if isPath:
-        if not path.is_file():
-            raise FileExistsError(path)
-
-        with path.open() as xml_file:
-            xml_string = xml_file.read()
+        xml_string = path.read_text()
 
     if not isPath and not isUrdf:
         raise ValueError(
