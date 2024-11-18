@@ -11,8 +11,9 @@ import numpy as np
 import pytest
 
 from adam.casadi import KinDynComputations
-from adam.geometry import utils
+from adam.numpy.numpy_like import SpatialMath
 from adam import Representations
+
 
 np.random.seed(42)
 
@@ -79,7 +80,7 @@ joints_val = (np.random.rand(n_dofs) - 0.5) * 5
 joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
 
 g = np.array([0, 0, -9.80665])
-H_b = utils.H_from_Pos_RPY(xyz, rpy)
+H_b = SpatialMath().H_from_Pos_RPY(xyz, rpy).array
 kinDyn.setRobotState(H_b, joints_val, base_vel, joints_dot_val, g)
 
 
