@@ -37,13 +37,13 @@ jobs:
         run: python -m build --sdist --wheel --outdir dist/ .
 
       - name: Create a File
-        run: echo "{{ matrix.os }}" > file-${{ matrix.os }}.txt
+        run: echo "{{ matrix.os }}" > file-${{ matrix.os }}
       
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.os }}
-          path: file-${{ matrix.os }}.txt
+          path: file-${{ matrix.os }}
 
   deploy_test_PyPI:
     name: 📦 Deploy to TestPyPI
