@@ -39,7 +39,7 @@ jobs:
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist-${{ matrix.os }}-${{ matrix.arch }}
+          name: dist-${{ matrix.os }}
           path: dist
 
   deploy_test_PyPI:
