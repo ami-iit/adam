@@ -36,6 +36,9 @@ jobs:
       - name: Build wheel and a source tarball
         run: python -m build --sdist --wheel --outdir dist/ .
 
+      - name: Create a File
+        run: echo "{{ matrix.os }}" > file-${{ matrix.os }}.txt
+      
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -56,6 +59,7 @@ jobs:
           path: dist
           pattern: dist-*
           merge-multiple: true
+      - run: ls -R dist 
 
       - name: Publish distribution 📦 to Test PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -78,6 +82,7 @@ jobs:
           path: dist
           pattern: dist-*
           merge-multiple: true
+      - run: ls -R dist
 
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
