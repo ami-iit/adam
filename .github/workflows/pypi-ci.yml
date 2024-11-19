@@ -36,7 +36,7 @@ jobs:
       - name: Build wheel and a source tarball
         run: python -m build --sdist --wheel --outdir dist/ .
 
-      - name: Archive artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.os }}
@@ -44,6 +44,7 @@ jobs:
 
   deploy_test_PyPI:
     name: 📦 Deploy to TestPyPI
+    needs: build_wheels
     runs-on: ubuntu-22.04
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -65,6 +66,7 @@ jobs:
   deploy_PyPI:
     name: 📦 Deploy to PyPI
     runs-on: ubuntu-22.04
+    needs: build_wheels
     if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
     permissions:
       id-token: write
