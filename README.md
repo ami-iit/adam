@@ -111,11 +111,30 @@ pip install .[selected-interface]
 
 #### Installation from conda-forge package
 
-```bash
-mamba create -n adamenv -c conda-forge adam-robotics
-```
 
-If you want to use `jax` or `pytorch`, just install the corresponding package as well.
+- Install **CasADi** interface:
+
+  ```bash
+  mamba create -n adamenv -c conda-forge adam-robotics-casadi
+  ```
+  
+- Install **Jax** interface (warning: not available on Windows):
+
+  ```bash
+  mamba create -n adamenv -c conda-forge adam-robotics-jax
+  ```
+
+- Install **PyTorch** interface (warning: not available on Windows):
+
+  ```bash
+  mamba create -n adamenv -c conda-forge adam-robotics-pytorch
+  ```
+
+- Install **ALL** interfaces (warning: not available on Windows):
+
+  ```bash
+  mamba create -n adamenv -c conda-forge adam-robotics-all
+  ```
 
 > [!NOTE]
 > Check also the conda JAX installation guide [here](https://jax.readthedocs.io/en/latest/installation.html#conda-community-supported)
