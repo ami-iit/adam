@@ -16,8 +16,8 @@ class RBDAlgorithms:
     def __init__(self, model: Model, math: SpatialMath) -> None:
         """
         Args:
-            model (Model): the adam.model representing the robot 
-            math (SpatialMath): the spatial math. 
+            model (Model): the adam.model representing the robot
+            math (SpatialMath): the spatial math.
         """
 
         self.model = model
