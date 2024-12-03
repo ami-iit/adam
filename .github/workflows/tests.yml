@@ -1,4 +1,4 @@
-name: Adam
+name: adam-tests
 
 on:
   push:
