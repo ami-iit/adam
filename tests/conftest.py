@@ -112,14 +112,14 @@ def tests_setup(request) -> RobotCfg | State:
         raise ValueError(f"Unknown velocity representation: {velocity_representation}")
     kin_dyn.setFrameVelocityRepresentation(idyn_representation)
 
-    n_dofs = len(joints_name_list)
+    n_dof = len(joints_name_list)
     # base quantities
     xyz = (np.random.rand(3) - 0.5) * 5
     rpy = (np.random.rand(3) - 0.5) * 5
     base_vel = (np.random.rand(6) - 0.5) * 5
     # joints quantitites
-    joints_val = (np.random.rand(n_dofs) - 0.5) * 5
-    joints_dot_val = (np.random.rand(n_dofs) - 0.5) * 5
+    joints_val = (np.random.rand(n_dof) - 0.5) * 5
+    joints_dot_val = (np.random.rand(n_dof) - 0.5) * 5
 
     g = np.array([0, 0, -9.80665])
     H_b = SpatialMath().H_from_Pos_RPY(xyz, rpy).array
@@ -139,7 +139,7 @@ def tests_setup(request) -> RobotCfg | State:
         velocity_representation=velocity_representation,
         model_path=model_path,
         joints_name_list=joints_name_list,
-        n_dof=n_dofs,
+        n_dof=n_dof,
         kin_dyn=kin_dyn,
         idyn_function_values=idyn_function_values,
     )
