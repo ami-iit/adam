@@ -26,9 +26,7 @@ def test_mass_matrix(setup_test):
     adam_kin_dyn, robot_cfg, state = setup_test
     idyn_mass_matrix = robot_cfg.idyn_function_values.mass_matrix
     adam_mass_matrix = adam_kin_dyn.mass_matrix(state.H, state.joints_pos)
-    assert adam_mass_matrix.numpy() - idyn_mass_matrix == pytest.approx(
-        0.0, abs=1e-5
-    )
+    assert adam_mass_matrix.numpy() - idyn_mass_matrix == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CMM(setup_test):

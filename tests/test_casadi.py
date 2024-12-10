@@ -45,9 +45,8 @@ def test_CoM_pos(setup_test):
 def test_total_mass(setup_test):
     adam_kin_dyn, robot_cfg, state = setup_test
     idyn_total_mass = robot_cfg.idyn_function_values.total_mass
-    assert (
-        adam_kin_dyn.get_total_mass() - idyn_total_mass
-        == pytest.approx(0.0, abs=1e-5)
+    assert adam_kin_dyn.get_total_mass() - idyn_total_mass == pytest.approx(
+        0.0, abs=1e-5
     )
 
 
@@ -158,15 +157,7 @@ def test_coriolis_matrix(setup_test):
 def test_gravity_term(setup_test):
     adam_kin_dyn, robot_cfg, state = setup_test
     idyn_gravity = robot_cfg.idyn_function_values.gravity_term
-    adam_gravity = cs.DM(
-        adam_kin_dyn.gravity_term(
-            state.H, state.joints_pos
-        )
-    )
+    adam_gravity = cs.DM(adam_kin_dyn.gravity_term(state.H, state.joints_pos))
     assert idyn_gravity - adam_gravity == pytest.approx(0.0, abs=1e-4)
-    adam_gravity = cs.DM(
-        adam_kin_dyn.gravity_term_fun()(
-            state.H, state.joints_pos
-        )
-    )
+    adam_gravity = cs.DM(adam_kin_dyn.gravity_term_fun()(state.H, state.joints_pos))
     assert idyn_gravity - adam_gravity == pytest.approx(0.0, abs=1e-4)
