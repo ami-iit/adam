@@ -244,6 +244,7 @@ w_H_f_batch = jitted_vmapped_frame_fk(w_H_b_batch, joints_batch)
 ### CasADi interface
 
 ```python
+import casadi as cs
 import adam
 from adam.casadi import KinDynComputations
 import icub_models
