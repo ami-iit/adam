@@ -99,7 +99,7 @@ def test_fk_non_actuated(setup_test):
 
 def test_bias_force(setup_test):
     adam_kin_dyn, robot_cfg, state = setup_test
-    idyn_h = robot_cfg.idyn_function_values.bias_forces
+    idyn_h = robot_cfg.idyn_function_values.bias_force
     adam_h = adam_kin_dyn.bias_force(
         state.H, state.joints_pos, state.base_vel, state.joints_vel
     )

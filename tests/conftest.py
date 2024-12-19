@@ -7,6 +7,8 @@ from adam.numpy.numpy_like import SpatialMath
 import dataclasses
 from itertools import product
 import logging
+import os
+import requests
 
 
 @dataclasses.dataclass
@@ -30,7 +32,7 @@ class IDynFunctionValues:
     relative_jacobian: np.ndarray
     forward_kinematics: np.ndarray
     forward_kinematics_non_actuated: np.ndarray
-    bias_forces: np.ndarray
+    bias_force: np.ndarray
     coriolis_term: np.ndarray
     gravity_term: np.ndarray
 
@@ -53,8 +55,21 @@ VELOCITY_REPRESENTATIONS = [
 
 ROBOTS = [
     "iCubGazeboV2_5",
-    "iCubGenova02",
+    "StickBot",
 ]
+
+
+def get_robot_model_path(robot_name: str) -> str:
+    if robot_name == "StickBot":
+        model_path = "stickbot.urdf"
+        if not os.path.exists(model_path):
+            url = "https://raw.githubusercontent.com/icub-tech-iit/ergocub-gazebo-simulations/master/models/stickBot/model.urdf"
+            response = requests.get(url)
+            with open(model_path, "wb") as file:
+                file.write(response.content)
+    else:
+        model_path = str(icub_models.get_model_file(robot_name))
+    return model_path
 
 
 TEST_CONFIGURATIONS = list(product(VELOCITY_REPRESENTATIONS, ROBOTS))
@@ -67,7 +82,7 @@ def tests_setup(request) -> RobotCfg | State:
 
     np.random.seed(42)
 
-    model_path = str(icub_models.get_model_file(robot_name))
+    model_path = get_robot_model_path(robot_name)
 
     joints_name_list = [
         "torso_pitch",
@@ -144,7 +159,7 @@ def tests_setup(request) -> RobotCfg | State:
         idyn_function_values=idyn_function_values,
     )
 
-    return robot_cfg, state
+    yield robot_cfg, state
 
 
 def compute_idyntree_values(
@@ -214,13 +229,13 @@ def compute_idyntree_values(
         kin_dyn.getWorldTransform("head").asHomogeneousTransform().toNumPy()
     )
 
-    # bias_forces
-    idyn_bias_forces = idyntree.FreeFloatingGeneralizedTorques(kin_dyn.model())
-    assert kin_dyn.generalizedBiasForces(idyn_bias_forces)
-    idyn_bias_forces = np.concatenate(
+    # bias_force
+    idyn_bias_force = idyntree.FreeFloatingGeneralizedTorques(kin_dyn.model())
+    assert kin_dyn.generalizedBiasForces(idyn_bias_force)
+    idyn_bias_force = np.concatenate(
         (
-            idyn_bias_forces.baseWrench().toNumPy(),
-            idyn_bias_forces.jointTorques().toNumPy(),
+            idyn_bias_force.baseWrench().toNumPy(),
+            idyn_bias_force.jointTorques().toNumPy(),
         )
     )
 
@@ -267,7 +282,7 @@ def compute_idyntree_values(
         relative_jacobian=idyn_relative_jacobian,
         forward_kinematics=idyn_forward_kinematics,
         forward_kinematics_non_actuated=idyn_forward_kinematics_non_actuated,
-        bias_forces=idyn_bias_forces,
+        bias_force=idyn_bias_force,
         coriolis_term=idyn_coriolis_term,
         gravity_term=idyn_gravity_term,
     )
