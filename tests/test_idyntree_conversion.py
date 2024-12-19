@@ -5,6 +5,7 @@ from adam.casadi import KinDynComputations
 from conftest import State, RobotCfg, compute_idyntree_values
 from adam.model.conversions.idyntree import to_idyntree_model
 
+
 @pytest.fixture(scope="module")
 def setup_test(tests_setup) -> KinDynComputations | RobotCfg | State:
     robot_cfg, state = tests_setup
@@ -14,7 +15,6 @@ def setup_test(tests_setup) -> KinDynComputations | RobotCfg | State:
     idyn_function_values = compute_idyntree_values(robot_cfg.kin_dyn, state)
     robot_cfg.idyn_function_values = idyn_function_values
     return adam_kin_dyn, robot_cfg, state
-
 
 
 def test_mass_matrix(setup_test):

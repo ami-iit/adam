@@ -38,8 +38,6 @@ def setup_test(tests_setup) -> KinDynComputationsParametric | RobotCfg | State:
     return adam_kin_dyn, robot_cfg, state, original_density, original_length
 
 
-
-
 def test_mass_matrix(setup_test):
     adam_kin_dyn, robot_cfg, state, original_density, original_length = setup_test
     idyn_mass_matrix = robot_cfg.idyn_function_values.mass_matrix

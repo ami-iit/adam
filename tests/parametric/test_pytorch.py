@@ -6,6 +6,7 @@ import torch
 
 torch.set_default_dtype(torch.float64)
 
+
 @pytest.fixture(scope="module")
 def setup_test(tests_setup) -> KinDynComputationsParametric | RobotCfg | State:
     robot_cfg, state = tests_setup
