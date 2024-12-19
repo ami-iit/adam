@@ -16,7 +16,7 @@ dependencies:
   - pytest-repeat
   - icub-models
   - idyntree >=11.0.0
-  - gitpython
   - jax
   - pytorch
   - jax2torch
+  - requests
