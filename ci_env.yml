@@ -20,3 +20,4 @@ dependencies:
   - jax
   - pytorch
   - jax2torch
+  - requests
