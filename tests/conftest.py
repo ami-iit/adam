@@ -54,7 +54,7 @@ VELOCITY_REPRESENTATIONS = [
 ]
 
 ROBOTS = [
-    "iCubGazeboV2_5",
+    "iCubGenova04",
     "StickBot",
 ]
 
