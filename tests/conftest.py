@@ -75,7 +75,7 @@ def get_robot_model_path(robot_name: str) -> str:
 TEST_CONFIGURATIONS = list(product(VELOCITY_REPRESENTATIONS, ROBOTS))
 
 
-@pytest.fixture(scope="session", params=TEST_CONFIGURATIONS, ids=str)
+@pytest.fixture(scope="module", params=TEST_CONFIGURATIONS, ids=str)
 def tests_setup(request) -> RobotCfg | State:
 
     velocity_representation, robot_name = request.param
