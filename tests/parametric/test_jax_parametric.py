@@ -128,7 +128,6 @@ def test_bias_force(setup_test):
         original_density,
     )
     assert idyn_bias_force - adam_bias_force == pytest.approx(0.0, abs=1e-4)
-    # assert np.allclose(idyn_bias_force, adam_bias_force, atol=1e-5)
 
 
 def test_coriolis_term(setup_test):
