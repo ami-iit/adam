@@ -13,9 +13,7 @@ from adam.model import Model, URDFModelFactory
 
 
 class KinDynComputations:
-    """This is a small class that retrieves robot quantities represented in a symbolic fashion using CasADi
-    in mixed representation, for Floating Base systems - as humanoid robots.
-    """
+    """Class that retrieves robot quantities using CasADi for Floating Base systems."""
 
     def __init__(
         self,
@@ -57,7 +55,7 @@ class KinDynComputations:
         """
         base_transform = cs.SX.sym("H", 4, 4)
         joint_positions = cs.SX.sym("s", self.NDoF)
-        [M, _] = self.rbdalgos.crba(base_transform, joint_positions)
+        M, _ = self.rbdalgos.crba(base_transform, joint_positions)
         return cs.Function(
             "M", [base_transform, joint_positions], [M.array], self.f_opts
         )
@@ -70,7 +68,7 @@ class KinDynComputations:
         """
         base_transform = cs.SX.sym("H", 4, 4)
         joint_positions = cs.SX.sym("s", self.NDoF)
-        [_, Jcm] = self.rbdalgos.crba(base_transform, joint_positions)
+        _, Jcm = self.rbdalgos.crba(base_transform, joint_positions)
         return cs.Function(
             "Jcm", [base_transform, joint_positions], [Jcm.array], self.f_opts
         )
@@ -229,54 +227,54 @@ class KinDynComputations:
         return self.rbdalgos.get_total_mass()
 
     def mass_matrix(
-        self, base_transform: Union[cs.SX, cs.DM], joint_positions: Union[cs.SX, cs.DM]
+        self, base_transform: cs.SX, joint_positions: cs.SX
     ):
         """Returns the Mass Matrix functions computed the CRBA
 
         Args:
-            base_transform (Union[cs.SX, cs.DM]): The homogenous transform from base to world frame
-            joint_positions (Union[cs.SX, cs.DM]): The joints position
+            base_transform (cs.SX): The homogenous transform from base to world frame
+            joint_positions (cs.SX): The joints position
 
         Returns:
-            M (Union[cs.SX, cs.DM]): Mass Matrix
+            M (cs.SX): Mass Matrix
         """
         if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
             raise ValueError(
                 "You are using casadi MX. Please use the function KinDynComputations.mass_matrix_fun()"
             )
 
-        [M, _] = self.rbdalgos.crba(base_transform, joint_positions)
+        M, _ = self.rbdalgos.crba(base_transform, joint_positions)
         return M.array
 
     def centroidal_momentum_matrix(
-        self, base_transform: Union[cs.SX, cs.DM], joint_positions: Union[cs.SX, cs.DM]
+        self, base_transform: cs.SX, joint_positions: cs.SX
     ):
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
         Args:
-            base_transform (Union[cs.SX, cs.DM]): The homogenous transform from base to world frame
-            joint_positions (Union[cs.SX, cs.DM]): The joints position
+            base_transform (cs.SX): The homogenous transform from base to world frame
+            joint_positions (cs.SX): The joints position
 
         Returns:
-            Jcc (Union[cs.SX, cs.DM]): Centroidal Momentum matrix
+            Jcc (cs.SX): Centroidal Momentum matrix
         """
         if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
             raise ValueError(
                 "You are using casadi MX. Please use the function KinDynComputations.centroidal_momentum_matrix_fun()"
             )
 
-        [_, Jcm] = self.rbdalgos.crba(base_transform, joint_positions)
+        _, Jcm = self.rbdalgos.crba(base_transform, joint_positions)
         return Jcm.array
 
-    def relative_jacobian(self, frame: str, joint_positions: Union[cs.SX, cs.DM]):
+    def relative_jacobian(self, frame: str, joint_positions: cs.SX):
         """Returns the Jacobian between the root link and a specified frame frames
 
         Args:
             frame (str): The tip of the chain
-            joint_positions (Union[cs.SX, cs.DM]): The joints position
+            joint_positions (cs.SX): The joints position
 
         Returns:
-            J (Union[cs.SX, cs.DM]): The Jacobian between the root and the frame
+            J (cs.SX): The Jacobian between the root and the frame
         """
         if isinstance(joint_positions, cs.MX):
             raise ValueError(
@@ -288,22 +286,22 @@ class KinDynComputations:
     def jacobian_dot(
         self,
         frame: str,
-        base_transform: Union[cs.SX, cs.DM],
-        joint_positions: Union[cs.SX, cs.DM],
-        base_velocity: Union[cs.SX, cs.DM],
-        joint_velocities: Union[cs.SX, cs.DM],
-    ) -> Union[cs.SX, cs.DM]:
+        base_transform: cs.SX,
+        joint_positions: cs.SX,
+        base_velocity: cs.SX,
+        joint_velocities: cs.SX,
+    ) -> cs.SX:
         """Returns the Jacobian derivative relative to the specified frame
 
         Args:
             frame (str): The frame to which the jacobian will be computed
-            base_transform (Union[cs.SX, cs.DM]): The homogenous transform from base to world frame
-            joint_positions (Union[cs.SX, cs.DM]): The joints position
-            base_velocity (Union[cs.SX, cs.DM]): The base velocity in mixed representation
-            joint_velocities (Union[cs.SX, cs.DM]): The joint velocities
+            base_transform (cs.SX): The homogenous transform from base to world frame
+            joint_positions (cs.SX): The joints position
+            base_velocity (cs.SX): The base velocity in mixed representation
+            joint_velocities (cs.SX): The joint velocities
 
         Returns:
-            Jdot (Union[cs.SX, cs.DM]): The Jacobian derivative relative to the frame
+            Jdot (cs.SX): The Jacobian derivative relative to the frame
         """
         if (
             isinstance(base_transform, cs.MX)
@@ -321,18 +319,18 @@ class KinDynComputations:
     def forward_kinematics(
         self,
         frame: str,
-        base_transform: Union[cs.SX, cs.DM],
-        joint_positions: Union[cs.SX, cs.DM],
+        base_transform: cs.SX,
+        joint_positions: cs.SX,
     ):
         """Computes the forward kinematics relative to the specified frame
 
         Args:
             frame (str): The frame to which the fk will be computed
-            base_transform (Union[cs.SX, cs.DM]): The homogenous transform from base to world frame
-            joint_positions (Union[cs.SX, cs.DM]): The joints position
+            base_transform (cs.SX): The homogenous transform from base to world frame
+            joint_positions (cs.SX): The joints position
 
         Returns:
-            H (Union[cs.SX, cs.DM]): The fk represented as Homogenous transformation matrix
+            H (cs.SX): The fk represented as Homogenous transformation matrix
         """
         if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
             raise ValueError(
@@ -347,12 +345,12 @@ class KinDynComputations:
         """Returns the Jacobian relative to the specified frame
 
         Args:
-            base_transform (Union[cs.SX, cs.DM]): The homogenous transform from base to world frame
-            s (Union[cs.SX, cs.DM]): The joints position
+            base_transform (cs.SX): The homogenous transform from base to world frame
+            s (cs.SX): The joints position
             frame (str): The frame to which the jacobian will be computed
 
         Returns:
-            J_tot (Union[cs.SX, cs.DM]): The Jacobian relative to the frame
+            J_tot (cs.SX): The Jacobian relative to the frame
         """
         if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
             raise ValueError(
@@ -363,22 +361,22 @@ class KinDynComputations:
 
     def bias_force(
         self,
-        base_transform: Union[cs.SX, cs.DM],
-        joint_positions: Union[cs.SX, cs.DM],
-        base_velocity: Union[cs.SX, cs.DM],
-        joint_velocities: Union[cs.SX, cs.DM],
-    ) -> Union[cs.SX, cs.DM]:
+        base_transform: cs.SX,
+        joint_positions: cs.SX,
+        base_velocity: cs.SX,
+        joint_velocities: cs.SX,
+    ) -> cs.SX:
         """Returns the bias force of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            base_transform (Union[cs.SX, cs.DM]): The homogenous transform from base to world frame
-            joint_positions (Union[cs.SX, cs.DM]): The joints position
-            base_velocity (Union[cs.SX, cs.DM]): The base velocity in mixed representation
-            joint_velocities (Union[cs.SX, cs.DM]): The joints velocity
+            base_transform (cs.SX): The homogenous transform from base to world frame
+            joint_positions (cs.SX): The joints position
+            base_velocity (cs.SX): The base velocity in mixed representation
+            joint_velocities (cs.SX): The joints velocity
 
         Returns:
-            h (Union[cs.SX, cs.DM]): the bias force
+            h (cs.SX): the bias force
         """
         if (
             isinstance(base_transform, cs.MX)
@@ -396,22 +394,22 @@ class KinDynComputations:
 
     def coriolis_term(
         self,
-        base_transform: Union[cs.SX, cs.DM],
-        joint_positions: Union[cs.SX, cs.DM],
-        base_velocity: Union[cs.SX, cs.DM],
-        joint_velocities: Union[cs.SX, cs.DM],
-    ) -> Union[cs.SX, cs.DM]:
+        base_transform: cs.SX,
+        joint_positions: cs.SX,
+        base_velocity: cs.SX,
+        joint_velocities: cs.SX,
+    ) -> cs.SX:
         """Returns the coriolis term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            base_transform (Union[cs.SX, cs.DM]): The homogenous transform from base to world frame
-            joint_positions (Union[cs.SX, cs.DM]): The joints position
-            base_velocity (Union[cs.SX, cs.DM]): The base velocity in mixed representation
-            joint_velocities (Union[cs.SX, cs.DM]): The joints velocity
+            base_transform (cs.SX): The homogenous transform from base to world frame
+            joint_positions (cs.SX): The joints position
+            base_velocity (cs.SX): The base velocity in mixed representation
+            joint_velocities (cs.SX): The joints velocity
 
         Returns:
-            C (Union[cs.SX, cs.DM]): the Coriolis term
+            C (cs.SX): the Coriolis term
         """
         if (
             isinstance(base_transform, cs.MX)
@@ -432,17 +430,17 @@ class KinDynComputations:
         ).array
 
     def gravity_term(
-        self, base_transform: Union[cs.SX, cs.DM], joint_positions: Union[cs.SX, cs.DM]
-    ) -> Union[cs.SX, cs.DM]:
+        self, base_transform: cs.SX, joint_positions: cs.SX
+    ) -> cs.SX:
         """Returns the gravity term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
-            base_transform (Union[cs.SX, cs.DM]): The homogenous transform from base to world frame
-            joint_positions (Union[cs.SX, cs.DM]): The joints position
+            base_transform (cs.SX): The homogenous transform from base to world frame
+            joint_positions (cs.SX): The joints position
 
         Returns:
-            G (Union[cs.SX, cs.DM]): the gravity term
+            G (cs.SX): the gravity term
         """
         if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
             raise ValueError(
@@ -458,16 +456,16 @@ class KinDynComputations:
         ).array
 
     def CoM_position(
-        self, base_transform: Union[cs.SX, cs.DM], joint_positions: Union[cs.SX, cs.DM]
-    ) -> Union[cs.SX, cs.DM]:
+        self, base_transform: cs.SX, joint_positions: cs.SX
+    ) -> cs.SX:
         """Returns the CoM positon
 
         Args:
-            base_transform (Union[cs.SX, cs.DM]): The homogenous transform from base to world frame
-            joint_positions (Union[cs.SX, cs.DM]): The joints position
+            base_transform (cs.SX): The homogenous transform from base to world frame
+            joint_positions (cs.SX): The joints position
 
         Returns:
-            CoM (Union[cs.SX, cs.DM]): The CoM position
+            CoM (cs.SX): The CoM position
         """
         if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
             raise ValueError(
