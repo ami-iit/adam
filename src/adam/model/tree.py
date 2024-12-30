@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Iterable, Union
+from typing import Generator, Iterable, Union
 
 from adam.model.abc_factories import Joint, Link
 
@@ -136,7 +136,7 @@ class Tree(Iterable):
         """
         return self.graph[name]
 
-    def __iter__(self) -> Node:
+    def __iter__(self) -> Generator[Node]:
         """This method allows to iterate on the model
         Returns:
             Node: the node istance
@@ -146,7 +146,7 @@ class Tree(Iterable):
         """
         yield from [self.graph[name] for name in self.ordered_nodes_list]
 
-    def __reversed__(self) -> Node:
+    def __reversed__(self) -> Generator[Node]:
         """
         Returns:
             Node
