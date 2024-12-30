@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath("../src/"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "adam"
-copyright = "2021, Artificial and Mechanical Intelligence Lab"
+copyright = "Artificial and Mechanical Intelligence Lab"
 author = "Artificial and Mechanical Intelligence Lab"
 # get release from git tag
 
