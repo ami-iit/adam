@@ -61,7 +61,7 @@ def to_idyntree_solid_shape(
 
 def to_idyntree_link(
     link: Link,
-) -> [idyntree.bindings.Link, list[idyntree.bindings.SolidShape]]:
+) -> tuple[idyntree.bindings.Link, list[idyntree.bindings.SolidShape]]:
     """
     Args:
         link (Link): the link to convert
