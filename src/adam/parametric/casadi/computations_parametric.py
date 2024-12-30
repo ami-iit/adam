@@ -1,7 +1,5 @@
 # Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
-from typing import List, Union
-
 import casadi as cs
 import numpy as np
 
@@ -9,7 +7,7 @@ from adam.casadi.casadi_like import SpatialMath
 from adam.core import RBDAlgorithms
 from adam.core.constants import Representations
 from adam.model import Model
-from adam.parametric.model import URDFParametricModelFactory, ParametricLink
+from adam.parametric.model import ParametricLink, URDFParametricModelFactory
 
 
 class KinDynComputationsParametric:
@@ -260,7 +258,7 @@ class KinDynComputationsParametric:
             "m", [self.length_multiplier, self.densities], [m], self.f_opts
         )
 
-    def get_original_densities(self) -> List[float]:
+    def get_original_densities(self) -> list[float]:
         """Returns the original densities of the parametric links
 
         Returns:

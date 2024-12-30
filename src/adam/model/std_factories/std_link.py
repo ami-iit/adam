@@ -2,7 +2,7 @@ import numpy.typing as npt
 import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
-from adam.model import Link, Inertial, Pose
+from adam.model import Inertial, Link, Pose
 
 
 class StdLink(Link):

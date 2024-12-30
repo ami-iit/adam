@@ -1,8 +1,9 @@
 import casadi as cs
 import numpy as np
 import pytest
+from conftest import RobotCfg, State, compute_idyntree_values
+
 from adam.casadi import KinDynComputations
-from conftest import State, RobotCfg, compute_idyntree_values
 from adam.model.conversions.idyntree import to_idyntree_model
 
 

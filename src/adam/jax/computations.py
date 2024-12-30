@@ -1,6 +1,5 @@
 # Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
-
 import jax.numpy as jnp
 import numpy as np
 

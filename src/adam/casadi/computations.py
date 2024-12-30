@@ -2,7 +2,6 @@
 
 import casadi as cs
 import numpy as np
-from typing import Union
 
 from adam.casadi.casadi_like import SpatialMath
 from adam.core import RBDAlgorithms
@@ -224,9 +223,7 @@ class KinDynComputations:
         """
         return self.rbdalgos.get_total_mass()
 
-    def mass_matrix(
-        self, base_transform: cs.SX, joint_positions: cs.SX
-    ):
+    def mass_matrix(self, base_transform: cs.SX, joint_positions: cs.SX):
         """Returns the Mass Matrix functions computed the CRBA
 
         Args:
@@ -244,9 +241,7 @@ class KinDynComputations:
         M, _ = self.rbdalgos.crba(base_transform, joint_positions)
         return M.array
 
-    def centroidal_momentum_matrix(
-        self, base_transform: cs.SX, joint_positions: cs.SX
-    ):
+    def centroidal_momentum_matrix(self, base_transform: cs.SX, joint_positions: cs.SX):
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
         Args:
@@ -427,9 +422,7 @@ class KinDynComputations:
             np.zeros(6),
         ).array
 
-    def gravity_term(
-        self, base_transform: cs.SX, joint_positions: cs.SX
-    ) -> cs.SX:
+    def gravity_term(self, base_transform: cs.SX, joint_positions: cs.SX) -> cs.SX:
         """Returns the gravity term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
@@ -453,9 +446,7 @@ class KinDynComputations:
             self.g,
         ).array
 
-    def CoM_position(
-        self, base_transform: cs.SX, joint_positions: cs.SX
-    ) -> cs.SX:
+    def CoM_position(self, base_transform: cs.SX, joint_positions: cs.SX) -> cs.SX:
         """Returns the CoM positon
 
         Args:

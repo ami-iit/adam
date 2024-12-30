@@ -1,14 +1,12 @@
 # Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
-
 import numpy as np
 import torch
-from typing import List
 
-from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.core.constants import Representations
+from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.model import Model
-from adam.parametric.model import URDFParametricModelFactory, ParametricLink
+from adam.parametric.model import ParametricLink, URDFParametricModelFactory
 from adam.pytorch.torch_like import SpatialMath
 
 
@@ -446,7 +444,7 @@ class KinDynComputationsParametric:
         self.NDoF = self.rbdalgos.NDoF
         return self.rbdalgos.get_total_mass()
 
-    def get_original_densities(self) -> List[float]:
+    def get_original_densities(self) -> list[float]:
         """Returns the original densities of the parametric links
 
         Returns:

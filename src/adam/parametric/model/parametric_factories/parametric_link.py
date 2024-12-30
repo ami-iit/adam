@@ -1,12 +1,12 @@
+import copy
+import math
+from enum import Enum
+
 import numpy.typing as npt
 import urdf_parser_py.urdf
-from enum import Enum
-import copy
 
 from adam.core.spatial_math import SpatialMath
 from adam.model import Link
-
-import math
 from adam.model.abc_factories import Inertia, Inertial
 
 

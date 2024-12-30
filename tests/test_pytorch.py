@@ -1,8 +1,9 @@
 import numpy as np
 import pytest
-from adam.pytorch import KinDynComputations
-from conftest import State, RobotCfg
 import torch
+from conftest import RobotCfg, State
+
+from adam.pytorch import KinDynComputations
 
 torch.set_default_dtype(torch.float64)
 

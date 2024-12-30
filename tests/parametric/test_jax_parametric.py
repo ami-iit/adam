@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
+from conftest import RobotCfg, State
+
 from adam.parametric.jax import KinDynComputationsParametric
-from conftest import State, RobotCfg
 
 
 @pytest.fixture(scope="module")

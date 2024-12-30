@@ -3,9 +3,9 @@
 from dataclasses import dataclass
 from typing import Union
 
+import numpy as np
 import numpy.typing as ntp
 import torch
-import numpy as np
 
 from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
 
