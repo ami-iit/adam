@@ -17,9 +17,14 @@ class Model:
     NDoF: int
     actuated_joints: list[str]
 
-    def __post_init__(self):
-        """set the "length of the model as the number of links"""
-        self.N = len(self.links)
+    @property
+    def N(self) -> int:
+        """
+
+        Returns:
+            int: the number of links in the model
+        """
+        return len(self.links)
 
     @staticmethod
     def build(factory: ModelFactory, joints_name_list: list[str] = None) -> "Model":
