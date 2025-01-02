@@ -1,9 +1,8 @@
 import numpy as np
 import pytest
 from conftest import RobotCfg, State
-from jax import config
-
 from adam.jax import KinDynComputations
+from jax import config
 
 config.update("jax_enable_x64", True)
 
