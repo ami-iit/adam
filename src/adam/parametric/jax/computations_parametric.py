@@ -21,7 +21,7 @@ class KinDynComputationsParametric:
         urdfstring: str,
         joints_name_list: list,
         links_name_list: list,
-        root_link: str = "root_link",
+        root_link: str = None,
         gravity: np.array = jnp.array([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
@@ -29,7 +29,7 @@ class KinDynComputationsParametric:
             urdfstring (str): either path or string of the urdf
             joints_name_list (list): list of the actuated joints
             links_name_list (list): list of parametric links
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
         self.math = SpatialMath()
         self.links_name_list = links_name_list
@@ -37,6 +37,10 @@ class KinDynComputationsParametric:
         self.urdfstring = urdfstring
         self.joints_name_list = joints_name_list
         self.representation = Representations.MIXED_REPRESENTATION  # Default
+        if root_link is not None:
+            raise DeprecationWarning(
+                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF"
+            )
 
     def set_frame_velocity_representation(
         self, representation: Representations
