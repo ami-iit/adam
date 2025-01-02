@@ -31,7 +31,7 @@ class Node:
 class Tree(Iterable):
     """The directed tree class"""
 
-    graph: dict
+    graph: dict[str, Node]
     root: str
 
     def __post_init__(self):
@@ -68,7 +68,9 @@ class Tree(Iterable):
 
         root_link = [l for l in nodes if nodes[l].parent is None]
         if len(root_link) != 1:
-            raise ValueError("The model has more than one root link")
+            raise ValueError(
+                f"Expected only one root, found {len(root_link)}: {root_link}"
+            )
         return Tree(nodes, root_link[0])
 
     def print(self, root):
