@@ -36,7 +36,6 @@ class KinDynComputations:
                 "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF"
             )
 
-
     def set_frame_velocity_representation(
         self, representation: Representations
     ) -> None:
