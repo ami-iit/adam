@@ -1,6 +1,5 @@
 import abc
 import dataclasses
-from typing import List
 
 import numpy.typing as npt
 
@@ -11,8 +10,8 @@ from adam.core.spatial_math import SpatialMath
 class Pose:
     """Pose class"""
 
-    xyz: List
-    rpy: List
+    xyz: list
+    rpy: list
 
 
 @dataclasses.dataclass
@@ -46,7 +45,7 @@ class Joint(abc.ABC):
     parent: str
     child: str
     type: str
-    axis: List
+    axis: list
     origin: Pose
     limit: Limits
     idx: int
@@ -177,9 +176,9 @@ class Link(abc.ABC):
 
     math: SpatialMath
     name: str
-    visuals: List
+    visuals: list
     inertial: Inertial
-    collisions: List
+    collisions: list
 
     def spatial_inertia(self) -> npt.ArrayLike:
         """
@@ -234,25 +233,25 @@ class ModelFactory(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_links(self) -> List[Link]:
+    def get_links(self) -> list[Link]:
         """
         Returns:
-            List[Link]: the list of the link
+            list[Link]: the list of the link
         """
         pass
 
     @abc.abstractmethod
-    def get_frames(self) -> List[Link]:
+    def get_frames(self) -> list[Link]:
         """
         Returns:
-            List[Link]: the list of the frames
+            list[Link]: the list of the frames
         """
         pass
 
     @abc.abstractmethod
-    def get_joints(self) -> List[Joint]:
+    def get_joints(self) -> list[Joint]:
         """
         Returns:
-            List[Joint]: the list of the joints
+            list[Joint]: the list of the joints
         """
         pass

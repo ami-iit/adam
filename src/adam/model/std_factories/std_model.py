@@ -1,7 +1,6 @@
 import os
 import pathlib
 import xml.etree.ElementTree as ET
-from typing import List
 
 import urdf_parser_py.urdf
 
@@ -21,36 +20,39 @@ def urdf_remove_sensors_tags(xml_string):
     return ET.tostring(root)
 
 
-def get_xml_string(path: str):
-    isPath = False
+def get_xml_string(path: str | pathlib.Path):
+
+    isPath = isinstance(path, pathlib.Path)
     isUrdf = False
+
+    # Extract the maximum path length for the current OS
+    try:
+        from ctypes.wintypes import MAX_PATH
+    except ValueError:
+        MAX_PATH = os.pathconf("/", "PC_PATH_MAX")
+
     # Checking if it is a path or an urdf
-    if type(path) is not (pathlib.Path):
-        if os.path.exists(path):
+    if not isPath:
+        if len(path) <= MAX_PATH and "<robot" not in path:
             path = pathlib.Path(path)
             isPath = True
         else:
             root = ET.fromstring(path)
-            robot_el = None
+
             for elem in root.iter():
                 if elem.tag == "robot":
                     xml_string = path
                     isUrdf = True
-    elif path.exists():
-        isPath = True
+                    break
 
-    if not (isPath) and not (isUrdf):
+    if isPath:
+        xml_string = path.read_text()
+
+    if not isPath and not isUrdf:
         raise ValueError(
             f"Invalid urdf string: {path}. It is neither a path nor a urdf string"
         )
 
-    if isPath:
-        if not (path.exists()):
-            raise FileExistsError(path)
-        path = pathlib.Path(path)
-        with open(path, "r") as xml_file:
-            xml_string = xml_file.read()
-            xml_file.close()
     return xml_string
 
 
@@ -80,17 +82,17 @@ class URDFModelFactory(ModelFactory):
         )
         self.name = self.urdf_desc.name
 
-    def get_joints(self) -> List[StdJoint]:
+    def get_joints(self) -> list[StdJoint]:
         """
         Returns:
-            List[StdJoint]: build the list of the joints
+            list[StdJoint]: build the list of the joints
         """
         return [self.build_joint(j) for j in self.urdf_desc.joints]
 
-    def get_links(self) -> List[StdLink]:
+    def get_links(self) -> list[StdLink]:
         """
         Returns:
-            List[StdLink]: build the list of the links
+            list[StdLink]: build the list of the links
 
         A link is considered a "real" link if
         - it has an inertial
@@ -111,10 +113,10 @@ class URDFModelFactory(ModelFactory):
             )
         ]
 
-    def get_frames(self) -> List[StdLink]:
+    def get_frames(self) -> list[StdLink]:
         """
         Returns:
-            List[StdLink]: build the list of the links
+            list[StdLink]: build the list of the links
 
         A link is considered a "fake" link (frame) if
         - it has no inertial

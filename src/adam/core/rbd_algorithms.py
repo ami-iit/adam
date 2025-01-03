@@ -1,6 +1,5 @@
-# Copyright (C) 2021 Istituto Italiano di Tecnologia (IIT). All rights reserved.
-# This software may be modified and distributed under the terms of the
-# GNU Lesser General Public License v2.1 or any later version.
+# Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
+
 import numpy.typing as npt
 
 from adam.core.constants import Representations
@@ -16,8 +15,8 @@ class RBDAlgorithms:
     def __init__(self, model: Model, math: SpatialMath) -> None:
         """
         Args:
-            model (Model): The robot model
-            math (SpatialMath): The spatial math object
+            model (Model): the adam.model representing the robot
+            math (SpatialMath): the spatial math.
         """
 
         self.model = model

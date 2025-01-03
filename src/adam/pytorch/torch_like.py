@@ -1,13 +1,11 @@
-# Copyright (C) 2021 Istituto Italiano di Tecnologia (IIT). All rights reserved.
-# This software may be modified and distributed under the terms of the
-# GNU Lesser General Public License v2.1 or any later version.
+# Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
 from dataclasses import dataclass
 from typing import Union
 
+import numpy as np
 import numpy.typing as ntp
 import torch
-import numpy as np
 
 from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
 
