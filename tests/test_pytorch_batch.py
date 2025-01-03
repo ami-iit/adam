@@ -1,9 +1,10 @@
 import numpy as np
 import pytest
-from adam.pytorch import KinDynComputationsBatch
-from conftest import State, RobotCfg
 import torch
+from conftest import RobotCfg, State
 from jax import config
+
+from adam.pytorch import KinDynComputationsBatch
 
 config.update("jax_enable_x64", True)
 

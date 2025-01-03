@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
+from conftest import RobotCfg, State
+
 from adam.numpy import KinDynComputations
-from conftest import State, RobotCfg
 
 
 @pytest.fixture(scope="module")

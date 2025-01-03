@@ -1,18 +1,14 @@
-# Copyright (C) 2021 Istituto Italiano di Tecnologia (IIT). All rights reserved.
-# This software may be modified and distributed under the terms of the
-# GNU Lesser General Public License v2.1 or any later version.
-
-from typing import List
+# Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
 import jax.numpy as jnp
 import numpy as np
 from jax import grad, jit, vmap
 
-from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.core.constants import Representations
+from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.jax.jax_like import SpatialMath
 from adam.model import Model
-from adam.parametric.model import URDFParametricModelFactory, ParametricLink
+from adam.parametric.model import ParametricLink, URDFParametricModelFactory
 
 
 class KinDynComputationsParametric:
@@ -25,7 +21,7 @@ class KinDynComputationsParametric:
         urdfstring: str,
         joints_name_list: list,
         links_name_list: list,
-        root_link: str = "root_link",
+        root_link: str = None,
         gravity: np.array = jnp.array([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
@@ -33,7 +29,7 @@ class KinDynComputationsParametric:
             urdfstring (str): either path or string of the urdf
             joints_name_list (list): list of the actuated joints
             links_name_list (list): list of parametric links
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
         self.math = SpatialMath()
         self.links_name_list = links_name_list
@@ -41,6 +37,10 @@ class KinDynComputationsParametric:
         self.urdfstring = urdfstring
         self.joints_name_list = joints_name_list
         self.representation = Representations.MIXED_REPRESENTATION  # Default
+        if root_link is not None:
+            raise DeprecationWarning(
+                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF"
+            )
 
     def set_frame_velocity_representation(
         self, representation: Representations
@@ -449,7 +449,7 @@ class KinDynComputationsParametric:
         self.NDoF = self.rbdalgos.NDoF
         return self.rbdalgos.get_total_mass()
 
-    def get_original_densities(self) -> List[float]:
+    def get_original_densities(self) -> list[float]:
         """Returns the original densities of the parametric links
 
         Returns:

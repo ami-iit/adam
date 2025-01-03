@@ -1,7 +1,7 @@
-import pathlib
-from typing import List
-import xml.etree.ElementTree as ET
 import os
+import pathlib
+import xml.etree.ElementTree as ET
+
 import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
@@ -85,17 +85,17 @@ class URDFModelFactory(ModelFactory):
         )
         self.name = self.urdf_desc.name
 
-    def get_joints(self) -> List[StdJoint]:
+    def get_joints(self) -> list[StdJoint]:
         """
         Returns:
-            List[StdJoint]: build the list of the joints
+            list[StdJoint]: build the list of the joints
         """
         return [self.build_joint(j) for j in self.urdf_desc.joints]
 
-    def get_links(self) -> List[StdLink]:
+    def get_links(self) -> list[StdLink]:
         """
         Returns:
-            List[StdLink]: build the list of the links
+            list[StdLink]: build the list of the links
 
         A link is considered a "real" link if
         - it has an inertial
@@ -116,10 +116,10 @@ class URDFModelFactory(ModelFactory):
             )
         ]
 
-    def get_frames(self) -> List[StdLink]:
+    def get_frames(self) -> list[StdLink]:
         """
         Returns:
-            List[StdLink]: build the list of the links
+            list[StdLink]: build the list of the links
 
         A link is considered a "fake" link (frame) if
         - it has no inertial

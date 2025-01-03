@@ -1,8 +1,9 @@
 import casadi as cs
 import numpy as np
 import pytest
+from conftest import RobotCfg, State
+
 from adam.casadi import KinDynComputations
-from conftest import State, RobotCfg
 
 
 @pytest.fixture(scope="module")

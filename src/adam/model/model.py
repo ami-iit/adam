@@ -1,5 +1,4 @@
 import dataclasses
-from typing import Dict, List
 
 from adam.model.abc_factories import Joint, Link, ModelFactory
 from adam.model.tree import Tree
@@ -11,24 +10,29 @@ class Model:
     Model class. It describes the robot using links and frames and their connectivity"""
 
     name: str
-    links: Dict[str, Link]
-    frames: Dict[str, Link]
-    joints: Dict[str, Joint]
+    links: dict[str, Link]
+    frames: dict[str, Link]
+    joints: dict[str, Joint]
     tree: Tree
     NDoF: int
-    actuated_joints: List[str]
+    actuated_joints: list[str]
 
-    def __post_init__(self):
-        """set the "length of the model as the number of links"""
-        self.N = len(self.links)
+    @property
+    def N(self) -> int:
+        """
+
+        Returns:
+            int: the number of links in the model
+        """
+        return len(self.links)
 
     @staticmethod
-    def build(factory: ModelFactory, joints_name_list: List[str] = None) -> "Model":
+    def build(factory: ModelFactory, joints_name_list: list[str] = None) -> "Model":
         """generates the model starting from the list of joints and the links-joints factory
 
         Args:
             factory (ModelFactory): the factory that generates the links and the joints, starting from a description (eg. urdf)
-            joints_name_list (List[str]): the list of the actuated joints
+            joints_name_list (list[str]): the list of the actuated joints
 
         Returns:
             Model: the model describing the robot
@@ -63,9 +67,9 @@ class Model:
         tree = Tree.build_tree(links=links_list, joints=joints_list)
 
         # generate some useful dict
-        joints: Dict[str, Joint] = {joint.name: joint for joint in joints_list}
-        links: Dict[str, Link] = {link.name: link for link in links_list}
-        frames: Dict[str, Link] = {frame.name: frame for frame in frames_list}
+        joints: dict[str, Joint] = {joint.name: joint for joint in joints_list}
+        links: dict[str, Link] = {link.name: link for link in links_list}
+        frames: dict[str, Link] = {frame.name: frame for frame in frames_list}
 
         return Model(
             name=factory.name,
@@ -77,7 +81,7 @@ class Model:
             actuated_joints=joints_name_list,
         )
 
-    def get_joints_chain(self, root: str, target: str) -> List[Joint]:
+    def get_joints_chain(self, root: str, target: str) -> list[Joint]:
         """generate the joints chains from a link to a link
 
         Args:
@@ -85,7 +89,7 @@ class Model:
             target (str): the target link
 
         Returns:
-            List[Joint]: the list of the joints
+            list[Joint]: the list of the joints
         """
 
         if target not in list(self.links) and target not in list(self.frames):

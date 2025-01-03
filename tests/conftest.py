@@ -1,14 +1,16 @@
-import pytest
-import numpy as np
-import icub_models
-import idyntree.bindings as idyntree
-from adam import Representations
-from adam.numpy.numpy_like import SpatialMath
 import dataclasses
-from itertools import product
 import logging
 import os
+from itertools import product
+
+import icub_models
+import idyntree.bindings as idyntree
+import numpy as np
+import pytest
 import requests
+
+from adam import Representations
+from adam.numpy.numpy_like import SpatialMath
 
 
 @dataclasses.dataclass

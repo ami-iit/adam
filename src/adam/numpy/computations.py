@@ -1,6 +1,5 @@
-# Copyright (C) 2021 Istituto Italiano di Tecnologia (IIT). All rights reserved.
-# This software may be modified and distributed under the terms of the
-# GNU Lesser General Public License v2.1 or any later version.
+# Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
+
 
 import numpy as np
 
@@ -17,14 +16,14 @@ class KinDynComputations:
         self,
         urdfstring: str,
         joints_name_list: list = None,
-        root_link: str = "root_link",
+        root_link: str = None,
         gravity: np.array = np.array([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
         Args:
             urdfstring (str): either path or string of the urdf
             joints_name_list (list): list of the actuated joints
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
         math = SpatialMath()
         factory = URDFModelFactory(path=urdfstring, math=math)
@@ -32,6 +31,10 @@ class KinDynComputations:
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = model.NDoF
         self.g = gravity
+        if root_link is not None:
+            raise DeprecationWarning(
+                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF"
+            )
 
     def set_frame_velocity_representation(
         self, representation: Representations

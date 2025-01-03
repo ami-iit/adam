@@ -1,11 +1,9 @@
 import idyntree.bindings
 import numpy as np
 import urdf_parser_py.urdf
-from typing import List
 
-
+from adam.model.abc_factories import Joint, Link
 from adam.model.model import Model
-from adam.model.abc_factories import Link, Joint
 
 
 def to_idyntree_solid_shape(
@@ -63,7 +61,7 @@ def to_idyntree_solid_shape(
 
 def to_idyntree_link(
     link: Link,
-) -> [idyntree.bindings.Link, List[idyntree.bindings.SolidShape]]:
+) -> tuple[idyntree.bindings.Link, list[idyntree.bindings.SolidShape]]:
     """
     Args:
         link (Link): the link to convert

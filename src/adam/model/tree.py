@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Iterable, Iterator, Union
 
 from adam.model.abc_factories import Joint, Link
 
@@ -10,19 +10,19 @@ class Node:
 
     name: str
     link: Link
-    arcs: List[Joint]
-    children: List["Node"]
+    arcs: list[Joint]
+    children: list["Node"]
     parent: Union[Link, None] = None
     parent_arc: Union[Joint, None] = None
 
     def __hash__(self) -> int:
         return hash(self.name)
 
-    def get_elements(self) -> Tuple[Link, Joint, Link]:
+    def get_elements(self) -> tuple[Link, Joint, Link]:
         """returns the node with its parent arc and parent link
 
         Returns:
-            Tuple[Link, Joint, Link]: the node, the parent_arc, the parent_link
+            tuple[Link, Joint, Link]: the node, the parent_arc, the parent_link
         """
         return self.link, self.parent_arc, self.parent
 
@@ -31,24 +31,24 @@ class Node:
 class Tree(Iterable):
     """The directed tree class"""
 
-    graph: Dict
+    graph: dict[str, Node]
     root: str
 
     def __post_init__(self):
         self.ordered_nodes_list = self.get_ordered_nodes_list(self.root)
 
     @staticmethod
-    def build_tree(links: List[Link], joints: List[Joint]) -> "Tree":
+    def build_tree(links: list[Link], joints: list[Joint]) -> "Tree":
         """builds the tree from the connectivity of the elements
 
         Args:
-            links (List[Link])
-            joints (List[Joint])
+            links (list[Link])
+            joints (list[Joint])
 
         Returns:
             Tree: the directed tree
         """
-        nodes: Dict[str, Node] = {
+        nodes: dict[str, Node] = {
             l.name: Node(
                 name=l.name, link=l, arcs=[], children=[], parent=None, parent_arc=None
             )
@@ -68,7 +68,9 @@ class Tree(Iterable):
 
         root_link = [l for l in nodes if nodes[l].parent is None]
         if len(root_link) != 1:
-            raise ValueError("The model has more than one root link")
+            raise ValueError(
+                f"Expected only one root, found {len(root_link)}: {root_link}"
+            )
         return Tree(nodes, root_link[0])
 
     def print(self, root):
@@ -81,25 +83,25 @@ class Tree(Iterable):
 
         pptree.print_tree(self.graph[root])
 
-    def get_ordered_nodes_list(self, start: str) -> List[str]:
+    def get_ordered_nodes_list(self, start: str) -> list[str]:
         """get the ordered list of the nodes, given the connectivity
 
         Args:
             start (str): the start node
 
         Returns:
-            List[str]: the ordered list
+            list[str]: the ordered list
         """
         ordered_list = [start]
         self.get_children(self.graph[start], ordered_list)
         return ordered_list
 
     @classmethod
-    def get_children(cls, node: Node, list: List):
+    def get_children(cls, node: Node, list: list):
         """Recursive method that finds children of child of child
         Args:
             node (Node): the analized node
-            list (List): the list of the children that needs to be filled
+            list (list): the list of the children that needs to be filled
         """
         if node.children is not []:
             for child in node.children:
@@ -136,7 +138,7 @@ class Tree(Iterable):
         """
         return self.graph[name]
 
-    def __iter__(self) -> Node:
+    def __iter__(self) -> Iterator[Node]:
         """This method allows to iterate on the model
         Returns:
             Node: the node istance
@@ -146,7 +148,7 @@ class Tree(Iterable):
         """
         yield from [self.graph[name] for name in self.ordered_nodes_list]
 
-    def __reversed__(self) -> Node:
+    def __reversed__(self) -> Iterator[Node]:
         """
         Returns:
             Node

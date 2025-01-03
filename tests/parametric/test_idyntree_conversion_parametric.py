@@ -1,14 +1,15 @@
 import casadi as cs
 import numpy as np
 import pytest
-from adam.parametric.casadi import KinDynComputationsParametric
-from conftest import State, RobotCfg, compute_idyntree_values
+from conftest import RobotCfg, State, compute_idyntree_values
+
+from adam.model import Model
 from adam.model.conversions.idyntree import to_idyntree_model
+from adam.numpy.numpy_like import SpatialMath
+from adam.parametric.casadi import KinDynComputationsParametric
 from adam.parametric.model.parametric_factories.parametric_model import (
     URDFParametricModelFactory,
 )
-from adam.model import Model
-from adam.numpy.numpy_like import SpatialMath
 
 
 @pytest.fixture(scope="module")

@@ -1,11 +1,8 @@
-import pathlib
-from typing import List
-import os
-
 import urdf_parser_py.urdf
+
 from adam.core.spatial_math import SpatialMath
-from adam.model import ModelFactory, StdJoint, StdLink, Link, Joint
-from adam.model.std_factories.std_model import urdf_remove_sensors_tags, get_xml_string
+from adam.model import Joint, Link, ModelFactory, StdJoint, StdLink
+from adam.model.std_factories.std_model import get_xml_string, urdf_remove_sensors_tags
 from adam.parametric.model import ParametricJoint, ParametricLink
 
 
@@ -21,7 +18,7 @@ class URDFParametricModelFactory(ModelFactory):
         self,
         path: str,
         math: SpatialMath,
-        links_name_list: List,
+        links_name_list: list,
         length_multiplier,
         densities,
     ):
@@ -45,26 +42,26 @@ class URDFParametricModelFactory(ModelFactory):
         self.length_multiplier = length_multiplier
         self.densities = densities
 
-    def get_joints(self) -> List[Joint]:
+    def get_joints(self) -> list[Joint]:
         """
         Returns:
-            List[Joint]: build the list of the joints
+            list[Joint]: build the list of the joints
         """
         return [self.build_joint(j) for j in self.urdf_desc.joints]
 
-    def get_links(self) -> List[Link]:
+    def get_links(self) -> list[Link]:
         """
         Returns:
-            List[Link]: build the list of the links
+            list[Link]: build the list of the links
         """
         return [
             self.build_link(l) for l in self.urdf_desc.links if l.inertial is not None
         ]
 
-    def get_frames(self) -> List[StdLink]:
+    def get_frames(self) -> list[StdLink]:
         """
         Returns:
-            List[Link]: build the list of the links
+            list[Link]: build the list of the links
         """
         return [self.build_link(l) for l in self.urdf_desc.links if l.inertial is None]
 
