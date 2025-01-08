@@ -17,9 +17,9 @@ class TorchLike(ArrayLike):
     array: torch.Tensor
 
     def __post_init__(self):
-        """Converts array to double precision"""
-        if self.array.dtype != torch.float64:
-            self.array = self.array.double()
+        """Converts array to the default type used in the library"""
+        if self.array.dtype != torch.get_default_dtype():
+            self.array = self.array.to(torch.get_default_dtype())
 
     def __setitem__(self, idx, value: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides set item operator"""
