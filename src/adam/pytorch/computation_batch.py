@@ -23,7 +23,7 @@ class KinDynComputationsBatch:
         self,
         urdfstring: str,
         joints_name_list: list = None,
-        root_link: str = "root_link",
+        root_link: str = None,
         gravity: np.array = jnp.array([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
