@@ -2,6 +2,8 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
+import warnings
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -40,10 +42,8 @@ class KinDynComputationsBatch:
         self.g = gravity
         self.funcs = {}
         if root_link is not None:
-            raise DeprecationWarning(
-                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF"
-            )
-        
+            warnings.warn("The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF", DeprecationWarning, stacklevel=2)
+
 
     def set_frame_velocity_representation(
         self, representation: Representations
