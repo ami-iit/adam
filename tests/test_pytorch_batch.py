@@ -73,6 +73,20 @@ def test_CoM_pos(setup_test):
     assert adam_com.shape == (n_samples, 3)
 
 
+def test_CoM_jacobian(setup_test):
+    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
+    idyn_com_jacobian = robot_cfg.idyn_function_values.CoM_jacobian
+    adam_com_jacobian = adam_kin_dyn.CoM_jacobian(state.H, state.joints_pos)
+    try:
+        adam_com_jacobian.sum().backward()
+    except:
+        raise ValueError(adam_com_jacobian)
+    assert adam_com_jacobian[0].detach().numpy() - idyn_com_jacobian == pytest.approx(
+        0.0, abs=1e-4
+    )
+    assert adam_com_jacobian.shape == (n_samples, 3, robot_cfg.n_dof + 6)
+
+
 def test_jacobian(setup_test):
     adam_kin_dyn, robot_cfg, state, n_samples = setup_test
     idyn_jacobian = robot_cfg.idyn_function_values.jacobian
