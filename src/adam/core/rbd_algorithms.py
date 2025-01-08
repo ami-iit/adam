@@ -8,8 +8,7 @@ from adam.model import Model, Node
 
 
 class RBDAlgorithms:
-    """This is a small class that implements Rigid body algorithms retrieving robot quantities, for Floating Base systems - as humanoid robots.
-    """
+    """This is a small class that implements Rigid body algorithms retrieving robot quantities, for Floating Base systems - as humanoid robots."""
 
     def __init__(self, model: Model, math: SpatialMath) -> None:
         """

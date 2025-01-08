@@ -37,7 +37,11 @@ class KinDynComputations:
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
         if root_link is not None:
-            warnings.warn("The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF", DeprecationWarning, stacklevel=2)
+            warnings.warn(
+                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
     def set_frame_velocity_representation(
         self, representation: Representations
