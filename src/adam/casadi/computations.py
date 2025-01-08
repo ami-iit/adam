@@ -155,6 +155,19 @@ class KinDynComputations:
             "CoM_pos", [base_transform, joint_positions], [com_pos.array], self.f_opts
         )
 
+    def CoM_jacobian_fun(self) -> cs.Function:
+        """Returns the CoM Jacobian
+
+        Returns:
+            J_com (casADi function): The CoM Jacobian
+        """
+        joint_positions = cs.SX.sym("s", self.NDoF)
+        base_transform = cs.SX.sym("H", 4, 4)
+        J_com = self.rbdalgos.CoM_jacobian(base_transform, joint_positions)
+        return cs.Function(
+            "J_com", [base_transform, joint_positions], [J_com.array], self.f_opts
+        )
+
     def bias_force_fun(self) -> cs.Function:
         """Returns the bias force of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
@@ -466,3 +479,20 @@ class KinDynComputations:
             )
 
         return self.rbdalgos.CoM_position(base_transform, joint_positions).array
+
+    def CoM_jacobian(self, base_transform: cs.SX, joint_positions: cs.SX) -> cs.SX:
+        """Returns the CoM Jacobian
+
+        Args:
+            base_transform (cs.SX): The homogenous transform from base to world frame
+            joint_positions (cs.SX): The joints position
+
+        Returns:
+            J_com (cs.SX): The CoM Jacobian
+        """
+        if isinstance(base_transform, cs.MX) and isinstance(joint_positions, cs.MX):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.CoM_jacobian_fun()"
+            )
+
+        return self.rbdalgos.CoM_jacobian(base_transform, joint_positions).array
