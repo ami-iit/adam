@@ -2,6 +2,8 @@
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
+import warnings
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -23,14 +25,14 @@ class KinDynComputationsBatch:
         self,
         urdfstring: str,
         joints_name_list: list = None,
-        root_link: str = "root_link",
+        root_link: str = None,
         gravity: np.array = jnp.array([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
         Args:
             urdfstring (str): path of the urdf
             joints_name_list (list): list of the actuated joints
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
         math = SpatialMath()
         factory = URDFModelFactory(path=urdfstring, math=math)
@@ -39,6 +41,12 @@ class KinDynComputationsBatch:
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
         self.funcs = {}
+        if root_link is not None:
+            warnings.warn(
+                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
     def set_frame_velocity_representation(
         self, representation: Representations

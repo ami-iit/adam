@@ -8,9 +8,7 @@ from adam.model import Model, Node
 
 
 class RBDAlgorithms:
-    """This is a small class that implements Rigid body algorithms retrieving robot quantities represented
-    in mixed representation, for Floating Base systems - as humanoid robots.
-    """
+    """This is a small class that implements Rigid body algorithms retrieving robot quantities, for Floating Base systems - as humanoid robots."""
 
     def __init__(self, model: Model, math: SpatialMath) -> None:
         """
@@ -248,7 +246,7 @@ class RBDAlgorithms:
             frame (str): The frame to which the jacobian will be computed
             base_transform (npt.ArrayLike): The homogenous transform from base to world frame
             joint_positions (npt.ArrayLike): The joints position
-            base_velocity (npt.ArrayLike): The base velocity in mixed representation
+            base_velocity (npt.ArrayLike): The base velocity
             joint_velocities (npt.ArrayLike): The joints velocity
 
         Returns:
@@ -370,7 +368,7 @@ class RBDAlgorithms:
             frame (str): The frame to which the jacobian will be computed
             base_transform (T): The homogenous transform from base to world frame
             joint_positions (T): The joints position
-            base_velocity (T): The base velocity in mixed representation
+            base_velocity (T): The base velocity
             joint_velocities (T): The joints velocity
             g (T): The 6D gravity acceleration
 

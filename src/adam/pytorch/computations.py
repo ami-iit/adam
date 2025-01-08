@@ -1,6 +1,8 @@
 # Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
 
+import warnings
+
 import numpy as np
 import torch
 
@@ -35,8 +37,10 @@ class KinDynComputations:
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
         if root_link is not None:
-            raise DeprecationWarning(
-                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF"
+            warnings.warn(
+                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF",
+                DeprecationWarning,
+                stacklevel=2,
             )
 
     def set_frame_velocity_representation(
@@ -50,7 +54,7 @@ class KinDynComputations:
         self.rbdalgos.set_frame_velocity_representation(representation)
 
     def mass_matrix(
-        self, base_transform: torch.Tensor, joint_position: torch.Tensor
+        self, base_transform: torch.Tensor, joint_positions: torch.Tensor
     ) -> torch.Tensor:
         """Returns the Mass Matrix functions computed the CRBA
 
@@ -61,11 +65,11 @@ class KinDynComputations:
         Returns:
             M (torch.tensor): Mass Matrix
         """
-        [M, _] = self.rbdalgos.crba(base_transform, joint_position)
+        [M, _] = self.rbdalgos.crba(base_transform, joint_positions)
         return M.array
 
     def centroidal_momentum_matrix(
-        self, base_transform: torch.Tensor, joint_position: torch.Tensor
+        self, base_transform: torch.Tensor, joint_positions: torch.Tensor
     ) -> torch.Tensor:
         """Returns the Centroidal Momentum Matrix functions computed the CRBA
 
@@ -76,11 +80,11 @@ class KinDynComputations:
         Returns:
             Jcc (torch.tensor): Centroidal Momentum matrix
         """
-        [_, Jcm] = self.rbdalgos.crba(base_transform, joint_position)
+        [_, Jcm] = self.rbdalgos.crba(base_transform, joint_positions)
         return Jcm.array
 
     def forward_kinematics(
-        self, frame, base_transform: torch.Tensor, joint_position: torch.Tensor
+        self, frame, base_transform: torch.Tensor, joint_positions: torch.Tensor
     ) -> torch.Tensor:
         """Computes the forward kinematics relative to the specified frame
 
@@ -96,7 +100,7 @@ class KinDynComputations:
             self.rbdalgos.forward_kinematics(
                 frame,
                 base_transform,
-                joint_position,
+                joint_positions,
             )
         ).array
 
@@ -177,7 +181,7 @@ class KinDynComputations:
         base_velocity: torch.Tensor,
         joint_velocities: torch.Tensor,
     ) -> torch.Tensor:
-        """Returns the bias force of the floating-base dynamics ejoint_positionsuation,
+        """Returns the bias force of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
@@ -204,7 +208,7 @@ class KinDynComputations:
         base_velocity: torch.Tensor,
         joint_velocities: torch.Tensor,
     ) -> torch.Tensor:
-        """Returns the coriolis term of the floating-base dynamics ejoint_positionsuation,
+        """Returns the coriolis term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:
@@ -228,7 +232,7 @@ class KinDynComputations:
     def gravity_term(
         self, base_transform: torch.Tensor, joint_positions: torch.Tensor
     ) -> torch.Tensor:
-        """Returns the gravity term of the floating-base dynamics ejoint_positionsuation,
+        """Returns the gravity term of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
         Args:

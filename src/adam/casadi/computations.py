@@ -1,5 +1,7 @@
 # Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
+import warnings
+
 import casadi as cs
 import numpy as np
 
@@ -34,8 +36,10 @@ class KinDynComputations:
         self.g = gravity
         self.f_opts = f_opts
         if root_link is not None:
-            raise DeprecationWarning(
-                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF"
+            warnings.warn(
+                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF",
+                DeprecationWarning,
+                stacklevel=2,
             )
 
     def set_frame_velocity_representation(
@@ -294,7 +298,7 @@ class KinDynComputations:
             frame (str): The frame to which the jacobian will be computed
             base_transform (cs.SX): The homogenous transform from base to world frame
             joint_positions (cs.SX): The joints position
-            base_velocity (cs.SX): The base velocity in mixed representation
+            base_velocity (cs.SX): The base velocity
             joint_velocities (cs.SX): The joint velocities
 
         Returns:
@@ -369,7 +373,7 @@ class KinDynComputations:
         Args:
             base_transform (cs.SX): The homogenous transform from base to world frame
             joint_positions (cs.SX): The joints position
-            base_velocity (cs.SX): The base velocity in mixed representation
+            base_velocity (cs.SX): The base velocity
             joint_velocities (cs.SX): The joints velocity
 
         Returns:
@@ -402,7 +406,7 @@ class KinDynComputations:
         Args:
             base_transform (cs.SX): The homogenous transform from base to world frame
             joint_positions (cs.SX): The joints position
-            base_velocity (cs.SX): The base velocity in mixed representation
+            base_velocity (cs.SX): The base velocity
             joint_velocities (cs.SX): The joints velocity
 
         Returns:

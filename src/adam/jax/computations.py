@@ -1,5 +1,7 @@
 # Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
+import warnings
+
 import jax.numpy as jnp
 import numpy as np
 
@@ -32,8 +34,10 @@ class KinDynComputations:
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
         if root_link is not None:
-            raise DeprecationWarning(
-                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF"
+            warnings.warn(
+                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF",
+                DeprecationWarning,
+                stacklevel=2,
             )
 
     def set_frame_velocity_representation(
