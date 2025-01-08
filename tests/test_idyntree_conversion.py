@@ -46,6 +46,13 @@ def test_CoM_pos(setup_test):
     adam_com = cs.DM(adam_kin_dyn.CoM_position_fun()(state.H, state.joints_pos))
     assert adam_com - idyn_com == pytest.approx(0.0, abs=1e-5)
 
+def test_CoM_jacobian(setup_test):
+    adam_kin_dyn, robot_cfg, state = setup_test
+    idyn_com_jac = robot_cfg.idyn_function_values.CoM_jacobian
+    adam_com_jac = cs.DM(adam_kin_dyn.CoM_jacobian_fun()(state.H, state.joints_pos))
+    assert adam_com_jac - idyn_com_jac == pytest.approx(0.0, abs=1e-5)
+    adam_com_jac = cs.DM(adam_kin_dyn.CoM_jacobian_fun()(state.H, state.joints_pos))
+    assert adam_com_jac - idyn_com_jac == pytest.approx(0.0, abs=1e-5)
 
 def test_total_mass(setup_test):
     adam_kin_dyn, robot_cfg, state = setup_test
