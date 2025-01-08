@@ -294,7 +294,7 @@ class KinDynComputations:
             frame (str): The frame to which the jacobian will be computed
             base_transform (cs.SX): The homogenous transform from base to world frame
             joint_positions (cs.SX): The joints position
-            base_velocity (cs.SX): The base velocity in mixed representation
+            base_velocity (cs.SX): The base velocity
             joint_velocities (cs.SX): The joint velocities
 
         Returns:
@@ -369,7 +369,7 @@ class KinDynComputations:
         Args:
             base_transform (cs.SX): The homogenous transform from base to world frame
             joint_positions (cs.SX): The joints position
-            base_velocity (cs.SX): The base velocity in mixed representation
+            base_velocity (cs.SX): The base velocity
             joint_velocities (cs.SX): The joints velocity
 
         Returns:
@@ -402,7 +402,7 @@ class KinDynComputations:
         Args:
             base_transform (cs.SX): The homogenous transform from base to world frame
             joint_positions (cs.SX): The joints position
-            base_velocity (cs.SX): The base velocity in mixed representation
+            base_velocity (cs.SX): The base velocity
             joint_velocities (cs.SX): The joints velocity
 
         Returns:
