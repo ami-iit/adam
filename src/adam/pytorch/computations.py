@@ -161,7 +161,7 @@ class KinDynComputations:
     def CoM_position(
         self, base_transform: torch.Tensor, joint_positions: torch.Tensor
     ) -> torch.Tensor:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame
@@ -173,6 +173,20 @@ class KinDynComputations:
         return self.rbdalgos.CoM_position(
             base_transform, joint_positions
         ).array.squeeze()
+
+    def CoM_jacobian(
+        self, base_transform: torch.Tensor, joint_positions: torch.Tensor
+    ) -> torch.Tensor:
+        """Returns the CoM Jacobian
+
+        Args:
+            base_transform (torch.tensor): The homogenous transform from base to world frame
+            joint_positions (torch.tensor): The joints position
+
+        Returns:
+            Jcom (torch.tensor): The CoM Jacobian
+        """
+        return self.rbdalgos.CoM_jacobian(base_transform, joint_positions).array
 
     def bias_force(
         self,

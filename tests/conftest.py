@@ -27,6 +27,7 @@ class IDynFunctionValues:
     mass_matrix: np.ndarray
     centroidal_momentum_matrix: np.ndarray
     CoM_position: np.ndarray
+    CoM_jacobian: np.ndarray
     total_mass: float
     jacobian: np.ndarray
     jacobian_non_actuated: np.ndarray
@@ -184,6 +185,11 @@ def compute_idyntree_values(
     # CoM position
     idyn_com = kin_dyn.getCenterOfMassPosition().toNumPy()
 
+    # Com jacobian
+    idyn_com_jacobian = idyntree.MatrixDynSize(3, kin_dyn.model().getNrOfDOFs() + 6)
+    kin_dyn.getCenterOfMassJacobian(idyn_com_jacobian)
+    idyn_com_jacobian = idyn_com_jacobian.toNumPy()
+
     # total mass
     total_mass = kin_dyn.model().getTotalMass()
 
@@ -277,6 +283,7 @@ def compute_idyntree_values(
         mass_matrix=idyn_mass_matrix,
         centroidal_momentum_matrix=idyn_cmm,
         CoM_position=idyn_com,
+        CoM_jacobian=idyn_com_jacobian,
         total_mass=total_mass,
         jacobian=idyn_jacobian,
         jacobian_non_actuated=idyn_jacobian_non_actuated,

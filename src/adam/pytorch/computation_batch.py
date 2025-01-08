@@ -414,7 +414,7 @@ class KinDynComputationsBatch:
     def CoM_position(
         self, base_transform: torch.Tensor, joint_positions: torch.Tensor
     ) -> torch.Tensor:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Args:
             base_transform (torch.Tensor): The homogenous transform from base to world frame
@@ -426,7 +426,7 @@ class KinDynComputationsBatch:
         return self.CoM_position_fun()(base_transform, joint_positions)
 
     def CoM_position_fun(self):
-        """Returns the CoM positon as a pytorch function
+        """Returns the CoM position as a pytorch function
 
         Returns:
             CoM (pytorch function): The CoM position
@@ -442,6 +442,38 @@ class KinDynComputationsBatch:
         jit_vmapped_fun = jax.jit(vmapped_fun)
         self.funcs["CoM_position"] = jax2torch(jit_vmapped_fun)
         return self.funcs["CoM_position"]
+
+    def CoM_jacobian(
+        self, base_transform: torch.Tensor, joint_positions: torch.Tensor
+    ) -> torch.Tensor:
+        """Returns the CoM Jacobian
+
+        Args:
+            base_transform (torch.Tensor): The homogenous transform from base to world frame
+            joint_positions (torch.Tensor): The joints position
+
+        Returns:
+            Jcom (torch.Tensor): The CoM Jacobian
+        """
+        return self.CoM_jacobian_fun()(base_transform, joint_positions)
+
+    def CoM_jacobian_fun(self):
+        """Returns the CoM Jacobian as a pytorch function
+
+        Returns:
+            Jcom (pytorch function): The CoM Jacobian
+        """
+        if self.funcs.get("CoM_jacobian") is not None:
+            return self.funcs["CoM_jacobian"]
+        print("[INFO] Compiling CoM Jacobian function")
+
+        def fun(base_transform, joint_positions):
+            return self.rbdalgos.CoM_jacobian(base_transform, joint_positions).array
+
+        vmapped_fun = jax.vmap(fun, in_axes=(0, 0))
+        jit_vmapped_fun = jax.jit(vmapped_fun)
+        self.funcs["CoM_jacobian"] = jax2torch(jit_vmapped_fun)
+        return self.funcs["CoM_jacobian"]
 
     def get_total_mass(self) -> float:
         """Returns the total mass of the robot

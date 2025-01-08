@@ -325,7 +325,7 @@ class RBDAlgorithms:
     def CoM_position(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Args:
             base_transform (T): The homogenous transform from base to world frame
@@ -344,6 +344,39 @@ class RBDAlgorithms:
             com_pos += I_H_l[:3, 3] * link.inertial.mass
         com_pos /= self.get_total_mass()
         return com_pos
+
+    def CoM_jacobian(
+        self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
+        """Returns the center of mass (CoM) Jacobian using the centroidal momentum matrix.
+
+        Args:
+            base_transform (T): The homogenous transform from base to world frame
+            joint_positions (T): The joints position
+
+        Returns:
+            J_com (T): The CoM Jacobian
+        """
+        # The com velocity can be computed as dot_x * m = J_cm_mixed * nu_mixed = J_cm_body * nu_body
+        # For this reason we compute the centroidal momentum matrix in mixed representation and then we convert it to body fixed if needed
+        # Save the original frame velocity representation
+        ori_frame_velocity_representation = self.frame_velocity_representation
+        # Set the frame velocity representation to mixed and compute the centroidal momentum matrix
+        self.frame_velocity_representation = Representations.MIXED_REPRESENTATION
+        _, Jcm = self.crba(base_transform, joint_positions)
+        if (
+            ori_frame_velocity_representation
+            == Representations.BODY_FIXED_REPRESENTATION
+        ):
+            # if the frame velocity representation is body fixed we need to convert the centroidal momentum matrix to body fixed
+            # dot_x * m = J_cm_mixed * mixed_to_body * nu_body
+            X = self.math.factory.eye(6 + self.NDoF)
+            X[:6, :6] = self.math.adjoint_mixed(base_transform)
+            Jcm = Jcm @ X
+        # Reset the frame velocity representation
+        self.frame_velocity_representation = ori_frame_velocity_representation
+        # Compute the CoM Jacobian
+        return Jcm[:3, :] / self.get_total_mass()
 
     def get_total_mass(self):
         """Returns the total mass of the robot

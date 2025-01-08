@@ -152,7 +152,7 @@ class KinDynComputations:
     def CoM_position(
         self, base_transform: np.ndarray, joint_positions: np.ndarray
     ) -> np.ndarray:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
@@ -162,6 +162,22 @@ class KinDynComputations:
             CoM (np.ndarray): The CoM position
         """
         return self.rbdalgos.CoM_position(
+            base_transform, joint_positions
+        ).array.squeeze()
+
+    def CoM_jacobian(
+        self, base_transform: np.ndarray, joint_positions: np.ndarray
+    ) -> np.ndarray:
+        """Returns the CoM Jacobian
+
+        Args:
+            base_transform (np.ndarray): The homogenous transform from base to world frame
+            joint_positions (np.ndarray): The joints position
+
+        Returns:
+            Jcom (np.ndarray): The CoM Jacobian
+        """
+        return self.rbdalgos.CoM_jacobian(
             base_transform, joint_positions
         ).array.squeeze()
 
