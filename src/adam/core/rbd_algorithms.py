@@ -359,7 +359,7 @@ class RBDAlgorithms:
         Returns:
             J_com (T): The CoM Jacobian
         """
-        # The com velocity can be computed as dot_x = J_cm_mixed * nu_mixed = J_cm_body * nu_body
+        # The com velocity can be computed as dot_x * m = J_cm_mixed * nu_mixed = J_cm_body * nu_body
         # For this reason we compute the centroidal momentum matrix in mixed representation and then we convert it to body fixed if needed
         # Save the original frame velocity representation
         ori_frame_velocity_representation = self.frame_velocity_representation
@@ -371,7 +371,7 @@ class RBDAlgorithms:
             == Representations.BODY_FIXED_REPRESENTATION
         ):
             # if the frame velocity representation is body fixed we need to convert the centroidal momentum matrix to body fixed
-            # dot_x = J_cm_mixed * mixed_to_body * nu_body
+            # dot_x * m = J_cm_mixed * mixed_to_body * nu_body
             X = self.math.factory.eye(6 + self.NDoF)
             X[:6, :6] = self.math.adjoint_mixed(base_transform)
             Jcm = Jcm @ X
