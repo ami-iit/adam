@@ -30,7 +30,7 @@ class KinDynComputationsBatch:
         Args:
             urdfstring (str): path of the urdf
             joints_name_list (list): list of the actuated joints
-            root_link (str, optional): the first link. Defaults to 'root_link'.
+            root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
         math = SpatialMath()
         factory = URDFModelFactory(path=urdfstring, math=math)
@@ -39,6 +39,11 @@ class KinDynComputationsBatch:
         self.NDoF = self.rbdalgos.NDoF
         self.g = gravity
         self.funcs = {}
+        if root_link is not None:
+            raise DeprecationWarning(
+                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF"
+            )
+        
 
     def set_frame_velocity_representation(
         self, representation: Representations
