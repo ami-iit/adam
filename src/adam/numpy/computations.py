@@ -162,6 +162,22 @@ class KinDynComputations:
             base_transform, joint_positions
         ).array.squeeze()
 
+    def CoM_jacobian(
+        self, base_transform: np.ndarray, joint_positions: np.ndarray
+    ) -> np.ndarray:
+        """Returns the CoM Jacobian
+
+        Args:
+            base_transform (np.ndarray): The homogenous transform from base to world frame
+            joint_positions (np.ndarray): The joints position
+
+        Returns:
+            Jcom (np.ndarray): The CoM Jacobian
+        """
+        return self.rbdalgos.CoM_jacobian(
+            base_transform, joint_positions
+        ).array.squeeze()
+
     def bias_force(
         self,
         base_transform: np.ndarray,
