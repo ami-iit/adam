@@ -271,7 +271,7 @@ class KinDynComputationsParametric:
         length_multiplier: torch.Tensor,
         densities: torch.Tensor,
     ) -> torch.Tensor:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Args:
             base_transform (torch.tensor): The homogenous transform from base to world frame

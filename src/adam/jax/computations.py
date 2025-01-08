@@ -216,7 +216,7 @@ class KinDynComputations:
     def CoM_position(
         self, base_transform: jnp.array, joint_positions: jnp.array
     ) -> jnp.array:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Args:
             base_transform (jnp.array): The homogenous transform from base to world frame

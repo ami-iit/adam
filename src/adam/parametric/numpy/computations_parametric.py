@@ -266,7 +266,7 @@ class KinDynComputationsParametric:
         length_multiplier: np.ndarray,
         densities: np.ndarray,
     ) -> np.ndarray:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame

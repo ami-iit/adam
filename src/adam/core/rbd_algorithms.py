@@ -327,7 +327,7 @@ class RBDAlgorithms:
     def CoM_position(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Args:
             base_transform (T): The homogenous transform from base to world frame

@@ -179,7 +179,7 @@ class KinDynComputationsParametric:
         )
 
     def CoM_position_fun(self) -> cs.Function:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Returns:
             com (casADi function): The CoM position

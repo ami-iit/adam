@@ -143,7 +143,7 @@ class KinDynComputations:
         )
 
     def CoM_position_fun(self) -> cs.Function:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Returns:
             CoM (casADi function): The CoM position
@@ -464,7 +464,7 @@ class KinDynComputations:
         ).array
 
     def CoM_position(self, base_transform: cs.SX, joint_positions: cs.SX) -> cs.SX:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Args:
             base_transform (cs.SX): The homogenous transform from base to world frame

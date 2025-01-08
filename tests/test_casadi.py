@@ -50,9 +50,7 @@ def test_CoM_jacobian(setup_test):
         adam_kin_dyn.CoM_jacobian_fun()(state.H, state.joints_pos)
     )
     assert adam_com_jacobian - idyn_com_jacobian == pytest.approx(0.0, abs=1e-5)
-    adam_com_jacobian = cs.DM(
-        adam_kin_dyn.CoM_jacobian(state.H, state.joints_pos)
-    )
+    adam_com_jacobian = cs.DM(adam_kin_dyn.CoM_jacobian(state.H, state.joints_pos))
     assert adam_com_jacobian - idyn_com_jacobian == pytest.approx(0.0, abs=1e-5)
 
 

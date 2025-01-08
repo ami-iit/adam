@@ -149,7 +149,7 @@ class KinDynComputations:
     def CoM_position(
         self, base_transform: np.ndarray, joint_positions: np.ndarray
     ) -> np.ndarray:
-        """Returns the CoM positon
+        """Returns the CoM position
 
         Args:
             base_transform (np.ndarray): The homogenous transform from base to world frame
