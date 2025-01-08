@@ -347,6 +347,23 @@ class RBDAlgorithms:
         com_pos /= self.get_total_mass()
         return com_pos
 
+    def CoM_jacobian(
+        self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> npt.ArrayLike:
+        """Returns the center of mass (CoM) Jacobian using the centroidal momentum matrix.
+
+        Args:
+            base_transform (T): The homogenous transform from base to world frame
+            joint_positions (T): The joints position
+
+        Returns:
+            J_com (T): The CoM Jacobian
+        """
+        # Retrieve the total mass and the centroidal momentum matrix
+        _, Jcm = self.crba(base_transform, joint_positions)
+        # Compute the CoM Jacobian
+        return Jcm[:3, :] / self.get_total_mass()
+
     def get_total_mass(self):
         """Returns the total mass of the robot
 
