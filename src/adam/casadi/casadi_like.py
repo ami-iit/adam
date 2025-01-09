@@ -93,7 +93,6 @@ class CasadiLike(ArrayLike):
         else:
             self.array[idx] = value.array if isinstance(value, CasadiLike) else value
 
-
     def __getitem__(self, idx) -> "CasadiLike":
         """Overrides get item operator"""
         if idx is Ellipsis:
