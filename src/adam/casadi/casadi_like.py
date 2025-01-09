@@ -115,11 +115,13 @@ class CasadiLike(ArrayLike):
         """
         args = tuple(filter(None, args))
         if len(args) > 2:
-            raise ValueError(f"Only 1D and 2D arrays are supported, The shape is {args}")
+            raise ValueError(
+                f"Only 1D and 2D arrays are supported, The shape is {args}"
+            )
 
         # For 1D reshape, just call CasADi reshape directly
         if len(args) == 1:
-            new_array = cs.reshape(self.array, args[0], 1) 
+            new_array = cs.reshape(self.array, args[0], 1)
         else:
             # For 2D reshape, transpose before and after to mimic row-major behavior
             new_array = cs.reshape(self.array.T, args[1], args[0]).T
