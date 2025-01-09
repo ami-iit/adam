@@ -285,7 +285,6 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: rotation matrix around z axis
         """
-        print(q, q.shape)
         return self._axis_angle_rotation("Z", q)
 
     def H_revolute_joint(
@@ -363,7 +362,6 @@ class SpatialMath:
         if isinstance(rpy, list):
             rpy = self.factory.array(rpy)
 
-        print(rpy)
         return self.Rz(rpy[..., 2]) @ self.Ry(rpy[..., 1]) @ self.Rx(rpy[..., 0])
 
     def X_revolute_joint(
