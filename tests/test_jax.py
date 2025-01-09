@@ -123,6 +123,7 @@ def test_gravity_term(setup_test):
     adam_gravity = adam_kin_dyn.gravity_term(state.H, state.joints_pos)
     assert idyn_gravity - adam_gravity == pytest.approx(0.0, abs=1e-4)
 
+
 def test_jax_like():
     B = jnp.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
     B_like = JaxLike(B)
