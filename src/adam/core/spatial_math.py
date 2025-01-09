@@ -126,7 +126,7 @@ class SpatialMath:
     """
 
     def __init__(self, factory: ArrayLikeFactory):
-        self._factory = factory
+        self._factory: ArrayLikeFactory = factory
 
     @property
     def factory(self) -> ArrayLikeFactory:
@@ -184,6 +184,63 @@ class SpatialMath:
     def skew(self, x):
         pass
 
+    @staticmethod
+    @abc.abstractmethod
+    def stack(x: npt.ArrayLike, axis: int = 0) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+            axis (int): axis
+
+        Returns:
+            npt.ArrayLike: stack matrix x along axis
+        """
+        pass
+
+    def _axis_angle_rotation(self, axis: str, angle: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Return the rotation matrices for one of the rotations about an axis
+        of which Euler angles describe, for each value of the angle given.
+
+        Args:
+            axis: Axis label "X", "Y", or "Z".
+            angle: a tensor of the form (B) or ()
+
+        Returns:
+            Rotation matrices as a tensor of shape (B, 3, 3) or (3, 3),
+            accordingly to the angle shape.
+        """
+
+        # Use len(angle.shape) to check dimensions:
+        if len(angle.shape) == 0 and len(angle.shape) == 1:
+            raise ValueError(
+                f"Angle must be a vector or a scalar. The shape is {angle.shape}."
+            )
+
+        cos = self.cos(angle)
+        sin = self.sin(angle)
+        one = self.factory.ones_like(angle)
+        zero = self.factory.zeros_like(angle)
+
+        if axis == "X":
+            R_flat = (one, zero, zero, zero, cos, -sin, zero, sin, cos)
+        elif axis == "Y":
+            R_flat = (cos, zero, sin, zero, one, zero, -sin, zero, cos)
+        elif axis == "Z":
+            R_flat = (cos, -sin, zero, sin, cos, zero, zero, zero, one)
+        else:
+            raise ValueError('Axis must be one of {"X", "Y", "Z"}.')
+
+        # Stack into shape (..., 9)
+        R = self.stack(R_flat, axis=-1)
+
+        # Reshape to (..., 3, 3).
+        # If angle is scalar (), it becomes (3, 3).
+        # If angle has shape (B,), it becomes (B, 3, 3).
+        R = R.reshape(*angle.shape, 3, 3)
+
+        return R
+
     def R_from_axis_angle(self, axis: npt.ArrayLike, q: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
@@ -208,13 +265,7 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: rotation matrix around x axis
         """
-        R = self.factory.eye(3)
-        cq, sq = self.cos(q), self.sin(q)
-        R[1, 1] = cq
-        R[1, 2] = -sq
-        R[2, 1] = sq
-        R[2, 2] = cq
-        return R
+        return self._axis_angle_rotation("X", q)
 
     def Ry(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -224,13 +275,7 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: rotation matrix around y axis
         """
-        R = self.factory.eye(3)
-        cq, sq = self.cos(q), self.sin(q)
-        R[0, 0] = cq
-        R[0, 2] = sq
-        R[2, 0] = -sq
-        R[2, 2] = cq
-        return R
+        return self._axis_angle_rotation("Y", q)
 
     def Rz(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -240,13 +285,8 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: rotation matrix around z axis
         """
-        R = self.factory.eye(3)
-        cq, sq = self.cos(q), self.sin(q)
-        R[0, 0] = cq
-        R[0, 1] = -sq
-        R[1, 0] = sq
-        R[1, 1] = cq
-        return R
+        print(q, q.shape)
+        return self._axis_angle_rotation("Z", q)
 
     def H_revolute_joint(
         self,
@@ -320,7 +360,11 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: Rotation matrix
         """
-        return self.Rz(rpy[2]) @ self.Ry(rpy[1]) @ self.Rx(rpy[0])
+        if isinstance(rpy, list):
+            rpy = self.factory.array(rpy)
+
+        print(rpy)
+        return self.Rz(rpy[..., 2]) @ self.Ry(rpy[..., 1]) @ self.Rx(rpy[..., 0])
 
     def X_revolute_joint(
         self,

@@ -1,7 +1,7 @@
 # Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Tuple
 
 import numpy as np
 import numpy.typing as ntp
@@ -195,7 +195,11 @@ class SpatialMath(SpatialMath):
         """
         if isinstance(x, float):
             x = torch.tensor(x)
-        return TorchLike(torch.sin(x))
+        return (
+            TorchLike(torch.sin(x.array))
+            if isinstance(x, TorchLike)
+            else TorchLike(torch.sin(x))
+        )
 
     @staticmethod
     def cos(x: ntp.ArrayLike) -> "TorchLike":
@@ -209,7 +213,11 @@ class SpatialMath(SpatialMath):
         # transform to torch tensor, if not already
         if isinstance(x, float):
             x = torch.tensor(x)
-        return TorchLike(torch.cos(x))
+        return (
+            TorchLike(torch.cos(x.array))
+            if isinstance(x, TorchLike)
+            else TorchLike(torch.cos(x))
+        )
 
     @staticmethod
     def outer(x: ntp.ArrayLike, y: ntp.ArrayLike) -> "TorchLike":
@@ -263,4 +271,20 @@ class SpatialMath(SpatialMath):
             v = torch.hstack([x[i].array for i in range(len(x))])
         else:
             v = torch.tensor(x)
+        return TorchLike(v)
+
+    @staticmethod
+    def stack(x: Tuple[Union[TorchLike, ntp.ArrayLike]], axis: int = 0) -> TorchLike:
+        """
+        Args:
+            x (Tuple[Union[TorchLike, ntp.ArrayLike]]): elements to stack
+            axis (int, optional): axis to stack. Defaults to 0.
+
+        Returns:
+            TorchLike: stacked elements
+        """
+        if isinstance(x[0], TorchLike):
+            v = torch.stack([x[i].array for i in range(len(x))], axis=axis)
+        else:
+            v = torch.stack(x, axis=axis)
         return TorchLike(v)

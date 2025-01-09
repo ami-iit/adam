@@ -4,7 +4,7 @@ import torch
 from conftest import RobotCfg, State
 
 from adam.pytorch import KinDynComputations
-from adam.pytorch.torch_like import TorchLike, TorchLikeFactory
+from adam.pytorch.torch_like import TorchLike, TorchLikeFactory, SpatialMath
 
 torch.set_default_dtype(torch.float64)
 
@@ -141,3 +141,11 @@ def test_torch_like():
 
     zeros = TorchLikeFactory.zeros_like(B_like)
     assert zeros.array - np.zeros_like(B) == pytest.approx(0.0, abs=1e-5)
+
+    sm = SpatialMath()
+
+    R = sm.R_from_RPY(torch.tensor([0.1, 0.2, 0.3]))
+    assert R.shape == (3, 3)
+
+    R = sm.R_from_RPY(torch.tensor([0.1, 0.2, 0.3]).repeat(32, 1))
+    assert R.shape == (32, 3, 3)
