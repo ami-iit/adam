@@ -210,7 +210,7 @@ class KinDynComputations:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            base_velocity.reshape(6, 1),
+            base_velocity,
             joint_velocities,
             self.g,
         ).array.squeeze()
@@ -238,7 +238,7 @@ class KinDynComputations:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            base_velocity.reshape(6, 1),
+            base_velocity,
             joint_velocities,
             torch.zeros(6),
         ).array.squeeze()
@@ -259,7 +259,7 @@ class KinDynComputations:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            torch.zeros(6).reshape(6, 1),
+            torch.zeros(6),
             torch.zeros(self.NDoF),
             self.g,
         ).array.squeeze()

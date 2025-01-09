@@ -57,7 +57,7 @@ class RBDAlgorithms:
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.math.spatial_transform(
-                    self.math.factory.eye(3), self.math.factory.zeros(3, 1)
+                    self.math.factory.eye(3), self.math.factory.zeros(3)
                 )
                 Phi[i] = self.math.factory.eye(6)
             else:
@@ -408,6 +408,8 @@ class RBDAlgorithms:
         Returns:
             tau (T): generalized force variables
         """
+        print(base_velocity.shape)
+
         # TODO: add accelerations
         tau = self.math.factory.zeros(self.NDoF + 6, 1)
         model_len = self.model.N
@@ -453,7 +455,7 @@ class RBDAlgorithms:
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.math.spatial_transform(
-                    self.math.factory.eye(3), self.math.factory.zeros(3, 1)
+                    self.math.factory.eye(3), self.math.factory.zeros(3)
                 )
                 Phi[i] = self.math.factory.eye(6)
                 v[i] = B_X_BI @ base_velocity
