@@ -3,6 +3,7 @@ import pytest
 from conftest import RobotCfg, State
 
 from adam.numpy import KinDynComputations
+from adam.numpy.numpy_like import NumpyLike, NumpyLikeFactory
 
 
 @pytest.fixture(scope="module")
@@ -116,3 +117,15 @@ def test_gravity_term(setup_test):
     idyn_gravity = robot_cfg.idyn_function_values.gravity_term
     adam_gravity = adam_kin_dyn.gravity_term(state.H, state.joints_pos)
     assert idyn_gravity - adam_gravity == pytest.approx(0.0, abs=1e-4)
+
+
+def test_numpy_like():
+    B = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+    B_like = NumpyLike(B)
+    assert B_like[...].array - B == pytest.approx(0.0, abs=1e-5)
+
+    ones = NumpyLikeFactory.ones_like(B_like)
+    assert ones.array - np.ones_like(B) == pytest.approx(0.0, abs=1e-5)
+
+    zeros = NumpyLikeFactory.zeros_like(B_like)
+    assert zeros.array - np.zeros_like(B) == pytest.approx(0.0, abs=1e-5)

@@ -149,6 +149,36 @@ class TorchLikeFactory(ArrayLikeFactory):
         """
         return TorchLike(torch.tensor(x))
 
+    @staticmethod
+    def zeros_like(x) -> TorchLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: zero matrix of dimension x
+        """
+        return (
+            TorchLike(torch.zeros_like(x.array))
+            if isinstance(x, TorchLike)
+            else TorchLike(torch.zeros_like(x))
+        )
+
+    @staticmethod
+    def ones_like(x) -> TorchLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: Identity matrix of dimension x
+        """
+        return (
+            TorchLike(torch.ones_like(x.array))
+            if isinstance(x, TorchLike)
+            else TorchLike(torch.ones_like(x))
+        )
+
 
 class SpatialMath(SpatialMath):
     def __init__(self):

@@ -144,6 +144,68 @@ class CasadiLikeFactory(ArrayLikeFactory):
         """
         return CasadiLike(cs.SX(*x))
 
+    @staticmethod
+    def zeros_like(x) -> CasadiLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: zero matrix of dimension x
+        """
+
+        kind = (
+            cs.DM
+            if (isinstance(x, CasadiLike) and isinstance(x.array, cs.DM))
+            or isinstance(x, cs.DM)
+            else cs.SX
+        )
+
+        return (
+            CasadiLike(kind.zeros(x.array.shape))
+            if isinstance(x, CasadiLike)
+            else (
+                CasadiLike(kind.zeros(x.shape))
+                if isinstance(x, (cs.SX, cs.DM))
+                else (
+                    TypeError(f"Unsupported type for zeros_like: {type(x)}")
+                    if isinstance(x, CasadiLike)
+                    else CasadiLike(kind.zeros(x.shape))
+                )
+            )
+        )
+
+    @staticmethod
+    def ones_like(x) -> CasadiLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: Identity matrix of dimension x
+        """
+
+        kind = (
+            cs.DM
+            if (isinstance(x, CasadiLike) and isinstance(x.array, cs.DM))
+            or isinstance(x, cs.DM)
+            else cs.SX
+        )
+
+        return (
+            CasadiLike(kind.ones(x.array.shape))
+            if isinstance(x, CasadiLike)
+            else (
+                CasadiLike(kind.ones(x.shape))
+                if isinstance(x, (cs.SX, cs.DM))
+                else (
+                    TypeError(f"Unsupported type for ones_like: {type(x)}")
+                    if isinstance(x, CasadiLike)
+                    else CasadiLike(kind.ones(x.shape))
+                )
+            )
+        )
+
 
 class SpatialMath(SpatialMath):
 

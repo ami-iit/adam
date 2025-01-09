@@ -134,6 +134,36 @@ class NumpyLikeFactory(ArrayLikeFactory):
         """
         return NumpyLike(np.array(x))
 
+    @staticmethod
+    def zeros_like(x) -> NumpyLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: zero matrix of dimension x
+        """
+        return (
+            NumpyLike(np.zeros_like(x.array))
+            if isinstance(x, NumpyLike)
+            else NumpyLike(np.zeros_like(x))
+        )
+
+    @staticmethod
+    def ones_like(x) -> NumpyLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: Ones matrix of dimension x
+        """
+        return (
+            NumpyLike(np.ones_like(x.array))
+            if isinstance(x, NumpyLike)
+            else NumpyLike(np.ones_like(x))
+        )
+
 
 class SpatialMath(SpatialMath):
     def __init__(self):

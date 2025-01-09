@@ -132,6 +132,36 @@ class JaxLikeFactory(ArrayLikeFactory):
         """
         return JaxLike(jnp.array(x))
 
+    @staticmethod
+    def zeros_like(x) -> JaxLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: zero matrix of dimension x
+        """
+        return (
+            JaxLike(jnp.zeros_like(x.array))
+            if isinstance(x, JaxLike)
+            else JaxLike(jnp.zeros_like(x))
+        )
+
+    @staticmethod
+    def ones_like(x) -> JaxLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: Ones matrix of dimension x
+        """
+        return (
+            JaxLike(jnp.ones_like(x.array))
+            if isinstance(x, JaxLike)
+            else JaxLike(jnp.ones_like(x))
+        )
+
 
 class SpatialMath(SpatialMath):
     def __init__(self):

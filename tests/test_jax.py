@@ -2,8 +2,11 @@ import numpy as np
 import pytest
 from conftest import RobotCfg, State
 from jax import config
+import jax.numpy as jnp
+
 
 from adam.jax import KinDynComputations
+from adam.jax.jax_like import JaxLike, JaxLikeFactory
 
 config.update("jax_enable_x64", True)
 
@@ -119,3 +122,14 @@ def test_gravity_term(setup_test):
     idyn_gravity = robot_cfg.idyn_function_values.gravity_term
     adam_gravity = adam_kin_dyn.gravity_term(state.H, state.joints_pos)
     assert idyn_gravity - adam_gravity == pytest.approx(0.0, abs=1e-4)
+
+def test_jax_like():
+    B = jnp.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+    B_like = JaxLike(B)
+    assert B_like[...].array - B == pytest.approx(0.0, abs=1e-5)
+
+    ones = JaxLikeFactory.ones_like(B_like)
+    assert ones.array - jnp.ones_like(B) == pytest.approx(0.0, abs=1e-5)
+
+    zeros = JaxLikeFactory.zeros_like(B_like)
+    assert zeros.array - jnp.zeros_like(B) == pytest.approx(0.0, abs=1e-5)

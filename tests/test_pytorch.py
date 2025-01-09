@@ -4,6 +4,7 @@ import torch
 from conftest import RobotCfg, State
 
 from adam.pytorch import KinDynComputations
+from adam.pytorch.torch_like import TorchLike, TorchLikeFactory
 
 torch.set_default_dtype(torch.float64)
 
@@ -128,3 +129,15 @@ def test_gravity_term(setup_test):
     idyn_gravity = robot_cfg.idyn_function_values.gravity_term
     adam_gravity = adam_kin_dyn.gravity_term(state.H, state.joints_pos)
     assert idyn_gravity - adam_gravity.numpy() == pytest.approx(0.0, abs=1e-4)
+
+
+def test_torch_like():
+    B = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+    B_like = TorchLike(B)
+    assert B_like[...].array - B == pytest.approx(0.0, abs=1e-5)
+
+    ones = TorchLikeFactory.ones_like(B_like)
+    assert ones.array - np.ones_like(B) == pytest.approx(0.0, abs=1e-5)
+
+    zeros = TorchLikeFactory.zeros_like(B_like)
+    assert zeros.array - np.zeros_like(B) == pytest.approx(0.0, abs=1e-5)

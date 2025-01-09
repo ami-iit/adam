@@ -4,6 +4,7 @@ import pytest
 from conftest import RobotCfg, State
 
 from adam.casadi import KinDynComputations
+from adam.casadi.casadi_like import CasadiLike, CasadiLikeFactory
 
 
 @pytest.fixture(scope="module")
@@ -173,3 +174,15 @@ def test_gravity_term(setup_test):
     assert idyn_gravity - adam_gravity == pytest.approx(0.0, abs=1e-4)
     adam_gravity = cs.DM(adam_kin_dyn.gravity_term_fun()(state.H, state.joints_pos))
     assert idyn_gravity - adam_gravity == pytest.approx(0.0, abs=1e-4)
+
+
+def test_casadi_like():
+    B = cs.DM([[1.0, 2.0], [3.0, 4.0]])
+    B_like = CasadiLike(B)
+    assert B_like[...].array - B == pytest.approx(0.0, abs=1e-5)
+
+    ones = CasadiLikeFactory.ones_like(B)
+    assert ones[...].array - cs.DM.ones(2, 2) == pytest.approx(0.0, abs=1e-5)
+
+    zeros = CasadiLikeFactory.zeros_like(B)
+    assert zeros[...].array - cs.DM.zeros(2, 2) == pytest.approx(0.0, abs=1e-5)

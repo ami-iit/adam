@@ -68,8 +68,9 @@ class ArrayLike(abc.ABC):
 class ArrayLikeFactory(abc.ABC):
     """Abstract class for a generic Array wrapper. Every method should be implemented for every data type."""
 
+    @staticmethod
     @abc.abstractmethod
-    def zeros(self, x: npt.ArrayLike) -> npt.ArrayLike:
+    def zeros(x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             x (npt.ArrayLike): matrix dimension
@@ -79,14 +80,39 @@ class ArrayLikeFactory(abc.ABC):
         """
         pass
 
+    @staticmethod
     @abc.abstractmethod
-    def eye(self, x: npt.ArrayLike) -> npt.ArrayLike:
+    def eye(x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             x (npt.ArrayLike): matrix dimension
 
         Returns:
             npt.ArrayLike: identity matrix of dimension x
+        """
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def zeros_like(x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: zero matrix of dimension x
+        """
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def ones_like(x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: ones matrix of dimension x
         """
         pass
 
