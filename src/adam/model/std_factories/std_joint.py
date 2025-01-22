@@ -4,7 +4,7 @@ import numpy.typing as npt
 import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
-from adam.model import Joint
+from adam.model import Joint, Limits, Pose
 
 
 class StdJoint(Joint):
@@ -21,10 +21,45 @@ class StdJoint(Joint):
         self.parent = joint.parent
         self.child = joint.child
         self.type = joint.joint_type
-        self.axis = joint.axis
-        self.origin = joint.origin
-        self.limit = joint.limit
+        self.axis = self._set_axis(joint.axis)
+        self.origin = self._set_origin(joint.origin)
+        self.limit = self._set_limits(joint.limit)
         self.idx = idx
+
+    def _set_axis(self, axis: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            axis (npt.ArrayLike): axis
+
+        Returns:
+            npt.ArrayLike: set the axis
+        """
+        return None if axis is None else self.math.array(axis)
+
+    def _set_origin(self, origin: Pose) -> Pose:
+        """
+        Args:
+            origin (Pose): origin
+
+        Returns:
+            Pose: set the origin
+        """
+        return Pose.build(xyz=origin.xyz, rpy=origin.rpy, math=self.math)
+
+    def _set_limits(self, limit: Limits) -> Limits:
+        """
+        Args:
+            limit (Limits): limit
+
+        Returns:
+            Limits: set the limits
+        """
+        return Limits(
+            lower=None if limit is None else self.math.array(limit.lower),
+            upper=None if limit is None else self.math.array(limit.upper),
+            effort=None if limit is None else self.math.array(limit.effort),
+            velocity=None if limit is None else self.math.array(limit.velocity),
+        )
 
     def homogeneous(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -85,12 +120,10 @@ class StdJoint(Joint):
             npt.ArrayLike: motion subspace of the joint
         """
         if self.type == "fixed":
-            return self.math.vertcat(0, 0, 0, 0, 0, 0)
+            return self.math.zeros(6, 1)
         elif self.type in ["revolute", "continuous"]:
             return self.math.vertcat(
-                0,
-                0,
-                0,
+                self.math.zeros(3, 1),
                 self.axis[0],
                 self.axis[1],
                 self.axis[2],
@@ -100,7 +133,5 @@ class StdJoint(Joint):
                 self.axis[0],
                 self.axis[1],
                 self.axis[2],
-                0,
-                0,
-                0,
+                self.math.zeros(3, 1),
             )
