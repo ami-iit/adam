@@ -64,12 +64,21 @@ class ArrayLike(abc.ABC):
         """
         pass
 
+    def __len__(self):
+        return len(self.array)
+
+    def __repr__(self):
+        return self.array.__repr__()
+
+    def as_list(self):
+        for i in range(len(self.array)):
+            yield self.array[i]
 
 class ArrayLikeFactory(abc.ABC):
     """Abstract class for a generic Array wrapper. Every method should be implemented for every data type."""
 
     @abc.abstractmethod
-    def zeros(self, x: npt.ArrayLike) -> npt.ArrayLike:
+    def zeros(self, *x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             x (npt.ArrayLike): matrix dimension
@@ -87,6 +96,17 @@ class ArrayLikeFactory(abc.ABC):
 
         Returns:
             npt.ArrayLike: identity matrix of dimension x
+        """
+        pass
+
+    @abc.abstractmethod
+    def array(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): array
+
+        Returns:
+            npt.ArrayLike: array
         """
         pass
 
