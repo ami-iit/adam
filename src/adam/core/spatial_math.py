@@ -392,7 +392,7 @@ class SpatialMath:
 
     def spatial_inertia(
         self,
-        I: npt.ArrayLike,
+        inertia_matrix: npt.ArrayLike,
         mass: npt.ArrayLike,
         c: npt.ArrayLike,
         rpy: npt.ArrayLike,
@@ -410,10 +410,6 @@ class SpatialMath:
         IO = self.factory.zeros(6, 6)
         Sc = self.skew(c)
         R = self.R_from_RPY(rpy)
-        inertia_matrix = self.factory.array(
-            [[I.ixx, I.ixy, I.ixz], [I.ixy, I.iyy, I.iyz], [I.ixz, I.iyz, I.izz]]
-        )
-
         IO[3:, 3:] = R @ inertia_matrix @ R.T + mass * Sc @ Sc.T
         IO[3:, :3] = mass * Sc
         IO[:3, 3:] = mass * Sc.T
