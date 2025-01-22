@@ -609,3 +609,30 @@ class SpatialMath:
         T[:3, :3] = R.T
         T[:3, 3] = -R.T @ p
         return T
+
+    def zeros(self, *x: int) -> npt.ArrayLike:
+        """
+        Args:
+            x (int): dimension
+        Returns:
+            npt.ArrayLike: zero matrix of dimension x
+        """
+        return self.factory.zeros(*x)
+
+    def eye(self, x: int) -> npt.ArrayLike:
+        """
+        Args:
+            x (int): dimension
+        Returns:
+            npt.ArrayLike: identity matrix of dimension x
+        """
+        return self.factory.eye(x)
+
+    def array(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): array
+        Returns:
+            npt.ArrayLike: array
+        """
+        return self.factory.array(x)
