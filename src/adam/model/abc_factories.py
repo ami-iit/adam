@@ -10,20 +10,64 @@ from adam.core.spatial_math import SpatialMath
 class Pose:
     """Pose class"""
 
-    xyz: list
-    rpy: list
+    xyz: npt.ArrayLike
+    rpy: npt.ArrayLike
+
+    @staticmethod
+    def build(xyz: npt.ArrayLike, rpy: npt.ArrayLike, math: SpatialMath) -> "Pose":
+        xyz = math.array(xyz)
+        rpy = math.array(rpy)
+        return Pose(xyz, rpy)
+
+    @staticmethod
+    def zero(math: SpatialMath) -> "Pose":
+        return Pose.build([0, 0, 0], [0, 0, 0], math)
+
+    def get_xyz(self) -> npt.ArrayLike:
+        return self.xyz
+
+    def get_rpy(self) -> npt.ArrayLike:
+        return self.rpy
 
 
 @dataclasses.dataclass
 class Inertia:
-    """Inertia class"""
+    matrix: npt.ArrayLike
+    ixx: npt.DTypeLike
+    ixy: npt.DTypeLike
+    ixz: npt.DTypeLike
+    iyy: npt.DTypeLike
+    iyz: npt.DTypeLike
+    izz: npt.DTypeLike
 
-    ixx: npt.ArrayLike
-    ixy: npt.ArrayLike
-    ixz: npt.ArrayLike
-    iyy: npt.ArrayLike
-    iyz: npt.ArrayLike
-    izz: npt.ArrayLike
+    @staticmethod
+    def build(
+        ixx: npt.DTypeLike,
+        ixy: npt.DTypeLike,
+        ixz: npt.DTypeLike,
+        iyy: npt.DTypeLike,
+        iyz: npt.DTypeLike,
+        izz: npt.DTypeLike,
+        math: SpatialMath,
+    ) -> "Inertia":
+        matrix = math.array(
+            [
+                [ixx, ixy, ixz],
+                [ixy, iyy, iyz],
+                [ixz, iyz, izz],
+            ]
+        )
+        return Inertia(matrix, ixx, ixy, ixz, iyy, iyz, izz)
+
+    @staticmethod
+    def zero(math: SpatialMath) -> "Inertia":
+        return Inertia.build(
+            ixx=0.0, ixy=0.0, ixz=0.0, iyy=0.0, iyz=0.0, izz=0.0, math=math
+        )
+
+    def get_matrix(self) -> npt.ArrayLike:
+        return self.matrix
+
 
 
 @dataclasses.dataclass
@@ -45,7 +89,7 @@ class Joint(abc.ABC):
     parent: str
     child: str
     type: str
-    axis: list
+    axis: npt.ArrayLike
     origin: Pose
     limit: Limits
     idx: int
@@ -86,24 +130,20 @@ class Joint(abc.ABC):
 class Inertial:
     """Inertial description"""
 
-    mass: npt.ArrayLike
+    mass: npt.DTypeLike
     inertia: Inertia
     origin: Pose
 
     @staticmethod
-    def zero() -> "Inertial":
+    def zero(math: SpatialMath) -> "Inertial":
         """Returns an Inertial object with zero mass and inertia"""
+        xyz = math.factory.zeros(3)
+        rpy = math.factory.zeros(3)
+        zero_element = math.factory.zeros(1)
         return Inertial(
-            mass=0.0,
-            inertia=Inertia(
-                ixx=0.0,
-                ixy=0.0,
-                ixz=0.0,
-                iyy=0.0,
-                iyz=0.0,
-                izz=0.0,
-            ),
-            origin=Pose(xyz=[0.0, 0.0, 0.0], rpy=[0.0, 0.0, 0.0]),
+            mass=zero_element,
+            inertia=Inertia.zero(math),
+            origin=Pose(xyz=xyz, rpy=rpy),
         )
 
     def set_mass(self, mass: npt.ArrayLike) -> "Inertial":
