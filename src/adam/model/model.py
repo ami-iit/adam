@@ -121,7 +121,7 @@ class Model:
         mass = 0.0
         for item in self.links:
             link = self.links[item]
-            mass += link.inertial.mass
+            mass += link.inertial.mass.array
         return mass
 
     def print_table(self):
