@@ -7,7 +7,6 @@ import casadi as cs
 import numpy.typing as npt
 
 from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
-from adam.numpy import NumpyLike
 
 
 @dataclass
@@ -18,59 +17,35 @@ class CasadiLike(ArrayLike):
 
     def __matmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides @ operator"""
-        if type(other) in [CasadiLike, NumpyLike]:
-            return CasadiLike(cs.mtimes(self.array, other.array))
-        else:
-            return CasadiLike(cs.mtimes(self.array, other))
+        return CasadiLike(cs.mtimes(self.array, other.array))
 
     def __rmatmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides @ operator"""
-        if type(other) in [CasadiLike, NumpyLike]:
-            return CasadiLike(other.array @ self.array)
-        else:
-            return CasadiLike(other @ self.array)
+        return CasadiLike(other.array @ self.array)
 
     def __mul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides * operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array * other.array)
-        else:
-            return CasadiLike(self.array * other)
+        return CasadiLike(self.array * other.array)
 
     def __rmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides * operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array * other.array)
-        else:
-            return CasadiLike(self.array * other)
+        return CasadiLike(self.array * other.array)
 
     def __add__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides + operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array + other.array)
-        else:
-            return CasadiLike(self.array + other)
+        return CasadiLike(self.array + other.array)
 
     def __radd__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides + operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array + other.array)
-        else:
-            return CasadiLike(self.array + other)
+        return CasadiLike(self.array + other.array)
 
     def __sub__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides - operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array - other.array)
-        else:
-            return CasadiLike(self.array - other)
+        return CasadiLike(self.array - other.array)
 
     def __rsub__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides - operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array - other.array)
-        else:
-            return CasadiLike(self.array - other)
+        return CasadiLike(self.array - other.array)
 
     def __neg__(self) -> "CasadiLike":
         """Overrides - operator"""
@@ -78,14 +53,11 @@ class CasadiLike(ArrayLike):
 
     def __truediv__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
         """Overrides / operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array / other.array)
-        else:
-            return CasadiLike(self.array / other)
+        return CasadiLike(self.array / other.array)
 
     def __setitem__(self, idx, value: Union["CasadiLike", npt.ArrayLike]):
         """Overrides set item operator"""
-        self.array[idx] = value.array if type(self) is type(value) else value
+        self.array[idx] = value.array
 
     def __getitem__(self, idx) -> "CasadiLike":
         """Overrides get item operator"""
@@ -103,7 +75,7 @@ class CasadiLike(ArrayLike):
 class CasadiLikeFactory(ArrayLikeFactory):
 
     @staticmethod
-    def zeros(*x: int) -> "CasadiLike":
+    def zeros(*x: int) -> CasadiLike:
         """
         Returns:
             CasadiLike: Matrix of zeros of dim *x
@@ -111,7 +83,7 @@ class CasadiLikeFactory(ArrayLikeFactory):
         return CasadiLike(cs.SX.zeros(*x))
 
     @staticmethod
-    def eye(x: int) -> "CasadiLike":
+    def eye(x: int) -> CasadiLike:
         """
         Args:
             x (int): matrix dimension
@@ -122,12 +94,43 @@ class CasadiLikeFactory(ArrayLikeFactory):
         return CasadiLike(cs.SX.eye(x))
 
     @staticmethod
-    def array(*x) -> "CasadiLike":
+    def array(x) -> CasadiLike:
         """
         Returns:
             CasadiLike: Vector wrapping *x
         """
-        return CasadiLike(cs.SX(*x))
+
+        # Case 1: If already symbolic, just wrap and return
+        if isinstance(x, (cs.SX, cs.DM)):
+            return CasadiLike(x)
+
+        # Case 2: If numeric, convert to DM
+        if isinstance(x, (int, float)):
+            # Single scalar
+            return CasadiLike(cs.DM(x))
+
+        # Case 3: If numpy array, convert to DM
+        if isinstance(x, cs.np.ndarray):
+            # If already a numpy array, convert to Casadi DM
+            return CasadiLike(cs.DM(x))
+
+        # Case 4: If list or tuple, convert to DM if all items are numeric or SX otherwise
+        if isinstance(x, (list, tuple)):
+            # TODO: we need to carefully check if this is the correct behavior
+            # for example, handle the case of a list of lists
+            # Handle empty list/tuple
+            if not x:
+                return CasadiLike(cs.DM([]))
+            # Check if all items are numeric
+            if all(isinstance(item, (int, float)) for item in x):
+                # All numeric, can safely convert to DM
+                return CasadiLike(cs.DM(x))
+            else:
+                return CasadiLike(cs.SX(x))
+
+        raise TypeError(
+            f"Unsupported type: {type(x)}. Must be numeric, list/tuple/np.ndarray of numerics, or SX."
+        )
 
 
 class SpatialMath(SpatialMath):
@@ -136,7 +139,7 @@ class SpatialMath(SpatialMath):
         super().__init__(CasadiLikeFactory)
 
     @staticmethod
-    def skew(x: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
+    def skew(x: Union["CasadiLike", npt.ArrayLike]) -> CasadiLike:
         """
         Args:
             x (Union[CasadiLike, npt.ArrayLike]): 3D vector
@@ -150,7 +153,7 @@ class SpatialMath(SpatialMath):
             return CasadiLike(cs.skew(x))
 
     @staticmethod
-    def sin(x: npt.ArrayLike) -> "CasadiLike":
+    def sin(x: npt.ArrayLike) -> CasadiLike:
         """
         Args:
             x (npt.ArrayLike): angle value
@@ -158,10 +161,10 @@ class SpatialMath(SpatialMath):
         Returns:
             CasadiLike: the sin value of x
         """
-        return CasadiLike(cs.sin(x))
+        return CasadiLike(cs.sin(x.array))
 
     @staticmethod
-    def cos(x: npt.ArrayLike) -> "CasadiLike":
+    def cos(x: npt.ArrayLike) -> CasadiLike:
         """
         Args:
             x (npt.ArrayLike): angle value
@@ -169,10 +172,10 @@ class SpatialMath(SpatialMath):
         Returns:
             CasadiLike: the cos value of x
         """
-        return CasadiLike(cs.cos(x))
+        return CasadiLike(cs.cos(x.array))
 
     @staticmethod
-    def outer(x: npt.ArrayLike, y: npt.ArrayLike) -> "CasadiLike":
+    def outer(x: npt.ArrayLike, y: npt.ArrayLike) -> CasadiLike:
         """
         Args:
             x (npt.ArrayLike): vector
@@ -181,10 +184,10 @@ class SpatialMath(SpatialMath):
         Returns:
             CasadiLike: outer product between x and y
         """
-        return CasadiLike(cs.np.outer(x, y))
+        return CasadiLike(cs.np.outer(x.array, y.array))
 
     @staticmethod
-    def vertcat(*x) -> "CasadiLike":
+    def vertcat(*x) -> CasadiLike:
         """
         Returns:
             CasadiLike:  vertical concatenation of elements
@@ -193,20 +196,15 @@ class SpatialMath(SpatialMath):
         # cs.vertcat accepts *args. A list of cs types is created extracting the value
         # from the CasadiLike stored in the tuple x.
         # Then the list is unpacked with the * operator.
-        y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
+        y = [xi.array for xi in x]
         return CasadiLike(cs.vertcat(*y))
 
     @staticmethod
-    def horzcat(*x) -> "CasadiLike":
+    def horzcat(*x) -> CasadiLike:
         """
         Returns:
             CasadiLike:  horizontal concatenation of elements
         """
 
-        y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
+        y = [xi.array for xi in x]
         return CasadiLike(cs.horzcat(*y))
-
-
-if __name__ == "__main__":
-    math = SpatialMath()
-    print(math.eye(3))
