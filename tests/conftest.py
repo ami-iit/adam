@@ -132,8 +132,8 @@ def tests_setup(request) -> RobotCfg | State:
 
     n_dof = len(joints_name_list)
     # base quantities
-    xyz = (np.random.rand(3) - 0.5) * 5
-    rpy = (np.random.rand(3) - 0.5) * 5
+    xyz = SpatialMath().array((np.random.rand(3) - 0.5) * 5)
+    rpy = SpatialMath().array((np.random.rand(3) - 0.5) * 5)
     base_vel = (np.random.rand(6) - 0.5) * 5
     # joints quantitites
     joints_val = (np.random.rand(n_dof) - 0.5) * 5
