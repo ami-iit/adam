@@ -3,7 +3,7 @@
 import numpy.typing as npt
 
 from adam.core.constants import Representations
-from adam.core.spatial_math import SpatialMath
+from adam.core.spatial_math import ArrayLike, SpatialMath
 from adam.model import Model, Node
 
 
@@ -46,6 +46,11 @@ class RBDAlgorithms:
             M (npt.ArrayLike): Mass Matrix
             Jcm (npt.ArrayLike): Centroidal Momentum Matrix
         """
+
+        base_transform, joint_positions = self._convert_to_arraylike(
+            base_transform, joint_positions
+        )
+
         model_len = self.model.N
         Ic, X_p, Phi = [None] * model_len, [None] * model_len, [None] * model_len
 
@@ -61,7 +66,11 @@ class RBDAlgorithms:
                 )
                 Phi[i] = self.math.factory.eye(6)
             else:
-                q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
+                q = (
+                    joint_positions[joint_i.idx]
+                    if joint_i.idx is not None
+                    else self.math.zeros(1)
+                )
                 X_p[i] = joint_i.spatial_transform(q=q)
                 Phi[i] = joint_i.motion_subspace()
 
@@ -138,11 +147,18 @@ class RBDAlgorithms:
         Returns:
             I_H_L (npt.ArrayLike): The fk represented as Homogenous transformation matrix
         """
+        base_transform, joint_positions = self._convert_to_arraylike(
+            base_transform, joint_positions
+        )
         chain = self.model.get_joints_chain(self.root_link, frame)
         I_H_L = self.math.factory.eye(4)
         I_H_L = I_H_L @ base_transform
         for joint in chain:
-            q_ = joint_positions[joint.idx] if joint.idx is not None else 0.0
+            q_ = (
+                joint_positions[joint.idx]
+                if joint.idx is not None
+                else self.math.zeros(1)
+            )
             H_joint = joint.homogeneous(q=q_)
             I_H_L = I_H_L @ H_joint
         return I_H_L
@@ -160,6 +176,7 @@ class RBDAlgorithms:
         Returns:
             J (npt.ArrayLike): The Joints Jacobian relative to the frame
         """
+        joint_positions = self._convert_to_arraylike(joint_positions)
         chain = self.model.get_joints_chain(self.root_link, frame)
         eye = self.math.factory.eye(4)
         B_H_j = eye
@@ -167,7 +184,11 @@ class RBDAlgorithms:
         B_H_L = self.forward_kinematics(frame, eye, joint_positions)
         L_H_B = self.math.homogeneous_inverse(B_H_L)
         for joint in chain:
-            q = joint_positions[joint.idx] if joint.idx is not None else 0.0
+            q = (
+                joint_positions[joint.idx]
+                if joint.idx is not None
+                else self.math.zeros(1)
+            )
             H_j = joint.homogeneous(q=q)
             B_H_j = B_H_j @ H_j
             L_H_j = L_H_B @ B_H_j
@@ -178,6 +199,9 @@ class RBDAlgorithms:
     def jacobian(
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
+        base_transform, joint_positions = self._convert_to_arraylike(
+            base_transform, joint_positions
+        )
         eye = self.math.factory.eye(4)
         J = self.joints_jacobian(frame, joint_positions)
         B_H_L = self.forward_kinematics(frame, eye, joint_positions)
@@ -193,8 +217,6 @@ class RBDAlgorithms:
             return J_tot
         # let's move to mixed representation
         elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            if type(base_transform) != type(B_H_L):
-                base_transform = self.math.factory.array(base_transform)
             w_H_L = base_transform @ B_H_L
             LI_X_L = self.math.adjoint_mixed(w_H_L)
             X = self.math.factory.eye(6 + self.NDoF)
@@ -217,6 +239,7 @@ class RBDAlgorithms:
         Returns:
             J (npt.ArrayLike): The 6 x NDoF Jacobian between the root and the frame
         """
+        joint_positions = self._convert_to_arraylike(joint_positions)
         if (
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
@@ -252,6 +275,12 @@ class RBDAlgorithms:
         Returns:
             J_dot (npt.ArrayLike): The Jacobian derivative relative to the frame
         """
+        base_transform, joint_positions, base_velocity, joint_velocities = (
+            self._convert_to_arraylike(
+                base_transform, joint_positions, base_velocity, joint_velocities
+            )
+        )
+
         chain = self.model.get_joints_chain(self.root_link, frame)
         eye = self.math.factory.eye(4)
         # initialize the transform from the base to a generic link j in the chain
@@ -280,8 +309,16 @@ class RBDAlgorithms:
         J[:, :6] = self.math.adjoint(L_H_B)
         J_dot[:, :6] = self.math.adjoint_derivative(L_H_B, v)
         for joint in chain:
-            q = joint_positions[joint.idx] if joint.idx is not None else 0.0
-            q_dot = joint_velocities[joint.idx] if joint.idx is not None else 0.0
+            q = (
+                joint_positions[joint.idx]
+                if joint.idx is not None
+                else self.math.zeros(1)
+            )
+            q_dot = (
+                joint_velocities[joint.idx]
+                if joint.idx is not None
+                else self.math.zeros(1)
+            )
             H_j = joint.homogeneous(q=q)
             B_H_j = B_H_j @ H_j
             L_H_j = L_H_B @ B_H_j
@@ -300,8 +337,6 @@ class RBDAlgorithms:
             return J_dot
         # let's move to mixed representation
         elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            if type(base_transform) != type(B_H_L):
-                base_transform = self.math.factory.array(base_transform)
             I_H_L = base_transform @ B_H_j
             LI_X_L = self.math.adjoint_mixed(I_H_L)
             X = self.math.factory.eye(6 + self.NDoF)
@@ -328,12 +363,15 @@ class RBDAlgorithms:
         """Returns the CoM position
 
         Args:
-            base_transform (T): The homogenous transform from base to world frame
-            joint_positions (T): The joints position
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
 
         Returns:
-            com (T): The CoM position
+            com (npt.ArrayLike): The CoM position
         """
+        base_transform, joint_positions = self._convert_to_arraylike(
+            base_transform, joint_positions
+        )
         com_pos = self.math.factory.zeros(3, 1)
         for item in self.model.tree:
             link = item.link
@@ -342,7 +380,7 @@ class RBDAlgorithms:
             # Adding the link transform
             I_H_l = I_H_l @ H_link
             com_pos += I_H_l[:3, 3] * link.inertial.mass
-        com_pos /= self.get_total_mass()
+        com_pos /= self._convert_to_arraylike(self.get_total_mass())
         return com_pos
 
     def CoM_jacobian(
@@ -351,12 +389,15 @@ class RBDAlgorithms:
         """Returns the center of mass (CoM) Jacobian using the centroidal momentum matrix.
 
         Args:
-            base_transform (T): The homogenous transform from base to world frame
-            joint_positions (T): The joints position
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
 
         Returns:
-            J_com (T): The CoM Jacobian
+            J_com (npt.ArrayLike): The CoM Jacobian
         """
+        base_transform, joint_positions = self._convert_to_arraylike(
+            base_transform, joint_positions
+        )
         # The com velocity can be computed as dot_x * m = J_cm_mixed * nu_mixed = J_cm_body * nu_body
         # For this reason we compute the centroidal momentum matrix in mixed representation and then we convert it to body fixed if needed
         # Save the original frame velocity representation
@@ -376,7 +417,7 @@ class RBDAlgorithms:
         # Reset the frame velocity representation
         self.frame_velocity_representation = ori_frame_velocity_representation
         # Compute the CoM Jacobian
-        return Jcm[:3, :] / self.get_total_mass()
+        return Jcm[:3, :] / self._convert_to_arraylike(self.get_total_mass())
 
     def get_total_mass(self):
         """Returns the total mass of the robot
@@ -399,15 +440,21 @@ class RBDAlgorithms:
 
         Args:
             frame (str): The frame to which the jacobian will be computed
-            base_transform (T): The homogenous transform from base to world frame
-            joint_positions (T): The joints position
-            base_velocity (T): The base velocity
-            joint_velocities (T): The joints velocity
-            g (T): The 6D gravity acceleration
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+            base_velocity (npt.ArrayLike): The base velocity
+            joint_velocities (npt.ArrayLike): The joints velocity
+            g (npt.ArrayLike): The 6D gravity acceleration
 
         Returns:
-            tau (T): generalized force variables
+            tau (npt.ArrayLike): generalized force variables
         """
+        base_transform, joint_positions, base_velocity, joint_velocities, g = (
+            self._convert_to_arraylike(
+                base_transform, joint_positions, base_velocity, joint_velocities, g
+            )
+        )
+
         # TODO: add accelerations
         tau = self.math.factory.zeros(self.NDoF + 6, 1)
         model_len = self.model.N
@@ -444,7 +491,7 @@ class RBDAlgorithms:
 
         # set initial acceleration (rotated gravity + apparent acceleration)
         # reshape g as a vertical vector
-        a[0] = -gravity_transform @ g.reshape(6, 1) + transformed_acceleration
+        a[0] = -gravity_transform @ g + transformed_acceleration
 
         for i, node in enumerate(self.model.tree):
             node: Node
@@ -459,9 +506,15 @@ class RBDAlgorithms:
                 v[i] = B_X_BI @ base_velocity
                 a[i] = X_p[i] @ a[0]
             else:
-                q = joint_positions[joint_i.idx] if joint_i.idx is not None else 0.0
+                q = (
+                    joint_positions[joint_i.idx]
+                    if joint_i.idx is not None
+                    else self.math.zeros(1)
+                )
                 q_dot = (
-                    joint_velocities[joint_i.idx] if joint_i.idx is not None else 0.0
+                    joint_velocities[joint_i.idx]
+                    if joint_i.idx is not None
+                    else self.math.zeros(1)
                 )
                 X_p[i] = joint_i.spatial_transform(q)
                 Phi[i] = joint_i.motion_subspace()
@@ -488,3 +541,19 @@ class RBDAlgorithms:
 
     def aba(self):
         raise NotImplementedError
+
+    def _convert_to_arraylike(self, *args):
+        # Handle no-arguments case (optional)
+        if not args:
+            raise ValueError("At least one argument is required")
+
+        converted = []
+        for arg in args:
+            # Convert if not already array-like
+            if isinstance(arg, ArrayLike):
+                converted.append(arg)
+            else:
+                converted.append(self.math.array(arg))
+
+        # If there's only one argument, return it directly
+        return converted[0] if len(converted) == 1 else converted
