@@ -20,9 +20,7 @@ class KinDynComputations:
         urdfstring: str,
         joints_name_list: list = None,
         root_link: str = None,
-        gravity: np.array = torch.tensor(
-            [0, 0, -9.80665, 0, 0, 0], dtype=torch.float64
-        ),
+        gravity: np.array = torch.tensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
         Args:
