@@ -23,7 +23,8 @@ class KinDynComputationsParametric:
         joints_name_list: list,
         links_name_list: list,
         root_link: str = None,
-        gravity: np.array = torch.tensor([0, 0, -9.80665, 0, 0, 0]) -> None:
+        gravity: np.array = torch.tensor([0, 0, -9.80665, 0, 0, 0])
+    ) -> None:
         """
         Args:
             urdfstring (str): either path or string of the urdf
