@@ -21,7 +21,6 @@ class TorchLike(ArrayLike):
         if self.array.dtype != torch.get_default_dtype():
             self.array = self.array.to(torch.get_default_dtype())
 
-
     def __setitem__(self, idx, value: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides set item operator"""
         if type(self) is type(value):
