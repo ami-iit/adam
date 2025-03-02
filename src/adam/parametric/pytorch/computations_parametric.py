@@ -33,7 +33,7 @@ class KinDynComputationsParametric:
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
         self.math = SpatialMath()
-        self.g = gravity
+        self.g = gravity.to(torch.get_default_dtype())
         self.links_name_list = links_name_list
         self.joints_name_list = joints_name_list
         self.urdfstring = urdfstring
