@@ -34,12 +34,18 @@ class KinDynComputationsBatch:
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
+
+        def to_default_dtype(tensor):
+            """Converts a JAX tensor to the default floating-point type (float32 or float64)."""
+            default_dtype = jnp.array(0.0).dtype  # Get the default floating-point dtype
+            return tensor.astype(default_dtype)
+
         math = SpatialMath()
         factory = URDFModelFactory(path=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
-        self.g = gravity
+        self.g = to_default_dtype(gravity)
         self.funcs = {}
         if root_link is not None:
             warnings.warn(

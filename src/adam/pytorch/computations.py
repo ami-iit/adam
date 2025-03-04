@@ -20,9 +20,7 @@ class KinDynComputations:
         urdfstring: str,
         joints_name_list: list = None,
         root_link: str = None,
-        gravity: np.array = torch.tensor(
-            [0, 0, -9.80665, 0, 0, 0], dtype=torch.float64
-        ),
+        gravity: np.array = torch.tensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
         Args:
@@ -35,7 +33,7 @@ class KinDynComputations:
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
-        self.g = gravity
+        self.g = gravity.to(torch.get_default_dtype())
         if root_link is not None:
             warnings.warn(
                 "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF",

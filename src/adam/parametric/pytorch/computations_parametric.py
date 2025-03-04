@@ -23,9 +23,7 @@ class KinDynComputationsParametric:
         joints_name_list: list,
         links_name_list: list,
         root_link: str = None,
-        gravity: np.array = torch.tensor(
-            [0, 0, -9.80665, 0, 0, 0], dtype=torch.float64
-        ),
+        gravity: np.array = torch.tensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
         Args:
@@ -35,7 +33,7 @@ class KinDynComputationsParametric:
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
         self.math = SpatialMath()
-        self.g = gravity
+        self.g = gravity.to(torch.get_default_dtype())
         self.links_name_list = links_name_list
         self.joints_name_list = joints_name_list
         self.urdfstring = urdfstring
