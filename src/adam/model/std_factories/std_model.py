@@ -28,16 +28,10 @@ def get_xml_string(path: str | pathlib.Path):
     isPath = isinstance(path, pathlib.Path)
     isUrdf = False
 
-    # Extract the maximum path length for the current OS
-    try:
-        from ctypes.wintypes import MAX_PATH
-    except ValueError:
-        MAX_PATH = os.pathconf("/", "PC_PATH_MAX")
-
     # Checking if it is a path or an urdf
     if not isPath:
-        if len(path) <= MAX_PATH and "<robot" not in path:
-            path = pathlib.Path(path)
+        if "<robot" not in path:
+            path = pathlib.Path(path).resolve()
             isPath = True
         else:
             root = ET.fromstring(path)
