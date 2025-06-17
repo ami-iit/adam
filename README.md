@@ -38,7 +38,7 @@
 
 Other requisites are:
 
-- `urdf_parser_py`
+- [`urdfdom-py`](https://pypi.org/project/urdfdom-py/) Python package, that exposes the `urdf_parser_py` Python  module
 - `jax`
 - `casadi`
 - `pytorch`
