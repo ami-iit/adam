@@ -30,7 +30,7 @@ dependencies = [
   "scipy",
   "casadi>=3.6",
   "prettytable",
-  "urdf_parser_py",
+  "urdfdom-py",
 ]
 
 [project.optional-dependencies]
