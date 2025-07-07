@@ -1,0 +1,347 @@
+import dataclasses
+from enum import Enum, auto
+from typing import Dict, List, Any, Tuple, Union
+
+import casadi as cs
+import numpy as np
+from adam.casadi import KinDynComputations
+from liecasadi import SO3, SE3
+
+
+class TargetType(Enum):
+    """Type of IK target supported by the solver."""
+
+    POSITION = auto()
+    ROTATION = auto()
+    POSE = auto()
+
+
+class FramesConstraint(Enum):
+    """Type of constraint for the frames in the IK problem."""
+
+    BALL = auto()  # Ball constraint (position only)
+    HINGE = auto()  # Hinge constraint (rotation only)
+    FIXED = auto()  # Fixed constraint (position + rotation)
+
+
+class InverseKinematics:
+    def __init__(
+        self,
+        urdf_path: str,
+        joints_list: List[str],
+        joint_limits_active: bool = True,
+        solver_settings: Dict[str, Any] = None,
+    ):
+        self.kd = KinDynComputations(urdf_path, joints_list)
+        self.ndof = len(joints_list)
+        self.joints_list = joints_list
+
+        # Opti variables --------------------------------------------------
+        self.opti = cs.Opti()
+        self.base_pos = self.opti.variable(3)  # translation (x,y,z)
+        self.base_quat = self.opti.variable(4)  # unit quaternion (x,y,z,w)
+        self.joint_var = self.opti.variable(self.ndof)
+        self.opti.set_initial(self.base_pos, [0, 0, 0])  # default to origin
+        self.opti.set_initial(self.base_quat, [0, 0, 0, 1])  # identity quaternion
+        self.opti.subject_to(cs.sumsqr(self.base_quat) == 1)  # enforce unit quaternion
+        self.opti.set_initial(self.joint_var, np.zeros(self.ndof))  # default to zero
+
+        self.targets: Dict[str, Dict[str, Any]] = {}
+        self._quadratic_terms: List[cs.MX] = []
+        self._problem_built = False
+        self._cached_sol = None
+        solver_settings = {
+            "ipopt": {"print_level": 0},
+        }
+        self.joint_limits_active = joint_limits_active
+        self.set_joint_limit_constraints()
+
+        self.opti.solver("ipopt", solver_settings)
+
+    def set_joint_limit_constraints(self):
+        if self.joint_limits_active:
+            # Add joint limits as constraints
+            for i, joint_name in enumerate(self.joints_list):
+                joint_limit = self.kd.rbdalgos.model.joints[joint_name].limit
+                if joint_limit is not None:
+                    self.opti.subject_to(
+                        self.opti.bounded(
+                            joint_limit.lower, self.joint_var[i], joint_limit.upper
+                        )
+                    )
+
+    def add_target_position(
+        self, frame: str, *, weight: float = 1.0, as_constraint: bool = False
+    ):
+        self._ensure_graph_modifiable()
+        if frame in self.targets:
+            raise ValueError(f"Target '{frame}' already exists")
+
+        p_des = self.opti.parameter(3)
+        self.opti.set_value(p_des, np.zeros(3))  # default to origin
+        p_fk = self.kd.forward_kinematics_fun(frame)(
+            self.base_transform(), self.joint_var
+        )[:3, 3]
+
+        if as_constraint:
+            self.opti.subject_to(p_fk == p_des)
+        else:
+            self._quadratic_terms.append(weight * cs.sumsqr(p_fk - p_des))
+
+        self.targets[frame] = {
+            "target_type": TargetType.POSITION,
+            "param_pos": p_des,
+            "weight": weight,
+            "as_constraint": as_constraint,
+        }
+
+    def add_frames_constraint(
+        self,
+        parent_frame: str,
+        child_frame: str,
+        constraint_type: FramesConstraint,
+        as_constraint: bool = False,
+    ):
+        self._ensure_graph_modifiable()
+        # check that frames are different
+        if parent_frame == child_frame:
+            raise ValueError("Parent and child frames must be different")
+        H_parent = self.kd.forward_kinematics_fun(parent_frame)(
+            self.base_transform(), self.joint_var
+        )
+        H_child = self.kd.forward_kinematics_fun(child_frame)(
+            self.base_transform(), self.joint_var
+        )
+        p_parent = H_parent[:3, 3]
+        p_child = H_child[:3, 3]
+        R_parent = H_parent[:3, :3]
+        R_child = H_child[:3, :3]
+        if constraint_type is FramesConstraint.BALL:
+            # Ball constraint: child frame must be positioned relative to parent frame
+            if as_constraint:
+                self.opti.subject_to(p_child == p_parent)
+            else:
+                slack = self.opti.variable(1)
+                self.opti.subject_to(cs.sumsqr(p_child - p_parent) <= slack)
+                self.opti.subject_to(
+                    self.opti.bounded(-1e-3, slack, 1e-3)
+                )  # small slack to allow for numerical stability
+                self._quadratic_terms.append(cs.sumsqr(slack) * 1e5)
+        elif constraint_type is FramesConstraint.HINGE:
+            # Hinge constraint: child frame must be aligned with parent frame
+            if as_constraint:
+                self.opti.subject_to(R_child == R_parent)
+            else:
+                slack = self.opti.variable(1)
+                rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_child.T @ R_parent))
+                self.opti.subject_to(rot_err_sq <= slack)
+                self.opti.subject_to(self.opti.bounded(-1e-3, slack, 1e-3))
+            # Hinge constraint: child frame must be aligned with parent frame
+            self.opti.subject_to(R_child == R_parent)
+        elif constraint_type is FramesConstraint.FIXED:
+            # Fixed constraint: child frame must be aligned and positioned with parent frame
+            if as_constraint:
+                self.opti.subject_to(p_child == p_parent)
+                self.opti.subject_to(R_child == R_parent)
+            else:
+                slack = self.opti.variable(1)
+                rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_child.T @ R_parent))
+                self.opti.subject_to(rot_err_sq <= slack)
+                self.opti.subject_to(self.opti.bounded(-1e-3, slack, 1e-3))
+        else:
+            raise ValueError(f"Unsupported constraint type: {constraint_type.name}")
+
+    def add_frames_constraints_ball(
+        self, parent_frame: str, child_frame: str, as_constraint: bool = False
+    ):
+        """Add a ball constraint between two frames."""
+        self.add_frames_constraint(
+            parent_frame, child_frame, FramesConstraint.BALL, as_constraint
+        )
+
+    def add_min_distance_constraint(self, frames_list: List[str], distance: float):
+        """Add a distance constraint between frames."""
+        self._ensure_graph_modifiable()
+        if len(frames_list) < 2:
+            raise ValueError("At least two frames are required for distance constraint")
+        for i in range(len(frames_list) - 1):
+            print(
+                f"Adding distance constraint between {frames_list[i]} and {frames_list[i + 1]}"
+            )
+            frame_i = frames_list[i]
+            frame_j = frames_list[i + 1]
+            p_i = self.kd.forward_kinematics_fun(frame_i)(
+                self.base_transform(), self.joint_var
+            )[:3, 3]
+            p_j = self.kd.forward_kinematics_fun(frame_j)(
+                self.base_transform(), self.joint_var
+            )[:3, 3]
+            dist_sq = cs.sumsqr(p_i - p_j)
+            self.opti.subject_to(dist_sq >= distance**2)
+
+    def add_target_orientation(
+        self, frame: str, *, weight: float = 1.0, as_constraint: bool = False
+    ):
+        self._ensure_graph_modifiable()
+        if frame in self.targets:
+            raise ValueError(f"Target '{frame}' already exists")
+
+        R_des = self.opti.parameter(3, 3)
+        self.opti.set_value(R_des, np.eye(3))  # default to identity rotation
+        H_fk = self.kd.forward_kinematics_fun(frame)(
+            self.base_transform(), self.joint_var
+        )
+        R_fk = H_fk[:3, :3]
+        rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_fk.T @ R_des))
+
+        if as_constraint:
+            self.opti.subject_to(rot_err_sq == 0)
+        else:
+            self._quadratic_terms.append(weight * rot_err_sq)
+
+        self.targets[frame] = {
+            "target_type": TargetType.ROTATION,
+            "param_rot": R_des,
+            "weight": weight,
+            "as_constraint": as_constraint,
+        }
+
+    def add_target_pose(
+        self, frame: str, *, weight: float = 1.0, as_constraint: bool = False
+    ):
+        self._ensure_graph_modifiable()
+        if frame in self.targets:
+            raise ValueError(f"Target '{frame}' already exists")
+
+        p_des = self.opti.parameter(3)
+        R_des = self.opti.parameter(3, 3)
+        self.opti.set_value(p_des, np.zeros(3))  # default to origin
+        self.opti.set_value(R_des, np.eye(3))  # default to identity rotation
+        H_fk = self.kd.forward_kinematics_fun(frame)(
+            self.base_transform(), self.joint_var
+        )
+        p_fk = H_fk[:3, 3]
+        R_fk = H_fk[:3, :3]
+
+        pos_err_sq = cs.sumsqr(p_fk - p_des)
+        rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_fk.T @ R_des))
+
+        if as_constraint:
+            self.opti.subject_to(p_fk == p_des)
+            self.opti.subject_to(rot_err_sq == 0)
+        else:
+            self._quadratic_terms.append(weight * (pos_err_sq + rot_err_sq))
+
+        self.targets[frame] = {
+            "target_type": TargetType.POSE,
+            "param_pos": p_des,
+            "param_rot": R_des,
+            "weight": weight,
+            "as_constraint": as_constraint,
+        }
+
+    def add_target(
+        self,
+        frame: str,
+        target_type: TargetType,
+        *,
+        weight: float = 1.0,
+        as_constraint: bool = False,
+    ):
+        if target_type is TargetType.POSITION:
+            self.add_target_position(frame, weight=weight, as_constraint=as_constraint)
+        elif target_type is TargetType.ROTATION:
+            self.add_target_orientation(
+                frame, weight=weight, as_constraint=as_constraint
+            )
+        elif target_type is TargetType.POSE:
+            self.add_target_pose(frame, weight=weight, as_constraint=as_constraint)
+        else:
+            raise ValueError("Unsupported target type")
+
+    def update_target_position(self, frame: str, position: np.ndarray):
+        self._check_target_type(frame, TargetType.POSITION)
+        self.opti.set_value(self.targets[frame]["param_pos"], position)
+
+    def update_target_orientation(self, frame: str, rotation: np.ndarray):
+        self._check_target_type(frame, TargetType.ROTATION)
+        self.opti.set_value(self.targets[frame]["param_rot"], rotation)
+
+    def update_target_pose(
+        self, frame: str, position: np.ndarray, rotation: np.ndarray
+    ):
+        self._check_target_type(frame, TargetType.POSE)
+        self.opti.set_value(self.targets[frame]["param_pos"], position)
+        self.opti.set_value(self.targets[frame]["param_rot"], rotation)
+
+    def update_target(
+        self, frame: str, target: Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]
+    ):
+        if frame not in self.targets:
+            raise ValueError(f"Unknown target '{frame}'")
+        ttype = self.targets[frame]["target_type"]
+        if ttype is TargetType.POSITION:
+            self.update_target_position(frame, target)  # type: ignore[arg-type]
+        elif ttype is TargetType.ROTATION:
+            self.update_target_orientation(frame, target)  # type: ignore[arg-type]
+        elif ttype is TargetType.POSE:
+            if not (isinstance(target, (list, tuple)) and len(target) == 2):
+                raise ValueError("Pose update expects (position, rotation)")
+            self.update_target_pose(frame, *target)  # type: ignore[arg-type]
+        else:
+            raise RuntimeError("Unknown target type")
+
+    def set_initial_guess(self, base_transform: np.ndarray, joint_values: np.ndarray):
+        base_transform = base_transform
+        pos = base_transform[:3, 3]
+        rot = base_transform[:3, :3]
+        quat = SO3.from_matrix(rot).as_quat().coeffs()  # (x,y,z,w)
+        self.opti.set_initial(self.base_pos, pos)
+        self.opti.set_initial(self.base_quat, quat)
+        self.opti.set_initial(self.joint_var, joint_values)
+
+    def solve(self):
+        if not self._problem_built:
+            self._finalize_problem()
+        if self._cached_sol is not None:
+            # Warm‑start
+            self.opti.set_initial(self.base_pos, self._cached_sol.value(self.base_pos))
+            self.opti.set_initial(
+                self.base_quat, self._cached_sol.value(self.base_quat)
+            )
+            self.opti.set_initial(
+                self.joint_var, self._cached_sol.value(self.joint_var)
+            )
+        self._cached_sol = self.opti.solve()
+
+    def get_solution(self):
+        if self._cached_sol is None:
+            raise RuntimeError("No solution yet - call solve() first")
+        pos = self._cached_sol.value(self.base_pos)
+        quat = self._cached_sol.value(self.base_quat)
+        joints = self._cached_sol.value(self.joint_var)
+        H = SE3.from_position_quaternion(pos, quat).as_matrix()  # 4x4 numpy
+        return np.array(H), np.array(joints)
+
+    def base_transform(self):
+        """Symbolic 4x4 transform of the floating base (SX)."""
+        return SE3.from_position_quaternion(self.base_pos, self.base_quat).as_matrix()
+
+    def _ensure_graph_modifiable(self):
+        if self._problem_built:
+            raise RuntimeError(
+                "Cannot add new targets after the problem has been assembled (first solve())."
+            )
+
+    def _finalize_problem(self):
+        if self._quadratic_terms:
+            self.opti.minimize(cs.sum(cs.vertcat(*self._quadratic_terms)))
+        else:
+            raise RuntimeError(
+                "No targets added to the problem. Please add at least one target."
+            )
+        self._problem_built = True
+
+    def _check_target_type(self, frame: str, expected: TargetType):
+        if self.targets[frame]["target_type"] is not expected:
+            raise ValueError(f"Target '{frame}' is not of type {expected.name}")
