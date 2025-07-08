@@ -220,7 +220,7 @@ class InverseKinematics:
                 slack = self.opti.variable(1)
                 rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_child.T @ R_parent))
                 self.opti.subject_to(rot_err_sq <= slack)
-                self.opti.subject_to(self.opti.bounded(-1e-3, slack, 1e-3))
+                self.opti.subject_to(self.opti.bounded(0, slack, 1e-3))
                 self.cost_terms.append(cs.sumsqr(slack) * 1e5)
         else:
             raise ValueError(f"Unsupported constraint type: {constraint_type.name}")
