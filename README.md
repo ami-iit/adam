@@ -351,6 +351,46 @@ M = kinDyn.mass_matrix(w_H_b_batch, joints_batch)
 w_H_f = kinDyn.forward_kinematics('frame_name', w_H_b_batch, joints_batch)
 ```
 
+### Inverse Kinematics
+
+adam provides an interface for solving inverse kinematics problems using CasADi. The solver supports
+
+- position, orientation, and full pose constraints
+- frame-to-frame constraints (ball, fixed)
+- optional joint limit constraints
+
+```python
+import casadi as cs
+import numpy as np
+import adam
+from adam.casadi import KinDynComputations
+from adam.casadi.inverse_kinematics import InverseKinematics, TargetType
+
+# Load your robot model
+import icub_models
+model_path = icub_models.get_model_file("iCubGazeboV2_5")
+# The joint list
+joints_name_list = ...
+# Create IK solver
+ik = InverseKinematics(model_path, joints)
+# Add a pose target on a frame (e.g., the left sole)
+ik.add_target("l_sole", target_type=TargetType.POSE, weight=1.0, as_constraint=False)
+ik.add_ball_constraint(frame_1, frame_2, as_constraint=False)
+
+# Update the target to a desired pose
+desired_position = np.array([0.3, 0.2, 1.0])
+desired_orientation = np.eye(3)
+ik.update_target("l_sole", (desired_position, desired_orientation))
+
+# Solve
+ik.solve()
+
+# Retrieve solution
+w_H_b_sol, q_sol = ik.get_solution()
+print("Base pose:\n", w_H_b_sol)
+print("Joint values:\n", q_sol)
+```
+
 ## 🦸‍♂️ Contributing
 
 **adam** is an open-source project. Contributions are very welcome!
