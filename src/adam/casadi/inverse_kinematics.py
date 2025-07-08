@@ -20,8 +20,20 @@ class FramesConstraint(Enum):
     """Type of constraint for the frames in the IK problem."""
 
     BALL = auto()  # Ball constraint (position only)
-    HINGE = auto()  # Hinge constraint (rotation only)
     FIXED = auto()  # Fixed constraint (position + rotation)
+
+
+@dataclasses.dataclass
+class Target:
+    """Dataclass to store target information."""
+
+    target_type: TargetType
+    frame: str
+    weight: float = 1.0
+    as_constraint: bool = False
+    forward_kinematics_function: cs.Function = None
+    param_pos: cs.SX = None
+    param_rot: cs.SX = None
 
 
 class InverseKinematics:
@@ -32,6 +44,14 @@ class InverseKinematics:
         joint_limits_active: bool = True,
         solver_settings: Dict[str, Any] = None,
     ):
+        """Initialize the InverseKinematics solver.
+
+        Args:
+            urdf_path (str): Path to the URDF file.
+            joints_list (List[str]): List of joint names.
+            joint_limits_active (bool, optional): If True, enforces joint limits. Defaults to True.
+            solver_settings (Dict[str, Any], optional): Settings for the solver. Defaults to None.
+        """
         self.kd = KinDynComputations(urdf_path, joints_list)
         self.ndof = len(joints_list)
         self.joints_list = joints_list
@@ -46,8 +66,8 @@ class InverseKinematics:
         self.opti.subject_to(cs.sumsqr(self.base_quat) == 1)  # enforce unit quaternion
         self.opti.set_initial(self.joint_var, np.zeros(self.ndof))  # default to zero
 
-        self.targets: Dict[str, Dict[str, Any]] = {}
-        self._quadratic_terms: List[cs.MX] = []
+        self.targets: Dict[str, Target] = {}
+        self.cost_terms: List[cs.MX] = []
         self._problem_built = False
         self._cached_sol = None
         solver_settings = {
@@ -58,7 +78,18 @@ class InverseKinematics:
 
         self.opti.solver("ipopt", solver_settings)
 
+    def set_solver(self, solver_name: str, solver_settings: Dict[str, Any]):
+        """Set the solver for the optimization problem.
+
+        Args:
+            solver_name (str): The name of the solver to use.
+            solver_settings (Dict[str, Any]): The settings for the solver.
+        """
+        self.opti.solver(solver_name, solver_settings)
+        self._cached_sol = None
+
     def set_joint_limit_constraints(self):
+        """Set joint limit constraints if active."""
         if self.joint_limits_active:
             # Add joint limits as constraints
             for i, joint_name in enumerate(self.joints_list):
@@ -73,6 +104,16 @@ class InverseKinematics:
     def add_target_position(
         self, frame: str, *, weight: float = 1.0, as_constraint: bool = False
     ):
+        """Add a target position for the IK solver.
+
+        Args:
+            frame (str): The name of the frame to target.
+            weight (float, optional): The weight of the target. Defaults to 1.0.
+            as_constraint (bool, optional): If True, adds the target as a constraint instead of a cost term. Defaults to False.
+
+        Raises:
+            ValueError: If the target frame already exists.
+        """
         self._ensure_graph_modifiable()
         if frame in self.targets:
             raise ValueError(f"Target '{frame}' already exists")
@@ -86,14 +127,16 @@ class InverseKinematics:
         if as_constraint:
             self.opti.subject_to(p_fk == p_des)
         else:
-            self._quadratic_terms.append(weight * cs.sumsqr(p_fk - p_des))
+            self.cost_terms.append(weight * cs.sumsqr(p_fk - p_des))
 
-        self.targets[frame] = {
-            "target_type": TargetType.POSITION,
-            "param_pos": p_des,
-            "weight": weight,
-            "as_constraint": as_constraint,
-        }
+        self.targets[frame] = Target(
+            target_type=TargetType.POSITION,
+            frame=frame,
+            weight=weight,
+            as_constraint=as_constraint,
+            param_pos=p_des,
+            forward_kinematics_function=self.kd.forward_kinematics_fun(frame),
+        )
 
     def add_frames_constraint(
         self,
@@ -102,6 +145,14 @@ class InverseKinematics:
         constraint_type: FramesConstraint,
         as_constraint: bool = False,
     ):
+        """Add a constraint between two frames.
+
+        Args:
+            parent_frame (str): The name of the parent frame.
+            child_frame (str): The name of the child frame.
+            constraint_type (FramesConstraint): Type of constraint to apply.
+            as_constraint (bool): If True, adds the constraint as a hard constraint instead of a cost term.
+        """
         self._ensure_graph_modifiable()
         # check that frames are different
         if parent_frame == child_frame:
@@ -112,10 +163,8 @@ class InverseKinematics:
         H_child = self.kd.forward_kinematics_fun(child_frame)(
             self.base_transform(), self.joint_var
         )
-        p_parent = H_parent[:3, 3]
-        p_child = H_child[:3, 3]
-        R_parent = H_parent[:3, :3]
-        R_child = H_child[:3, :3]
+        p_parent, p_child = H_parent[:3, 3], H_child[:3, 3]
+        R_parent, R_child = H_parent[:3, :3], H_child[:3, :3]
         if constraint_type is FramesConstraint.BALL:
             # Ball constraint: child frame must be positioned relative to parent frame
             if as_constraint:
@@ -126,18 +175,7 @@ class InverseKinematics:
                 self.opti.subject_to(
                     self.opti.bounded(-1e-3, slack, 1e-3)
                 )  # small slack to allow for numerical stability
-                self._quadratic_terms.append(cs.sumsqr(slack) * 1e5)
-        elif constraint_type is FramesConstraint.HINGE:
-            # Hinge constraint: child frame must be aligned with parent frame
-            if as_constraint:
-                self.opti.subject_to(R_child == R_parent)
-            else:
-                slack = self.opti.variable(1)
-                rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_child.T @ R_parent))
-                self.opti.subject_to(rot_err_sq <= slack)
-                self.opti.subject_to(self.opti.bounded(-1e-3, slack, 1e-3))
-            # Hinge constraint: child frame must be aligned with parent frame
-            self.opti.subject_to(R_child == R_parent)
+                self.cost_terms.append(cs.sumsqr(slack) * 1e5)
         elif constraint_type is FramesConstraint.FIXED:
             # Fixed constraint: child frame must be aligned and positioned with parent frame
             if as_constraint:
@@ -148,19 +186,45 @@ class InverseKinematics:
                 rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_child.T @ R_parent))
                 self.opti.subject_to(rot_err_sq <= slack)
                 self.opti.subject_to(self.opti.bounded(-1e-3, slack, 1e-3))
+                self.cost_terms.append(cs.sumsqr(slack) * 1e5)
         else:
             raise ValueError(f"Unsupported constraint type: {constraint_type.name}")
 
-    def add_frames_constraints_ball(
+    def add_ball_constraint(
         self, parent_frame: str, child_frame: str, as_constraint: bool = False
     ):
-        """Add a ball constraint between two frames."""
+        """Add a ball constraint between two frames.
+
+        Args:
+            parent_frame (str): The name of the parent frame.
+            child_frame (str): The name of the child frame.
+            as_constraint (bool): If True, adds the constraint as a hard constraint instead of a cost term.
+        """
         self.add_frames_constraint(
             parent_frame, child_frame, FramesConstraint.BALL, as_constraint
         )
 
+    def add_fixed_constraint(
+        self, parent_frame: str, child_frame: str, as_constraint: bool = False
+    ):
+        """Add a fixed constraint between two frames.
+
+        Args:
+            parent_frame (str): The name of the parent frame.
+            child_frame (str): The name of the child frame.
+            as_constraint (bool): If True, adds the constraint as a hard constraint instead of a cost term.
+        """
+        self.add_frames_constraint(
+            parent_frame, child_frame, FramesConstraint.FIXED, as_constraint
+        )
+
     def add_min_distance_constraint(self, frames_list: List[str], distance: float):
-        """Add a distance constraint between frames."""
+        """Add a distance constraint between frames.
+
+        Args:
+            frames_list (List[str]): List of frame names to apply the distance constraint.
+            distance (float): Minimum distance between consecutive frames.
+        """
         self._ensure_graph_modifiable()
         if len(frames_list) < 2:
             raise ValueError("At least two frames are required for distance constraint")
@@ -168,8 +232,7 @@ class InverseKinematics:
             print(
                 f"Adding distance constraint between {frames_list[i]} and {frames_list[i + 1]}"
             )
-            frame_i = frames_list[i]
-            frame_j = frames_list[i + 1]
+            frame_i, frame_j = frames_list[i], frames_list[i + 1]
             p_i = self.kd.forward_kinematics_fun(frame_i)(
                 self.base_transform(), self.joint_var
             )[:3, 3]
@@ -182,6 +245,13 @@ class InverseKinematics:
     def add_target_orientation(
         self, frame: str, *, weight: float = 1.0, as_constraint: bool = False
     ):
+        """Add an orientation target for a frame.
+
+        Args:
+            frame (str): The name of the frame to target.
+            weight (float): Weight for the target in the cost function.
+            as_constraint (bool): If True, adds the target as a constraint instead of a cost
+        """
         self._ensure_graph_modifiable()
         if frame in self.targets:
             raise ValueError(f"Target '{frame}' already exists")
@@ -197,18 +267,27 @@ class InverseKinematics:
         if as_constraint:
             self.opti.subject_to(rot_err_sq == 0)
         else:
-            self._quadratic_terms.append(weight * rot_err_sq)
+            self.cost_terms.append(weight * rot_err_sq)
 
-        self.targets[frame] = {
-            "target_type": TargetType.ROTATION,
-            "param_rot": R_des,
-            "weight": weight,
-            "as_constraint": as_constraint,
-        }
+        self.targets[frame] = Target(
+            target_type=TargetType.ROTATION,
+            frame=frame,
+            weight=weight,
+            as_constraint=as_constraint,
+            param_rot=R_des,
+            forward_kinematics_function=self.kd.forward_kinematics_fun(frame),
+        )
 
     def add_target_pose(
         self, frame: str, *, weight: float = 1.0, as_constraint: bool = False
     ):
+        """Add a pose target for a frame.
+
+        Args:
+            frame (str): The name of the frame to target.
+            weight (float): Weight for the target in the cost function.
+            as_constraint (bool): If True, adds the target as a constraint instead of a cost
+        """
         self._ensure_graph_modifiable()
         if frame in self.targets:
             raise ValueError(f"Target '{frame}' already exists")
@@ -220,8 +299,7 @@ class InverseKinematics:
         H_fk = self.kd.forward_kinematics_fun(frame)(
             self.base_transform(), self.joint_var
         )
-        p_fk = H_fk[:3, 3]
-        R_fk = H_fk[:3, :3]
+        p_fk, R_fk = H_fk[:3, 3], H_fk[:3, :3]
 
         pos_err_sq = cs.sumsqr(p_fk - p_des)
         rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_fk.T @ R_des))
@@ -230,15 +308,17 @@ class InverseKinematics:
             self.opti.subject_to(p_fk == p_des)
             self.opti.subject_to(rot_err_sq == 0)
         else:
-            self._quadratic_terms.append(weight * (pos_err_sq + rot_err_sq))
+            self.cost_terms.append(weight * (pos_err_sq + rot_err_sq))
 
-        self.targets[frame] = {
-            "target_type": TargetType.POSE,
-            "param_pos": p_des,
-            "param_rot": R_des,
-            "weight": weight,
-            "as_constraint": as_constraint,
-        }
+        self.targets[frame] = Target(
+            target_type=TargetType.POSE,
+            frame=frame,
+            weight=weight,
+            as_constraint=as_constraint,
+            param_pos=p_des,
+            param_rot=R_des,
+            forward_kinematics_function=self.kd.forward_kinematics_fun(frame),
+        )
 
     def add_target(
         self,
@@ -248,6 +328,14 @@ class InverseKinematics:
         weight: float = 1.0,
         as_constraint: bool = False,
     ):
+        """Add a target for a frame.
+
+        Args:
+            frame (str): The name of the frame to target.
+            target_type (TargetType): The type of target (position, rotation, or pose).
+            weight (float): Weight for the target in the cost function.
+            as_constraint (bool): If True, adds the target as a constraint instead of a cost
+        """
         if target_type is TargetType.POSITION:
             self.add_target_position(frame, weight=weight, as_constraint=as_constraint)
         elif target_type is TargetType.ROTATION:
@@ -260,26 +348,56 @@ class InverseKinematics:
             raise ValueError("Unsupported target type")
 
     def update_target_position(self, frame: str, position: np.ndarray):
+        """Update the target position for a frame.
+
+        Args:
+            frame (str): The name of the frame to update.
+            position (np.ndarray): The new target position.
+        """
         self._check_target_type(frame, TargetType.POSITION)
-        self.opti.set_value(self.targets[frame]["param_pos"], position)
+        self.opti.set_value(self.targets[frame].param_pos, position)
 
     def update_target_orientation(self, frame: str, rotation: np.ndarray):
+        """Update the target orientation for a frame.
+
+        Args:
+            frame (str): The name of the frame to update.
+            rotation (np.ndarray): The new target rotation.
+        """
         self._check_target_type(frame, TargetType.ROTATION)
-        self.opti.set_value(self.targets[frame]["param_rot"], rotation)
+        self.opti.set_value(self.targets[frame].param_rot, rotation)
 
     def update_target_pose(
         self, frame: str, position: np.ndarray, rotation: np.ndarray
     ):
+        """Update the target pose for a frame.
+
+        Args:
+            frame (str): The name of the frame to update.
+            position (np.ndarray): The new target position.
+            rotation (np.ndarray): The new target rotation.
+        """
         self._check_target_type(frame, TargetType.POSE)
-        self.opti.set_value(self.targets[frame]["param_pos"], position)
-        self.opti.set_value(self.targets[frame]["param_rot"], rotation)
+        self.opti.set_value(self.targets[frame].param_pos, position)
+        self.opti.set_value(self.targets[frame].param_rot, rotation)
 
     def update_target(
-        self, frame: str, target: Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]
+        self, frame: str, target: np.ndarray | Tuple[np.ndarray, np.ndarray]
     ):
+        """Update the target for a frame.
+
+        Args:
+            frame (str): The name of the frame to update.
+            target (Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]): The new target position or pose.
+
+        Raises:
+            ValueError: If the target is of an invalid type.
+            ValueError: If the frame is not a pose target.
+            RuntimeError: If the optimization problem has already been built.
+        """
         if frame not in self.targets:
             raise ValueError(f"Unknown target '{frame}'")
-        ttype = self.targets[frame]["target_type"]
+        ttype = self.targets[frame].target_type
         if ttype is TargetType.POSITION:
             self.update_target_position(frame, target)  # type: ignore[arg-type]
         elif ttype is TargetType.ROTATION:
@@ -292,6 +410,12 @@ class InverseKinematics:
             raise RuntimeError("Unknown target type")
 
     def set_initial_guess(self, base_transform: np.ndarray, joint_values: np.ndarray):
+        """Set the initial guess for the optimization problem.
+
+        Args:
+            base_transform (np.ndarray): 4x4 transformation matrix for the floating base.
+            joint_values (np.ndarray): Initial joint values for the robot.
+        """
         base_transform = base_transform
         pos = base_transform[:3, 3]
         rot = base_transform[:3, :3]
@@ -301,6 +425,7 @@ class InverseKinematics:
         self.opti.set_initial(self.joint_var, joint_values)
 
     def solve(self):
+        """Solve the optimization problem."""
         if not self._problem_built:
             self._finalize_problem()
         if self._cached_sol is not None:
@@ -315,6 +440,14 @@ class InverseKinematics:
         self._cached_sol = self.opti.solve()
 
     def get_solution(self):
+        """Get the solution of the optimization problem.
+
+        Raises:
+            RuntimeError: If the optimization problem has not been solved yet.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: The 4x4 transformation matrix and joint values.
+        """
         if self._cached_sol is None:
             raise RuntimeError("No solution yet - call solve() first")
         pos = self._cached_sol.value(self.base_pos)
@@ -334,8 +467,13 @@ class InverseKinematics:
             )
 
     def _finalize_problem(self):
-        if self._quadratic_terms:
-            self.opti.minimize(cs.sum(cs.vertcat(*self._quadratic_terms)))
+        """Finalize the optimization problem.
+
+        Raises:
+            RuntimeError: If the optimization problem has already been built.
+        """
+        if self.cost_terms:
+            self.opti.minimize(cs.sum(cs.vertcat(*self.cost_terms)))
         else:
             raise RuntimeError(
                 "No targets added to the problem. Please add at least one target."
@@ -343,5 +481,14 @@ class InverseKinematics:
         self._problem_built = True
 
     def _check_target_type(self, frame: str, expected: TargetType):
-        if self.targets[frame]["target_type"] is not expected:
+        """Check the target type for a given frame.
+
+        Args:
+            frame (str): The name of the frame to check.
+            expected (TargetType): The expected target type.
+
+        Raises:
+            ValueError: If the target type does not match the expected type.
+        """
+        if self.targets[frame].target_type is not expected:
             raise ValueError(f"Target '{frame}' is not of type {expected.name}")
