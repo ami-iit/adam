@@ -72,7 +72,7 @@ class InverseKinematics:
         self._cached_sol = None
         solver_settings = {
             "ipopt": {"print_level": 0},
-        }
+        } if solver_settings is None else solver_settings
         self.joint_limits_active = joint_limits_active
         self.set_joint_limit_constraints()
 
@@ -416,9 +416,7 @@ class InverseKinematics:
             base_transform (np.ndarray): 4x4 transformation matrix for the floating base.
             joint_values (np.ndarray): Initial joint values for the robot.
         """
-        base_transform = base_transform
-        pos = base_transform[:3, 3]
-        rot = base_transform[:3, :3]
+        pos, rot = base_transform[:3, 3], base_transform[:3, :3]
         quat = SO3.from_matrix(rot).as_quat().coeffs()  # (x,y,z,w)
         self.opti.set_initial(self.base_pos, pos)
         self.opti.set_initial(self.base_quat, quat)
