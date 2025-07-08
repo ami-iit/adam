@@ -1,7 +1,7 @@
+from __future__ import annotations
 import dataclasses
 from enum import Enum, auto
-from typing import Dict, List, Any, Tuple, Union
-
+from typing import Any
 import casadi as cs
 import numpy as np
 from adam.casadi import KinDynComputations
@@ -40,17 +40,17 @@ class InverseKinematics:
     def __init__(
         self,
         urdf_path: str,
-        joints_list: List[str],
+        joints_list: list[str],
         joint_limits_active: bool = True,
-        solver_settings: Dict[str, Any] = None,
+        solver_settings: dict[str,] = None,
     ):
         """Initialize the InverseKinematics solver.
 
         Args:
             urdf_path (str): Path to the URDF file.
-            joints_list (List[str]): List of joint names.
+            joints_list (list[str]): List of joint names.
             joint_limits_active (bool, optional): If True, enforces joint limits. Defaults to True.
-            solver_settings (Dict[str, Any], optional): Settings for the solver. Defaults to None.
+            solver_settings (dict[str, ], optional): Settings for the solver. Defaults to None.
         """
         self.kd = KinDynComputations(urdf_path, joints_list)
         self.ndof = len(joints_list)
@@ -66,8 +66,8 @@ class InverseKinematics:
         self.opti.subject_to(cs.sumsqr(self.base_quat) == 1)  # enforce unit quaternion
         self.opti.set_initial(self.joint_var, np.zeros(self.ndof))  # default to zero
 
-        self.targets: Dict[str, Target] = {}
-        self.cost_terms: List[cs.MX] = []
+        self.targets: dict[str, Target] = {}
+        self.cost_terms: list[cs.MX] = []
         self._problem_built = False
         self._cached_sol = None
         solver_settings = {
@@ -78,12 +78,12 @@ class InverseKinematics:
 
         self.opti.solver("ipopt", solver_settings)
 
-    def set_solver(self, solver_name: str, solver_settings: Dict[str, Any]):
+    def set_solver(self, solver_name: str, solver_settings: dict[str, Any]):
         """Set the solver for the optimization problem.
 
         Args:
             solver_name (str): The name of the solver to use.
-            solver_settings (Dict[str, Any]): The settings for the solver.
+            solver_settings (dict[str, Any]): The settings for the solver.
         """
         self.opti.solver(solver_name, solver_settings)
         self._cached_sol = None
@@ -218,11 +218,11 @@ class InverseKinematics:
             parent_frame, child_frame, FramesConstraint.FIXED, as_constraint
         )
 
-    def add_min_distance_constraint(self, frames_list: List[str], distance: float):
+    def add_min_distance_constraint(self, frames_list: list[str], distance: float):
         """Add a distance constraint between frames.
 
         Args:
-            frames_list (List[str]): List of frame names to apply the distance constraint.
+            frames_list (list[str]): List of frame names to apply the distance constraint.
             distance (float): Minimum distance between consecutive frames.
         """
         self._ensure_graph_modifiable()
@@ -382,13 +382,13 @@ class InverseKinematics:
         self.opti.set_value(self.targets[frame].param_rot, rotation)
 
     def update_target(
-        self, frame: str, target: np.ndarray | Tuple[np.ndarray, np.ndarray]
+        self, frame: str, target: np.ndarray | tuple[np.ndarray, np.ndarray]
     ):
         """Update the target for a frame.
 
         Args:
             frame (str): The name of the frame to update.
-            target (Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]): The new target position or pose.
+            target (Union[np.ndarray, tuple[np.ndarray, np.ndarray]]): The new target position or pose.
 
         Raises:
             ValueError: If the target is of an invalid type.
