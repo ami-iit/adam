@@ -208,7 +208,7 @@ class InverseKinematics:
                 slack = self.opti.variable(1)
                 self.opti.subject_to(cs.sumsqr(p_child - p_parent) <= slack)
                 self.opti.subject_to(
-                    self.opti.bounded(-1e-3, slack, 1e-3)
+                    self.opti.bounded(0, slack, 1e-3)
                 )  # small slack to allow for numerical stability
                 self.cost_terms.append(cs.sumsqr(slack) * 1e5)
         elif constraint_type is FramesConstraint.FIXED:
