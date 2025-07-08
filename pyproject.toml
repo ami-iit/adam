@@ -48,6 +48,7 @@ test = [
   "black",
   "jax2torch",
   "requests",
+  "liecasadi",
 ]
 conversion = ["idyntree"]
 all = ["jax", "jaxlib", "casadi>=3.6", "torch", "jax2torch"]
@@ -57,7 +58,7 @@ all = ["jax", "jaxlib", "casadi>=3.6", "torch", "jax2torch"]
 "Source" = "https://github.com/ami-iit/adam"
 
 [tool.setuptools]
-package-dir = {"" = "src"}                      # keeps the src/ layout
+package-dir = { "" = "src" } # keeps the src/ layout
 
 [tool.setuptools.packages.find]
 where = ["src"]
