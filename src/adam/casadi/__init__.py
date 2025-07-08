@@ -2,4 +2,4 @@
 
 from .casadi_like import CasadiLike
 from .computations import KinDynComputations
-from .inverse_kinematics import InverseKinematics
+from .inverse_kinematics import InverseKinematics, TargetType
