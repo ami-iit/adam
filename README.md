@@ -111,29 +111,28 @@ pip install .[selected-interface]
 
 #### Installation from conda-forge package
 
-
 - Install **CasADi** interface:
 
   ```bash
-  mamba create -n adamenv -c conda-forge adam-robotics-casadi
+  conda create -n adamenv -c conda-forge adam-robotics-casadi
   ```
-  
+
 - Install **Jax** interface (warning: not available on Windows):
 
   ```bash
-  mamba create -n adamenv -c conda-forge adam-robotics-jax
+  conda create -n adamenv -c conda-forge adam-robotics-jax
   ```
 
 - Install **PyTorch** interface (warning: not available on Windows):
 
   ```bash
-  mamba create -n adamenv -c conda-forge adam-robotics-pytorch
+  conda create -n adamenv -c conda-forge adam-robotics-pytorch
   ```
 
 - Install **ALL** interfaces (warning: not available on Windows):
 
   ```bash
-  mamba create -n adamenv -c conda-forge adam-robotics-all
+  conda create -n adamenv -c conda-forge adam-robotics-all
   ```
 
 > [!NOTE]
@@ -146,31 +145,31 @@ Install in a conda environment the required dependencies:
 - **Jax** interface dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge jax numpy lxml prettytable matplotlib urdfdom-py
+  conda create -n adamenv -c conda-forge jax numpy lxml prettytable matplotlib urdfdom-py
   ```
 
 - **CasADi** interface dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge casadi numpy lxml prettytable matplotlib urdfdom-py
+  conda create -n adamenv -c conda-forge casadi numpy lxml prettytable matplotlib urdfdom-py
   ```
 
 - **PyTorch** interface dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge pytorch numpy lxml prettytable matplotlib urdfdom-py jax2torch
+  conda create -n adamenv -c conda-forge pytorch numpy lxml prettytable matplotlib urdfdom-py jax2torch
   ```
 
 - **ALL** interfaces dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge jax casadi pytorch numpy lxml prettytable matplotlib urdfdom-py jax2torch
+  conda create -n adamenv -c conda-forge jax casadi pytorch numpy lxml prettytable matplotlib urdfdom-py jax2torch
   ```
 
 Activate the environment, clone the repo and install the library:
 
 ```bash
-mamba activate adamenv
+conda activate adamenv
 git clone https://github.com/ami-iit/ADAM.git
 cd adam
 pip install --no-deps .
