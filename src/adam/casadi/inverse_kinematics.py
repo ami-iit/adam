@@ -70,11 +70,15 @@ class InverseKinematics:
         self.cost_terms: list[cs.MX] = []
         self._problem_built = False
         self._cached_sol = None
-        solver_settings = {
-            "ipopt": {"print_level": 0},
-        } if solver_settings is None else solver_settings
+        solver_settings = (
+            {
+                "ipopt": {"print_level": 0},
+            }
+            if solver_settings is None
+            else solver_settings
+        )
         self.joint_limits_active = joint_limits_active
-        self.set_joint_limit_constraints()
+        self.set_default_joint_limit_constraints()
 
         self.opti.solver("ipopt", solver_settings)
 
@@ -88,7 +92,23 @@ class InverseKinematics:
         self.opti.solver(solver_name, solver_settings)
         self._cached_sol = None
 
-    def set_joint_limit_constraints(self):
+    def get_opti(self) -> cs.Opti:
+        """Get the CasADi Opti object for this IK solver. This can be used to add custom constraints or objectives.
+
+        Returns:
+            cs.Opti: The CasADi Opti object.
+        """
+        return self.opti
+
+    def get_kin_dyn_computations(self) -> KinDynComputations:
+        """Get the KinDynComputations object used by this IK solver.
+
+        Returns:
+            KinDynComputations: The KinDynComputations object.
+        """
+        return self.kd
+
+    def set_default_joint_limit_constraints(self):
         """Set joint limit constraints if active."""
         if self.joint_limits_active:
             # Add joint limits as constraints
@@ -100,6 +120,21 @@ class InverseKinematics:
                             joint_limit.lower, self.joint_var[i], joint_limit.upper
                         )
                     )
+
+    def set_joint_limits(self, lower_bounds: np.ndarray, upper_bounds: np.ndarray):
+        """Set custom joint limits for the optimization problem.
+
+        Args:
+            lower_bounds (np.ndarray): Lower bounds for each joint.
+            upper_bounds (np.ndarray): Upper bounds for each joint.
+        """
+        self._ensure_graph_modifiable()
+        if len(lower_bounds) != self.ndof or len(upper_bounds) != self.ndof:
+            raise ValueError("Bounds must match the number of degrees of freedom")
+        for i in range(self.ndof):
+            self.opti.subject_to(
+                self.opti.bounded(lower_bounds[i], self.joint_var[i], upper_bounds[i])
+            )
 
     def add_target_position(
         self, frame: str, *, weight: float = 1.0, as_constraint: bool = False
