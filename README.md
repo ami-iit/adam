@@ -374,7 +374,7 @@ joints_name_list = ...
 # Create IK solver
 ik = InverseKinematics(model_path, joints)
 # Add a pose target on a frame (e.g., the left sole)
-ik.add_target("l_sole", target_type=TargetType.POSE, weight=1.0, as_constraint=False)
+ik.add_target("l_sole", target_type=TargetType.POSE, as_soft_constraint=True, weight=1.0)
 ik.add_ball_constraint(frame_1, frame_2, as_soft_constraint=True)
 
 # Update the target to a desired pose
