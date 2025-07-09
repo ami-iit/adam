@@ -178,7 +178,7 @@ class InverseKinematics:
         parent_frame: str,
         child_frame: str,
         constraint_type: FramesConstraint,
-        as_constraint: bool = False,
+        as_soft_constraint: bool = True,
     ):
         """Add a constraint between two frames.
 
@@ -186,7 +186,7 @@ class InverseKinematics:
             parent_frame (str): The name of the parent frame.
             child_frame (str): The name of the child frame.
             constraint_type (FramesConstraint): Type of constraint to apply.
-            as_constraint (bool): If True, adds the constraint as a hard constraint instead of a cost term.
+            as_soft_constraint (bool): If True, handle the constraint as a soft constraint, addding a cost term instead of a hard constraint.
         """
         self._ensure_graph_modifiable()
         # check that frames are different
@@ -202,41 +202,42 @@ class InverseKinematics:
         R_parent, R_child = H_parent[:3, :3], H_child[:3, :3]
         if constraint_type is FramesConstraint.BALL:
             # Ball constraint: child frame must be positioned relative to parent frame
-            if as_constraint:
-                self.opti.subject_to(p_child == p_parent)
-            else:
+            if as_soft_constraint:
                 slack = self.opti.variable(1)
                 self.opti.subject_to(cs.sumsqr(p_child - p_parent) <= slack)
                 self.opti.subject_to(
                     self.opti.bounded(0, slack, 1e-3)
                 )  # small slack to allow for numerical stability
                 self.cost_terms.append(cs.sumsqr(slack) * 1e5)
+            else:
+                self.opti.subject_to(p_child == p_parent)
+
         elif constraint_type is FramesConstraint.FIXED:
             # Fixed constraint: child frame must be aligned and positioned with parent frame
-            if as_constraint:
-                self.opti.subject_to(p_child == p_parent)
-                self.opti.subject_to(R_child == R_parent)
-            else:
+            if as_soft_constraint:
                 slack = self.opti.variable(1)
                 rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_child.T @ R_parent))
                 self.opti.subject_to(rot_err_sq <= slack)
                 self.opti.subject_to(self.opti.bounded(0, slack, 1e-3))
                 self.cost_terms.append(cs.sumsqr(slack) * 1e5)
+            else:
+                self.opti.subject_to(p_child == p_parent)
+                self.opti.subject_to(R_child == R_parent)
         else:
             raise ValueError(f"Unsupported constraint type: {constraint_type.name}")
 
     def add_ball_constraint(
-        self, parent_frame: str, child_frame: str, as_constraint: bool = False
+        self, parent_frame: str, child_frame: str, as_soft_constraint: bool = True
     ):
         """Add a ball constraint between two frames.
 
         Args:
             parent_frame (str): The name of the parent frame.
             child_frame (str): The name of the child frame.
-            as_constraint (bool): If True, adds the constraint as a hard constraint instead of a cost term.
+            as_soft_constraint (bool): If True, handle the constraint as a soft constraint, addding a cost term instead of a hard constraint.
         """
         self.add_frames_constraint(
-            parent_frame, child_frame, FramesConstraint.BALL, as_constraint
+            parent_frame, child_frame, FramesConstraint.BALL, as_soft_constraint
         )
 
     def add_fixed_constraint(
