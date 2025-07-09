@@ -20,3 +20,4 @@ dependencies:
   - pytorch
   - jax2torch
   - requests
+  - liecasadi
