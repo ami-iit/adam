@@ -42,7 +42,7 @@ class InverseKinematics:
         urdf_path: str,
         joints_list: list[str],
         joint_limits_active: bool = True,
-        solver_settings: dict[str,] = None,
+        solver_settings: dict[str, Any] = None,
     ):
         """Initialize the InverseKinematics solver.
 
