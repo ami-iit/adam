@@ -148,7 +148,7 @@ class InverseKinematics:
         Args:
             frame (str): The name of the frame to target.
             as_soft_constraint (bool): If False, adds the target as a hard constraint. If True, adds it as a soft constraint (cost term).
-            weight (float): The weight of the target. Defaults to 1.0.
+            weight (float): The weight of the target, ignored if `as_soft_constraint` is `False`.
 
         Raises:
             ValueError: If the target frame already exists.
@@ -192,7 +192,7 @@ class InverseKinematics:
             child_frame (str): The name of the child frame.
             constraint_type (FramesConstraint): Type of constraint to apply.
             as_soft_constraint (bool): If False, adds the constraint as a hard constraint. If True, adds it as a soft constraint (cost term).
-            weight (float): Weight for the constraint in the cost function.
+            weight (float): Weight for the constraint in the cost function, ignored if `as_soft_constraint` is `False`.
         """
         self._ensure_graph_modifiable()
         # check that frames are different
@@ -306,7 +306,7 @@ class InverseKinematics:
         Args:
             frame (str): The name of the frame to target.
             as_soft_constraint (bool): If False, adds the target as a hard constraint. If True, adds it as a soft constraint (cost term).
-            weight (float): Weight for the target in the cost function.
+            weight (float): Weight for the target in the cost function, ignored if `as_soft_constraint` is `False`.
 
         Raises:
             ValueError: If the target frame already exists.
@@ -346,7 +346,7 @@ class InverseKinematics:
         Args:
             frame (str): The name of the frame to target.
             as_soft_constraint (bool): If False, adds the target as a hard constraint. If True, adds it as a soft constraint (cost term).
-            weight (float): Weight for the target in the cost function.
+            weight (float): Weight for the target in the cost function, ignored if `as_soft_constraint` is `False`.
         Raises:
             ValueError: If the target frame already exists.
         """
@@ -396,7 +396,7 @@ class InverseKinematics:
             frame (str): The name of the frame to target.
             target_type (TargetType): The type of target (position, rotation, or pose).
             as_soft_constraint (bool): If False, adds the target as a hard constraint. If True, adds it as a soft constraint (cost term).
-            weight (float): Weight for the target in the cost function.
+            weight (float): Weight for the target in the cost function, ignored if `as_soft_constraint` is `False`.
         """
         if target_type is TargetType.POSITION:
             self.add_target_position(
@@ -454,7 +454,7 @@ class InverseKinematics:
 
         Args:
             frame (str): The name of the frame to update.
-            target (Union[np.ndarray, tuple[np.ndarray, np.ndarray]]): The new target position or pose.
+            target (Union[np.ndarray, tuple[np.ndarray, np.ndarray]]): The new target position, rotation, or pose.
 
         Raises:
             ValueError: If the target is of an invalid type.
