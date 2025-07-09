@@ -186,7 +186,7 @@ class InverseKinematics:
             parent_frame (str): The name of the parent frame.
             child_frame (str): The name of the child frame.
             constraint_type (FramesConstraint): Type of constraint to apply.
-            as_soft_constraint (bool): If True, handle the constraint as a soft constraint, addding a cost term instead of a hard constraint.
+            as_soft_constraint (bool): If True, handle the constraint as a soft constraint, adding a cost term instead of a hard constraint.
         """
         self._ensure_graph_modifiable()
         # check that frames are different
