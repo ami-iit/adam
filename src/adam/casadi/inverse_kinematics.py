@@ -264,7 +264,7 @@ class InverseKinematics:
             parent_frame (str): The name of the parent frame.
             child_frame (str): The name of the child frame.
             as_soft_constraint (bool): If True, adds the constraint as a soft constraint instead of a hard constraint.
-            weight (float): Weight for the constraint in the cost function.
+            weight (float): Weight for the constraint in the cost function, ignored if `as_soft_constraint` is `False` 
         """
         self.add_frames_constraint(
             parent_frame,
