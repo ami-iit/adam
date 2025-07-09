@@ -147,8 +147,8 @@ class InverseKinematics:
 
         Args:
             frame (str): The name of the frame to target.
-            as_soft_constraint (bool, optional): If True, adds the target as a cost term instead of a constraint.
-            weight (float, optional): The weight of the target. Defaults to 1.0.
+            as_soft_constraint (bool): If False, adds the target as a hard constraint. If True, adds it as a soft constraint (cost term).
+            weight (float): The weight of the target. Defaults to 1.0.
 
         Raises:
             ValueError: If the target frame already exists.
@@ -191,7 +191,7 @@ class InverseKinematics:
             parent_frame (str): The name of the parent frame.
             child_frame (str): The name of the child frame.
             constraint_type (FramesConstraint): Type of constraint to apply.
-            as_soft_constraint (bool): If True, handle the constraint as a soft constraint, addding a cost term instead of a hard constraint.
+            as_soft_constraint (bool): If False, adds the constraint as a hard constraint. If True, adds it as a soft constraint (cost term).
             weight (float): Weight for the constraint in the cost function.
         """
         self._ensure_graph_modifiable()
@@ -244,8 +244,8 @@ class InverseKinematics:
         Args:
             parent_frame (str): The name of the parent frame.
             child_frame (str): The name of the child frame.
-            as_soft_constraint (bool): If True, handle the constraint as a soft constraint, addding a cost term instead of a hard constraint.
-            weight (float): Weight for the constraint in the cost function, ignored if `as_soft_constraint` is `False` 
+            as_soft_constraint (bool): If False, adds the constraint as a hard constraint. If True, adds it as a soft constraint (cost term).
+            weight (float): Weight for the constraint in the cost function, ignored if `as_soft_constraint` is `False`
         """
         self.add_frames_constraint(
             parent_frame, child_frame, FramesConstraint.BALL, as_soft_constraint, weight
@@ -263,8 +263,8 @@ class InverseKinematics:
         Args:
             parent_frame (str): The name of the parent frame.
             child_frame (str): The name of the child frame.
-            as_soft_constraint (bool): If True, adds the constraint as a soft constraint instead of a hard constraint.
-            weight (float): Weight for the constraint in the cost function, ignored if `as_soft_constraint` is `False` 
+            as_soft_constraint (bool): If False, adds the constraint as a hard constraint. If True, adds it as a soft constraint (cost term).
+            weight (float): Weight for the constraint in the cost function, ignored if `as_soft_constraint` is `False`
         """
         self.add_frames_constraint(
             parent_frame,
@@ -305,7 +305,7 @@ class InverseKinematics:
 
         Args:
             frame (str): The name of the frame to target.
-            as_soft_constraint (bool): If True, adds the target as a cost term instead of a constraint.
+            as_soft_constraint (bool): If False, adds the target as a hard constraint. If True, adds it as a soft constraint (cost term).
             weight (float): Weight for the target in the cost function.
 
         Raises:
@@ -345,7 +345,7 @@ class InverseKinematics:
 
         Args:
             frame (str): The name of the frame to target.
-            as_soft_constraint (bool): If True, adds the target as a cost term instead of a constraint.
+            as_soft_constraint (bool): If False, adds the target as a hard constraint. If True, adds it as a soft constraint (cost term).
             weight (float): Weight for the target in the cost function.
         Raises:
             ValueError: If the target frame already exists.
@@ -395,7 +395,7 @@ class InverseKinematics:
         Args:
             frame (str): The name of the frame to target.
             target_type (TargetType): The type of target (position, rotation, or pose).
-            as_soft_constraint (bool): If True, adds the target as a cost term instead of a constraint.
+            as_soft_constraint (bool): If False, adds the target as a hard constraint. If True, adds it as a soft constraint (cost term).
             weight (float): Weight for the target in the cost function.
         """
         if target_type is TargetType.POSITION:
