@@ -30,7 +30,7 @@ class Target:
     target_type: TargetType
     frame: str
     weight: float = 1.0
-    as_constraint: bool = False
+    as_soft_constraint: bool = True
     forward_kinematics_function: cs.Function = None
     param_pos: cs.SX = None
     param_rot: cs.SX = None
@@ -137,14 +137,18 @@ class InverseKinematics:
             )
 
     def add_target_position(
-        self, frame: str, *, weight: float = 1.0, as_constraint: bool = False
+        self,
+        frame: str,
+        *,
+        as_soft_constraint: bool = True,
+        weight: float = 1.0,
     ):
         """Add a target position for the IK solver.
 
         Args:
             frame (str): The name of the frame to target.
+            as_soft_constraint (bool, optional): If True, adds the target as a cost term instead of a constraint.
             weight (float, optional): The weight of the target. Defaults to 1.0.
-            as_constraint (bool, optional): If True, adds the target as a constraint instead of a cost term. Defaults to False.
 
         Raises:
             ValueError: If the target frame already exists.
@@ -159,16 +163,16 @@ class InverseKinematics:
             self.base_transform(), self.joint_var
         )[:3, 3]
 
-        if as_constraint:
-            self.opti.subject_to(p_fk == p_des)
-        else:
+        if as_soft_constraint:
             self.cost_terms.append(weight * cs.sumsqr(p_fk - p_des))
+        else:
+            self.opti.subject_to(p_fk == p_des)
 
         self.targets[frame] = Target(
             target_type=TargetType.POSITION,
             frame=frame,
             weight=weight,
-            as_constraint=as_constraint,
+            as_soft_constraint=as_soft_constraint,
             param_pos=p_des,
             forward_kinematics_function=self.kd.forward_kinematics_fun(frame),
         )
@@ -179,6 +183,7 @@ class InverseKinematics:
         child_frame: str,
         constraint_type: FramesConstraint,
         as_soft_constraint: bool = True,
+        weight: float = 1e5,
     ):
         """Add a constraint between two frames.
 
@@ -186,7 +191,8 @@ class InverseKinematics:
             parent_frame (str): The name of the parent frame.
             child_frame (str): The name of the child frame.
             constraint_type (FramesConstraint): Type of constraint to apply.
-            as_soft_constraint (bool): If True, handle the constraint as a soft constraint, adding a cost term instead of a hard constraint.
+            as_soft_constraint (bool): If True, handle the constraint as a soft constraint, addding a cost term instead of a hard constraint.
+            weight (float): Weight for the constraint in the cost function.
         """
         self._ensure_graph_modifiable()
         # check that frames are different
@@ -208,7 +214,7 @@ class InverseKinematics:
                 self.opti.subject_to(
                     self.opti.bounded(0, slack, 1e-3)
                 )  # small slack to allow for numerical stability
-                self.cost_terms.append(cs.sumsqr(slack) * 1e5)
+                self.cost_terms.append(cs.sumsqr(slack) * weight)
             else:
                 self.opti.subject_to(p_child == p_parent)
 
@@ -219,7 +225,7 @@ class InverseKinematics:
                 rot_err_sq = cs.power(1 - (cs.trace(R_parent.T @ R_child) - 1) / 2, 2)
                 self.opti.subject_to(rot_err_sq <= slack)
                 self.opti.subject_to(self.opti.bounded(0, slack, 1e-3))
-                self.cost_terms.append(cs.sumsqr(slack) * 1e5)
+                self.cost_terms.append(cs.sumsqr(slack) * weight)
             else:
                 self.opti.subject_to(p_child == p_parent)
                 self.opti.subject_to(R_child == R_parent)
@@ -227,7 +233,11 @@ class InverseKinematics:
             raise ValueError(f"Unsupported constraint type: {constraint_type.name}")
 
     def add_ball_constraint(
-        self, parent_frame: str, child_frame: str, as_soft_constraint: bool = True
+        self,
+        parent_frame: str,
+        child_frame: str,
+        as_soft_constraint: bool = True,
+        weight: float = 1e5,
     ):
         """Add a ball constraint between two frames.
 
@@ -235,23 +245,33 @@ class InverseKinematics:
             parent_frame (str): The name of the parent frame.
             child_frame (str): The name of the child frame.
             as_soft_constraint (bool): If True, handle the constraint as a soft constraint, addding a cost term instead of a hard constraint.
+            weight (float): Weight for the constraint in the cost function.
         """
         self.add_frames_constraint(
-            parent_frame, child_frame, FramesConstraint.BALL, as_soft_constraint
+            parent_frame, child_frame, FramesConstraint.BALL, as_soft_constraint, weight
         )
 
     def add_fixed_constraint(
-        self, parent_frame: str, child_frame: str, as_constraint: bool = False
+        self,
+        parent_frame: str,
+        child_frame: str,
+        as_soft_constraint: bool = True,
+        weight: float = 1e5,
     ):
         """Add a fixed constraint between two frames.
 
         Args:
             parent_frame (str): The name of the parent frame.
             child_frame (str): The name of the child frame.
-            as_constraint (bool): If True, adds the constraint as a hard constraint instead of a cost term.
+            as_soft_constraint (bool): If True, adds the constraint as a soft constraint instead of a hard constraint.
+            weight (float): Weight for the constraint in the cost function.
         """
         self.add_frames_constraint(
-            parent_frame, child_frame, FramesConstraint.FIXED, as_constraint
+            parent_frame,
+            child_frame,
+            FramesConstraint.FIXED,
+            as_soft_constraint,
+            weight,
         )
 
     def add_min_distance_constraint(self, frames_list: list[str], distance: float):
@@ -279,14 +299,17 @@ class InverseKinematics:
             self.opti.subject_to(dist_sq >= distance**2)
 
     def add_target_orientation(
-        self, frame: str, *, weight: float = 1.0, as_constraint: bool = False
+        self, frame: str, *, as_soft_constraint: bool = True, weight: float = 1.0
     ):
         """Add an orientation target for a frame.
 
         Args:
             frame (str): The name of the frame to target.
+            as_soft_constraint (bool): If True, adds the target as a cost term instead of a constraint.
             weight (float): Weight for the target in the cost function.
-            as_constraint (bool): If True, adds the target as a constraint instead of a cost
+
+        Raises:
+            ValueError: If the target frame already exists.
         """
         self._ensure_graph_modifiable()
         if frame in self.targets:
@@ -301,29 +324,31 @@ class InverseKinematics:
         # proxy for rotation error: trace(R) = 1 + 2 * cos(theta), where theta is the angle of rotation
         rot_err_sq = cs.power(1 - (cs.trace(R_des.T @ R_fk) - 1) / 2, 2)
 
-        if as_constraint:
-            self.opti.subject_to(rot_err_sq == 0)
-        else:
+        if as_soft_constraint:
             self.cost_terms.append(weight * rot_err_sq)
+        else:
+            self.opti.subject_to(rot_err_sq == 0)
 
         self.targets[frame] = Target(
             target_type=TargetType.ROTATION,
             frame=frame,
             weight=weight,
-            as_constraint=as_constraint,
+            as_soft_constraint=as_soft_constraint,
             param_rot=R_des,
             forward_kinematics_function=self.kd.forward_kinematics_fun(frame),
         )
 
     def add_target_pose(
-        self, frame: str, *, weight: float = 1.0, as_constraint: bool = False
+        self, frame: str, *, as_soft_constraint: bool = True, weight: float = 1.0
     ):
         """Add a pose target for a frame.
 
         Args:
             frame (str): The name of the frame to target.
+            as_soft_constraint (bool): If True, adds the target as a cost term instead of a constraint.
             weight (float): Weight for the target in the cost function.
-            as_constraint (bool): If True, adds the target as a constraint instead of a cost
+        Raises:
+            ValueError: If the target frame already exists.
         """
         self._ensure_graph_modifiable()
         if frame in self.targets:
@@ -341,17 +366,17 @@ class InverseKinematics:
         pos_err_sq = cs.sumsqr(p_fk - p_des)
         rot_err_sq = cs.power(1 - (cs.trace(R_des.T @ R_fk) - 1) / 2, 2)
 
-        if as_constraint:
+        if as_soft_constraint:
+            self.cost_terms.append(weight * (pos_err_sq + rot_err_sq))
+        else:
             self.opti.subject_to(p_fk == p_des)
             self.opti.subject_to(rot_err_sq == 0)
-        else:
-            self.cost_terms.append(weight * (pos_err_sq + rot_err_sq))
 
         self.targets[frame] = Target(
             target_type=TargetType.POSE,
             frame=frame,
             weight=weight,
-            as_constraint=as_constraint,
+            as_soft_constraint=as_soft_constraint,
             param_pos=p_des,
             param_rot=R_des,
             forward_kinematics_function=self.kd.forward_kinematics_fun(frame),
@@ -362,25 +387,29 @@ class InverseKinematics:
         frame: str,
         target_type: TargetType,
         *,
+        as_soft_constraint: bool = True,
         weight: float = 1.0,
-        as_constraint: bool = False,
     ):
         """Add a target for a frame.
 
         Args:
             frame (str): The name of the frame to target.
             target_type (TargetType): The type of target (position, rotation, or pose).
+            as_soft_constraint (bool): If True, adds the target as a cost term instead of a constraint.
             weight (float): Weight for the target in the cost function.
-            as_constraint (bool): If True, adds the target as a constraint instead of a cost
         """
         if target_type is TargetType.POSITION:
-            self.add_target_position(frame, weight=weight, as_constraint=as_constraint)
+            self.add_target_position(
+                frame, weight=weight, as_soft_constraint=as_soft_constraint
+            )
         elif target_type is TargetType.ROTATION:
             self.add_target_orientation(
-                frame, weight=weight, as_constraint=as_constraint
+                frame, weight=weight, as_soft_constraint=as_soft_constraint
             )
         elif target_type is TargetType.POSE:
-            self.add_target_pose(frame, weight=weight, as_constraint=as_constraint)
+            self.add_target_pose(
+                frame, weight=weight, as_soft_constraint=as_soft_constraint
+            )
         else:
             raise ValueError("Unsupported target type")
 
