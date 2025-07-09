@@ -216,7 +216,7 @@ class InverseKinematics:
             # Fixed constraint: child frame must be aligned and positioned with parent frame
             if as_soft_constraint:
                 slack = self.opti.variable(1)
-                rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_child.T @ R_parent))
+                rot_err_sq = cs.power(1 - (cs.trace(R_parent.T @ R_child) - 1) / 2, 2)
                 self.opti.subject_to(rot_err_sq <= slack)
                 self.opti.subject_to(self.opti.bounded(0, slack, 1e-3))
                 self.cost_terms.append(cs.sumsqr(slack) * 1e5)
@@ -298,7 +298,8 @@ class InverseKinematics:
             self.base_transform(), self.joint_var
         )
         R_fk = H_fk[:3, :3]
-        rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_fk.T @ R_des))
+        # proxy for rotation error: trace(R) = 1 + 2 * cos(theta), where theta is the angle of rotation
+        rot_err_sq = cs.power(1 - (cs.trace(R_des.T @ R_fk) - 1) / 2, 2)
 
         if as_constraint:
             self.opti.subject_to(rot_err_sq == 0)
@@ -338,7 +339,7 @@ class InverseKinematics:
         p_fk, R_fk = H_fk[:3, 3], H_fk[:3, :3]
 
         pos_err_sq = cs.sumsqr(p_fk - p_des)
-        rot_err_sq = cs.sumsqr(cs.trace(np.eye(3) - R_fk.T @ R_des))
+        rot_err_sq = cs.power(1 - (cs.trace(R_des.T @ R_fk) - 1) / 2, 2)
 
         if as_constraint:
             self.opti.subject_to(p_fk == p_des)
