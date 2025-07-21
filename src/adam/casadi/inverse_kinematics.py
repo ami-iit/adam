@@ -61,6 +61,9 @@ class InverseKinematics:
         self.base_pos = self.opti.variable(3)  # translation (x,y,z)
         self.base_quat = self.opti.variable(4)  # unit quaternion (x,y,z,w)
         self.joint_var = self.opti.variable(self.ndof)
+        self.base_homogeneous = SE3.from_position_quaternion(
+            self.base_pos, self.base_quat
+        ).as_matrix()
         self.opti.set_initial(self.base_pos, [0, 0, 0])  # default to origin
         self.opti.set_initial(self.base_quat, [0, 0, 0, 1])  # identity quaternion
         self.opti.subject_to(cs.sumsqr(self.base_quat) == 1)  # enforce unit quaternion
@@ -81,6 +84,25 @@ class InverseKinematics:
         self.set_default_joint_limit_constraints()
 
         self.opti.solver("ipopt", solver_settings)
+
+    def get_opti_variables(self) -> dict[str, cs.SX]:
+        """Get the optimization variables of the IK solver.
+
+        Returns:
+            dict[str, cs.SX]: Dictionary containing the optimization variables.
+
+            - "base_pos": Position of the base (3D vector).
+            - "base_quat": Quaternion representing the base orientation (4D vector with x, y, z, w).
+            - "joint_var": Joint variables (1D vector with length equal to the number of joints).
+            - "base_homogeneous": Homogeneous transformation matrix of the base (4x4 matrix, from position and quaternion).`
+
+        """
+        return {
+            "base_pos": self.base_pos,
+            "base_quat": self.base_quat,
+            "joint_var": self.joint_var,
+            "base_homogeneous": self.base_homogeneous,
+        }
 
     def set_solver(self, solver_name: str, solver_settings: dict[str, Any]):
         """Set the solver for the optimization problem.
@@ -556,3 +578,12 @@ class InverseKinematics:
         """
         if self.targets[frame].target_type is not expected:
             raise ValueError(f"Target '{frame}' is not of type {expected.name}")
+
+    def add_cost(self, cost: cs.MX):
+        """Add a custom cost term to the optimization problem.
+
+        Args:
+            cost (cs.MX): The cost term to add.
+        """
+        self._ensure_graph_modifiable()
+        self.cost_terms.append(cost)
