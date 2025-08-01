@@ -163,16 +163,24 @@ class RBDAlgorithms:
         chain = self.model.get_joints_chain(self.root_link, frame)
         eye = self.math.factory.eye(4)
         B_H_j = eye
-        J = self.math.factory.zeros(6, self.NDoF)
         B_H_L = self.forward_kinematics(frame, eye, joint_positions)
         L_H_B = self.math.homogeneous_inverse(B_H_L)
+        J_list = []
+        joint_J_dict = {}
         for joint in chain:
             q = joint_positions[joint.idx] if joint.idx is not None else 0.0
             H_j = joint.homogeneous(q=q)
             B_H_j = B_H_j @ H_j
             L_H_j = L_H_B @ B_H_j
             if joint.idx is not None:
-                J[:, joint.idx] = self.math.adjoint(L_H_j) @ joint.motion_subspace()
+                joint_J_dict[joint.idx] = self.math.adjoint(L_H_j) @ joint.motion_subspace()
+
+        for i in range(self.NDoF):
+            if i in joint_J_dict:
+                J_list.append(joint_J_dict[i])
+            else:
+                J_list.append(self.math.factory.zeros(6))
+        J = self.math.stack_list(J_list)
         return J
 
     def jacobian(
@@ -182,9 +190,7 @@ class RBDAlgorithms:
         J = self.joints_jacobian(frame, joint_positions)
         B_H_L = self.forward_kinematics(frame, eye, joint_positions)
         L_X_B = self.math.adjoint_inverse(B_H_L)
-        J_tot = self.math.factory.zeros(6, self.NDoF + 6)
-        J_tot[:6, :6] = L_X_B
-        J_tot[:, 6:] = J
+        J_tot = self.math.vcat_inputs(L_X_B, J)
 
         if (
             self.frame_velocity_representation
@@ -198,7 +204,8 @@ class RBDAlgorithms:
             w_H_L = base_transform @ B_H_L
             LI_X_L = self.math.adjoint_mixed(w_H_L)
             X = self.math.factory.eye(6 + self.NDoF)
-            X[:6, :6] = self.math.adjoint_mixed_inverse(base_transform)
+            X = self.math.compose_blocks(self.math.adjoint_mixed_inverse(base_transform), self.math.factory.zeros(6, self.NDoF),
+                                         self.math.factory.zeros(self.NDoF, 6), self.math.factory.eye(self.NDoF))
             J_tot = LI_X_L @ J_tot @ X
             return J_tot
         else:
@@ -277,8 +284,10 @@ class RBDAlgorithms:
 
         v = self.math.adjoint(L_H_B) @ B_v_IB
         a = self.math.adjoint_derivative(L_H_B, v) @ B_v_IB
-        J[:, :6] = self.math.adjoint(L_H_B)
-        J_dot[:, :6] = self.math.adjoint_derivative(L_H_B, v)
+        joint_J_list = []
+        joint_J_dict = {}
+        joint_J_dot_list = []
+        joint_J_dot_dict = {}
         for joint in chain:
             q = joint_positions[joint.idx] if joint.idx is not None else 0.0
             q_dot = joint_velocities[joint.idx] if joint.idx is not None else 0.0
@@ -290,8 +299,21 @@ class RBDAlgorithms:
             J_dot_j = self.math.adjoint_derivative(L_H_j, v) @ joint.motion_subspace()
             a += J_dot_j * q_dot
             if joint.idx is not None:
-                J[:, joint.idx + 6] = J_j
-                J_dot[:, joint.idx + 6] = J_dot_j
+                joint_J_dict[joint.idx] = J_j
+                joint_J_dot_dict[joint.idx] = J_dot_j
+
+        for i in range(self.NDoF):
+            if i in joint_J_dict:
+                joint_J_list.append(joint_J_dict[i])
+                joint_J_dot_list.append(joint_J_dot_dict[i])
+            else:
+                joint_J_list.append(self.math.factory.zeros(6))
+                joint_J_dot_list.append(self.math.factory.zeros(6))
+        joint_J = self.math.stack_list(joint_J_list)
+        joint_J_dot = self.math.stack_list(joint_J_dot_list)
+
+        J = self.math.vcat_inputs(self.math.adjoint(L_H_B), joint_J)
+        J_dot = self.math.vcat_inputs(self.math.adjoint_derivative(L_H_B, v), joint_J_dot)
 
         if (
             self.frame_velocity_representation
