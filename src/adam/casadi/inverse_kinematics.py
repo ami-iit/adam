@@ -582,6 +582,14 @@ class InverseKinematics:
     def add_cost(self, cost: cs.MX):
         """Add a custom cost term to the optimization problem.
 
+        This method appends the provided cost term to the `cost_terms` list. 
+        During the `_finalize_problem` step, all cost terms in this list are 
+        combined using `cs.sum(cs.vertcat(*self.cost_terms))` and minimized 
+        as part of the objective function.
+
+        Note: This method ensures that the optimization graph is still modifiable 
+        before adding the cost term. Once the problem is finalized (after the 
+        first call to `solve()`), no new cost terms can be added.
         Args:
             cost (cs.MX): The cost term to add.
         """
