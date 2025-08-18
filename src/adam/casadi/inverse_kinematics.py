@@ -94,7 +94,7 @@ class InverseKinematics:
             - "base_pos": Position of the base (3D vector).
             - "base_quat": Quaternion representing the base orientation (4D vector with x, y, z, w).
             - "joint_pos": Joint variables (Vector with length equal to the number of non-fixed joints).
-            - "base_homogeneous": Homogeneous transformation matrix of the base (4x4 matrix, from position and quaternion).`
+            - "base_homogeneous": Homogeneous transformation matrix of the base (4x4 matrix, from position and quaternion).
 
         """
         return {
