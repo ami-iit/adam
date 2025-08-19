@@ -1,9 +1,8 @@
 # Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Callable
 
-import numpy as np
 import numpy.typing as ntp
 import torch
 
@@ -126,10 +125,13 @@ class TorchLikeFactory(ArrayLikeFactory):
     @staticmethod
     def zeros(*x: int) -> "TorchLike":
         """
+        Args:
+            *x (int): dimensions
+
         Returns:
             TorchLike: zero matrix of dimension *x
         """
-        return TorchLike(torch.zeros(x))
+        return TorchLike(torch.zeros(x, dtype=torch.get_default_dtype()))
 
     @staticmethod
     def eye(x: int) -> "TorchLike":
@@ -140,15 +142,18 @@ class TorchLikeFactory(ArrayLikeFactory):
         Returns:
             TorchLike: identity matrix of dimension x
         """
-        return TorchLike(torch.eye(x))
+        return TorchLike(torch.eye(x, dtype=torch.get_default_dtype()))
 
     @staticmethod
     def array(x: ntp.ArrayLike) -> "TorchLike":
         """
+        Args:
+            x (ntp.ArrayLike): input array
+
         Returns:
-            TorchLike: vector wrapping x
+            TorchLike: tensor representation of x
         """
-        return TorchLike(torch.tensor(x))
+        return TorchLike(torch.as_tensor(x, dtype=torch.get_default_dtype()))
 
 
 class SpatialMath(SpatialMath):
@@ -203,14 +208,29 @@ class SpatialMath(SpatialMath):
         Returns:
             TorchLike: skew matrix from x
         """
-        if not isinstance(x, TorchLike):
-            return TorchLike(
-                torch.tensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
-            )
-        x = x.array
-        return TorchLike(
-            torch.tensor([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
-        )
+        if isinstance(x, TorchLike):
+            v = x.array
+        else:
+            v = torch.as_tensor(x)
+        # Accept (3,), (3,1), (1,3); otherwise flatten and take first 3 if >=3
+        if v.ndim == 2 and v.shape in ((3, 1), (1, 3)):
+            v = v.reshape(3)
+        elif v.ndim != 1:
+            flat = v.reshape(-1)
+            if flat.numel() == 3:
+                v = flat[:3]
+            else:
+                raise ValueError(f"skew expects 3 elements, got shape {v.shape}")
+        if v.numel() != 3:
+            raise ValueError("skew expects 3 elements")
+        M = torch.zeros((3, 3), dtype=v.dtype, device=v.device)
+        M[0, 1] = -v[2]
+        M[0, 2] = v[1]
+        M[1, 0] = v[2]
+        M[1, 2] = -v[0]
+        M[2, 0] = -v[1]
+        M[2, 1] = v[0]
+        return TorchLike(M)
 
     @staticmethod
     def vertcat(*x: ntp.ArrayLike) -> "TorchLike":
@@ -218,11 +238,24 @@ class SpatialMath(SpatialMath):
         Returns:
             TorchLike: vertical concatenation of x
         """
-        if isinstance(x[0], TorchLike):
-            v = torch.vstack([x[i].array for i in range(len(x))])
-        else:
-            v = torch.tensor(x)
-        return TorchLike(v)
+        tensors = []
+        for xi in x:
+            t = xi.array if isinstance(xi, TorchLike) else torch.as_tensor(xi)
+            if t.ndim == 0:
+                # scalar -> make column element
+                t = t.reshape(1, 1)
+            elif t.ndim == 1 and all(
+                isinstance(xj, (int, float, TorchLike)) for xj in x
+            ):
+                # If all entries are scalars treat 1-D as column elements (rare case)
+                t = t.reshape(-1, 1)
+            tensors.append(t)
+        dtype = tensors[0].dtype
+        for t in tensors[1:]:
+            if t.dtype != dtype:
+                dtype = torch.promote_types(dtype, t.dtype)
+        tensors = [t.to(dtype) for t in tensors]
+        return TorchLike(torch.vstack(tensors))
 
     @staticmethod
     def horzcat(*x: ntp.ArrayLike) -> "TorchLike":
@@ -230,8 +263,15 @@ class SpatialMath(SpatialMath):
         Returns:
             TorchLike: horizontal concatenation of x
         """
-        if isinstance(x[0], TorchLike):
-            v = torch.hstack([x[i].array for i in range(len(x))])
-        else:
-            v = torch.tensor(x)
-        return TorchLike(v)
+        tensors = []
+        for xi in x:
+            t = xi.array if isinstance(xi, TorchLike) else torch.as_tensor(xi)
+            if t.ndim == 0:
+                t = t.reshape(1)
+            tensors.append(t)
+        dtype = tensors[0].dtype
+        for t in tensors[1:]:
+            if t.dtype != dtype:
+                dtype = torch.promote_types(dtype, t.dtype)
+        tensors = [t.to(dtype) for t in tensors]
+        return TorchLike(torch.hstack(tensors))
