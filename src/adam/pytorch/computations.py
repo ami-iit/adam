@@ -205,13 +205,14 @@ class KinDynComputations:
         Returns:
             h (torch.tensor): the bias force
         """
-        return self.rbdalgos.rnea(
+        tau = self.rbdalgos.rnea(
             base_transform,
             joint_positions,
             base_velocity.reshape(6, 1),
             joint_velocities,
             self.g,
         ).array.squeeze()
+        return tau.clone()
 
     def coriolis_term(
         self,
@@ -233,13 +234,14 @@ class KinDynComputations:
             C (torch.tensor): the Coriolis term
         """
         # set in the bias force computation the gravity term to zero
-        return self.rbdalgos.rnea(
+        out = self.rbdalgos.rnea(
             base_transform,
             joint_positions,
             base_velocity.reshape(6, 1),
             joint_velocities,
             torch.zeros(6),
         ).array.squeeze()
+        return out.clone()
 
     def gravity_term(
         self, base_transform: torch.Tensor, joint_positions: torch.Tensor
@@ -254,13 +256,14 @@ class KinDynComputations:
         Returns:
             G (torch.tensor): the gravity term
         """
-        return self.rbdalgos.rnea(
+        out = self.rbdalgos.rnea(
             base_transform,
             joint_positions,
             torch.zeros(6).reshape(6, 1),
             torch.zeros(self.NDoF),
             self.g,
         ).array.squeeze()
+        return out.clone()
 
     def get_total_mass(self) -> float:
         """Returns the total mass of the robot
