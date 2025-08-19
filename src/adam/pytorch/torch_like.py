@@ -15,12 +15,12 @@ class TorchLike(ArrayLike):
 
     array: torch.Tensor
 
-    def __setitem__(self, idx, value: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+    def __setitem__(self, idx, value: Union["TorchLike", ntp.ArrayLike]) -> None:
         """Overrides set item operator"""
         if type(self) is type(value):
             self.array[idx] = value.array.reshape(self.array[idx].shape)
         else:
-            self.array[idx] = torch.tensor(value) if isinstance(value, float) else value
+            self.array[idx] = torch.as_tensor(value) if isinstance(value, float) else value
 
     def __getitem__(self, idx):
         """Overrides get item operator"""
@@ -170,7 +170,7 @@ class SpatialMath(SpatialMath):
             TorchLike: sin value of x
         """
         if isinstance(x, float):
-            x = torch.tensor(x)
+            x = torch.as_tensor(x)
         return TorchLike(torch.sin(x))
 
     @staticmethod
@@ -184,7 +184,7 @@ class SpatialMath(SpatialMath):
         """
         # transform to torch tensor, if not already
         if isinstance(x, float):
-            x = torch.tensor(x)
+            x = torch.as_tensor(x)
         return TorchLike(torch.cos(x))
 
     @staticmethod
@@ -197,7 +197,7 @@ class SpatialMath(SpatialMath):
         Returns:
             TorchLike: outer product of x and y
         """
-        return TorchLike(torch.outer(torch.tensor(x), torch.tensor(y)))
+        return TorchLike(torch.outer(torch.as_tensor(x), torch.as_tensor(y)))
 
     @staticmethod
     def skew(x: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
