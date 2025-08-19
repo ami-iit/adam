@@ -16,11 +16,6 @@ class TorchLike(ArrayLike):
 
     array: torch.Tensor
 
-    def __post_init__(self):
-        """Converts array to the desired type"""
-        if self.array.dtype != torch.get_default_dtype():
-            self.array = self.array.to(torch.get_default_dtype())
-
     def __setitem__(self, idx, value: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides set item operator"""
         if type(self) is type(value):
@@ -51,6 +46,43 @@ class TorchLike(ArrayLike):
             return TorchLike(self.array)
         x = self.array
         return TorchLike(x.permute(*torch.arange(x.ndim - 1, -1, -1)))
+
+    def _to_tensor(self, other) -> torch.Tensor:
+        if isinstance(other, TorchLike):
+            return other.array
+        if isinstance(other, torch.Tensor):
+            return other
+        return torch.as_tensor(other, device=self.array.device)
+
+    def _promote(
+        self, a: torch.Tensor, b: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        if a.dtype == b.dtype:
+            return a, b
+        target = torch.promote_types(a.dtype, b.dtype)
+        return a.to(target), b.to(target)
+
+    def _binary_op(
+        self, other, op: Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+    ) -> "TorchLike":
+        b = self._to_tensor(other)
+        a_cast, b_cast = self._promote(self.array, b)
+        # Normalize simple column/row vector shapes
+        if (
+            a_cast.ndim == 1
+            and b_cast.ndim == 2
+            and b_cast.shape[1] == 1
+            and a_cast.shape[0] == b_cast.shape[0]
+        ):
+            a_cast = a_cast.unsqueeze(1)
+        if (
+            b_cast.ndim == 1
+            and a_cast.ndim == 2
+            and a_cast.shape[1] == 1
+            and b_cast.shape[0] == a_cast.shape[0]
+        ):
+            b_cast = b_cast.unsqueeze(1)
+        return TorchLike(op(a_cast, b_cast))
 
     def __matmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
         """Overrides @ operator"""
