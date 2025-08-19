@@ -408,8 +408,6 @@ class RBDAlgorithms:
         Returns:
             tau (T): generalized force variables
         """
-        # TODO: add accelerations
-        tau = self.math.factory.zeros(self.NDoF + 6, 1)
         model_len = self.model.N
 
         Ic = [None] * model_len
@@ -432,11 +430,6 @@ class RBDAlgorithms:
             transformed_acceleration[:3] = (
                 -B_X_BI[:3, :3] @ self.math.skew(base_velocity[3:]) @ base_velocity[:3]
             )
-            # transformed_acceleration[3:] = (
-            #     -X_to_mixed[:3, :3]
-            #     @ self.math.skew(base_velocity[3:])
-            #     @ base_velocity[3:]
-            # )
         else:
             raise NotImplementedError(
                 "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
@@ -446,6 +439,7 @@ class RBDAlgorithms:
         # reshape g as a vertical vector
         a[0] = -gravity_transform @ g.reshape(6, 1) + transformed_acceleration
 
+        # Forward pass
         for i, node in enumerate(self.model.tree):
             node: Node
             link_i, joint_i, link_pi = node.get_elements()
@@ -466,25 +460,25 @@ class RBDAlgorithms:
                 X_p[i] = joint_i.spatial_transform(q)
                 Phi[i] = joint_i.motion_subspace()
                 pi = self.model.tree.get_idx_from_name(link_pi.name)
-                # pi = self.tree.links.index(link_pi)
                 v[i] = X_p[i] @ v[pi] + Phi[i] * q_dot
                 a[i] = X_p[i] @ a[pi] + self.math.spatial_skew(v[i]) @ Phi[i] * q_dot
 
             f[i] = Ic[i] @ a[i] + self.math.spatial_skew_star(v[i]) @ Ic[i] @ v[i]
 
+        # Backward pass – collect contributions without in-place slice on final tau
+        joint_tau = self.math.factory.zeros(self.NDoF, 1)
+        base_elem = None
         for i, node in reversed(list(enumerate(self.model.tree))):
             node: Node
             link_i, joint_i, link_pi = node.get_elements()
+            contrib = Phi[i].T @ f[i]
             if link_i.name == self.root_link:
-                tau[:6] = Phi[i].T @ f[i]
+                base_elem = contrib
             elif joint_i.idx is not None:
-                tau[joint_i.idx + 6] = Phi[i].T @ f[i]
+                joint_tau[joint_i.idx] = contrib
             if link_i.name != self.root_link:
                 pi = self.model.tree.get_idx_from_name(link_pi.name)
                 f[pi] = f[pi] + X_p[i].T @ f[i]
 
-        tau[:6] = B_X_BI.T @ tau[:6]
-        return tau
-
-    def aba(self):
-        raise NotImplementedError
+        base_wrench = B_X_BI.T @ base_elem
+        return self.math.vertcat(base_wrench, joint_tau)
