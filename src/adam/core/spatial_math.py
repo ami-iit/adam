@@ -415,12 +415,17 @@ class SpatialMath:
         Sc = self.skew(c)
         R = self.factory.zeros(3, 3)
         R_temp = self.R_from_RPY(rpy)
-        inertia_matrix = self.vertcat(
-            self.horzcat(I.ixx, I.ixy, I.ixz),
-            self.horzcat(I.ixy, I.iyy, I.iyz),
-            self.horzcat(I.ixz, I.iyz, I.izz),
-        )
-
+        # Build 3x3 inertia matrix explicitly (avoid vertcat/horzcat which now force column vectors)
+        inertia_matrix = self.factory.zeros(3, 3)
+        inertia_matrix[0, 0] = I.ixx
+        inertia_matrix[0, 1] = I.ixy
+        inertia_matrix[0, 2] = I.ixz
+        inertia_matrix[1, 0] = I.ixy
+        inertia_matrix[1, 1] = I.iyy
+        inertia_matrix[1, 2] = I.iyz
+        inertia_matrix[2, 0] = I.ixz
+        inertia_matrix[2, 1] = I.iyz
+        inertia_matrix[2, 2] = I.izz
         IO[3:, 3:] = R_temp @ inertia_matrix @ R_temp.T + mass * Sc @ Sc.T
         IO[3:, :3] = mass * Sc
         IO[:3, 3:] = mass * Sc.T
