@@ -35,7 +35,7 @@ class JaxLike(ArrayLike):
         return self.array.shape
 
     def reshape(self, *args):
-        return self.array.reshape(*args)
+        return JaxLike(self.array.reshape(*args))
 
     @property
     def T(self) -> "JaxLike":
@@ -193,11 +193,17 @@ class SpatialMath(SpatialMath):
         Returns:
             JaxLike: Vertical concatenation of elements
         """
-        if isinstance(x[0], JaxLike):
-            v = jnp.vstack([x[i].array for i in range(len(x))])
-        else:
-            v = jnp.vstack([x[i] for i in range(len(x))])
-        return JaxLike(v)
+        arrays = []
+        for elem in x:
+            if isinstance(elem, JaxLike):
+                arr = elem.array
+            else:
+                arr = jnp.array(elem)
+            # Ensure column vector orientation for 1-D inputs
+            if arr.ndim == 1:
+                arr = arr.reshape(-1, 1)
+            arrays.append(arr)
+        return JaxLike(jnp.vstack(arrays))
 
     @staticmethod
     def horzcat(*x) -> "JaxLike":

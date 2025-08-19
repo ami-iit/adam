@@ -181,11 +181,20 @@ class SpatialMath(SpatialMath):
         Returns:
             NumpyLike: vertical concatenation of x
         """
-        if isinstance(x[0], NumpyLike):
-            v = np.vstack([x[i].array for i in range(len(x))])
-        else:
-            v = np.vstack([x[i] for i in range(len(x))])
-        return NumpyLike(v)
+        arrays = []
+        for elem in x:
+            if isinstance(elem, NumpyLike):
+                arr = elem.array
+            else:
+                arr = np.array(elem)
+            # Ensure column vector orientation for 1-D or row vectors
+            if arr.ndim == 1:
+                arr = arr.reshape(-1, 1)
+            elif arr.ndim == 2 and arr.shape[0] == 1 and arr.shape[1] != 1:
+                # Row vector -> column
+                arr = arr.T
+            arrays.append(arr)
+        return NumpyLike(np.vstack(arrays))
 
     @staticmethod
     def horzcat(*x: Union["NumpyLike", npt.ArrayLike]) -> "NumpyLike":
