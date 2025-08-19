@@ -208,10 +208,7 @@ class SpatialMath(SpatialMath):
         Returns:
             TorchLike: skew matrix from x
         """
-        if isinstance(x, TorchLike):
-            v = x.array
-        else:
-            v = torch.as_tensor(x)
+        v = x.array if isinstance(x, TorchLike) else torch.as_tensor(x)
         # Accept (3,), (3,1), (1,3); otherwise flatten and take first 3 if >=3
         if v.ndim == 2 and v.shape in ((3, 1), (1, 3)):
             v = v.reshape(3)
