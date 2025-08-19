@@ -85,68 +85,37 @@ class TorchLike(ArrayLike):
         return TorchLike(op(a_cast, b_cast))
 
     def __matmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        """Overrides @ operator"""
-
-        if type(self) is type(other):
-            return TorchLike(self.array @ other.array)
-        if isinstance(other, torch.Tensor):
-            return TorchLike(self.array @ other)
-        else:
-            return TorchLike(self.array @ torch.tensor(other))
+        b = self._to_tensor(other)
+        a_cast, b_cast = self._promote(self.array, b)
+        return TorchLike(a_cast @ b_cast)
 
     def __rmatmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        """Overrides @ operator"""
-        if type(self) is type(other):
-            return TorchLike(other.array @ self.array)
-        else:
-            return TorchLike(torch.tensor(other) @ self.array)
+        a = self._to_tensor(other)
+        a_cast, b_cast = self._promote(a, self.array)
+        return TorchLike(a_cast @ b_cast)
 
     def __mul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        """Overrides * operator"""
-        if type(self) is type(other):
-            return TorchLike(self.array * other.array)
-        else:
-            return TorchLike(self.array * other)
+        return self._binary_op(other, torch.mul)
 
     def __rmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        """Overrides * operator"""
-        if type(self) is type(other):
-            return TorchLike(other.array * self.array)
-        else:
-            return TorchLike(other * self.array)
+        return self._binary_op(other, torch.mul)
 
     def __truediv__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        """Overrides / operator"""
-        if type(self) is type(other):
-            return TorchLike(self.array / other.array)
-        else:
-            return TorchLike(self.array / other)
+        return self._binary_op(other, torch.div)
 
     def __add__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        """Overrides + operator"""
-        if type(self) is not type(other):
-            return TorchLike(self.array.squeeze() + other.squeeze())
-        return TorchLike(self.array.squeeze() + other.array.squeeze())
+        return self._binary_op(other, torch.add)
 
     def __radd__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        """Overrides + operator"""
-        if type(self) is not type(other):
-            return TorchLike(self.array.squeeze() + other.squeeze())
-        return TorchLike(self.array.squeeze() + other.array.squeeze())
+        return self._binary_op(other, torch.add)
 
     def __sub__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        """Overrides - operator"""
-        if type(self) is type(other):
-            return TorchLike(self.array.squeeze() - other.array.squeeze())
-        else:
-            return TorchLike(self.array.squeeze() - other.squeeze())
+        return self._binary_op(other, torch.sub)
 
     def __rsub__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        """Overrides - operator"""
-        if type(self) is type(other):
-            return TorchLike(other.array.squeeze() - self.array.squeeze())
-        else:
-            return TorchLike(other.squeeze() - self.array.squeeze())
+        b = self._to_tensor(other)
+        a_cast, b_cast = self._promote(b, self.array)
+        return TorchLike(a_cast - b_cast)
 
     def __neg__(self) -> "TorchLike":
         """Overrides - operator"""
