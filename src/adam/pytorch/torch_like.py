@@ -17,10 +17,16 @@ class TorchLike(ArrayLike):
 
     def __setitem__(self, idx, value: Union["TorchLike", ntp.ArrayLike]) -> None:
         """Overrides set item operator"""
-        if type(self) is type(value):
-            self.array[idx] = value.array.reshape(self.array[idx].shape)
+        if isinstance(value, TorchLike):
+            t = value.array.reshape(self.array[idx].shape)
         else:
-            self.array[idx] = torch.as_tensor(value) if isinstance(value, float) else value
+            t = torch.as_tensor(value, device=self.array.device)
+            if t.dtype != self.array.dtype:
+                t = t.to(self.array.dtype)
+        self.array[idx] = t
+
+    def __repr__(self):
+        return f"TorchLike({self.array!r})"
 
     def __getitem__(self, idx):
         """Overrides get item operator"""
@@ -31,7 +37,7 @@ class TorchLike(ArrayLike):
         return self.array.shape
 
     def reshape(self, *args):
-        return self.array.reshape(*args)
+        return TorchLike(self.array.reshape(*args))
 
     @property
     def T(self) -> "TorchLike":
@@ -40,7 +46,6 @@ class TorchLike(ArrayLike):
             TorchLike: transpose of array
         """
         # check if self.array is a 0-D tensor
-
         if len(self.array.shape) == 0:
             return TorchLike(self.array)
         x = self.array
@@ -84,37 +89,40 @@ class TorchLike(ArrayLike):
         return TorchLike(op(a_cast, b_cast))
 
     def __matmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        b = self._to_tensor(other)
-        a_cast, b_cast = self._promote(self.array, b)
-        return TorchLike(a_cast @ b_cast)
+        """Overrides @ operator"""
+        return self._binary_op(other, torch.matmul)
 
     def __rmatmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        a = self._to_tensor(other)
-        a_cast, b_cast = self._promote(a, self.array)
-        return TorchLike(a_cast @ b_cast)
+        """Overrides @ operator"""
+        return self._binary_op(other, torch.matmul)
 
     def __mul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides multiplication operator"""
         return self._binary_op(other, torch.mul)
 
     def __rmul__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides multiplication operator"""
         return self._binary_op(other, torch.mul)
 
     def __truediv__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides division operator"""
         return self._binary_op(other, torch.div)
 
     def __add__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides addition operator"""
         return self._binary_op(other, torch.add)
 
     def __radd__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides addition operator"""
         return self._binary_op(other, torch.add)
 
     def __sub__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
+        """Overrides subtraction operator"""
         return self._binary_op(other, torch.sub)
 
     def __rsub__(self, other: Union["TorchLike", ntp.ArrayLike]) -> "TorchLike":
-        b = self._to_tensor(other)
-        a_cast, b_cast = self._promote(b, self.array)
-        return TorchLike(a_cast - b_cast)
+        """Overrides subtraction operator"""
+        return self._binary_op(other, torch.sub)
 
     def __neg__(self) -> "TorchLike":
         """Overrides - operator"""
@@ -221,12 +229,9 @@ class SpatialMath(SpatialMath):
         if v.numel() != 3:
             raise ValueError("skew expects 3 elements")
         M = torch.zeros((3, 3), dtype=v.dtype, device=v.device)
-        M[0, 1] = -v[2]
-        M[0, 2] = v[1]
-        M[1, 0] = v[2]
-        M[1, 2] = -v[0]
-        M[2, 0] = -v[1]
-        M[2, 1] = v[0]
+        M[0, 1], M[0, 2] = -v[2], v[1]
+        M[1, 0], M[1, 2] = v[2], -v[0]
+        M[2, 0], M[2, 1] = -v[1], v[0]
         return TorchLike(M)
 
     @staticmethod
@@ -241,11 +246,6 @@ class SpatialMath(SpatialMath):
             if t.ndim == 0:
                 # scalar -> make column element
                 t = t.reshape(1, 1)
-            elif t.ndim == 1 and all(
-                isinstance(xj, (int, float, TorchLike)) for xj in x
-            ):
-                # If all entries are scalars treat 1-D as column elements (rare case)
-                t = t.reshape(-1, 1)
             tensors.append(t)
         dtype = tensors[0].dtype
         for t in tensors[1:]:
