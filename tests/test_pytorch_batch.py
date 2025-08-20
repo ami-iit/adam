@@ -2,11 +2,8 @@ import numpy as np
 import pytest
 import torch
 from conftest import RobotCfg, State
-from jax import config
 
 from adam.pytorch import KinDynComputationsBatch
-
-config.update("jax_enable_x64", True)
 
 
 @pytest.fixture(scope="module")
@@ -91,9 +88,9 @@ def test_jacobian_dot(setup_test):
     adam_jacobian_dot = adam_kin_dyn.jacobian_dot(
         "l_sole", state.H, state.joints_pos, state.base_vel, state.joints_vel
     )
-    adam_jacobian_dot_nu = adam_jacobian_dot[0].detach().numpy() @ np.concatenate(
-        (state.base_vel[0].detach().numpy(), state.joints_vel[0].detach().numpy())
-    )
+    adam_jacobian_dot_nu = (adam_jacobian_dot[0] @ torch.concatenate(
+        (state.base_vel[0], state.joints_vel[0])
+    )).detach().numpy()
     assert adam_jacobian_dot_nu - idyn_jacobian_dot_nu == pytest.approx(0.0, abs=1e-4)
     assert adam_jacobian_dot.shape == (n_samples, 6, robot_cfg.n_dof + 6)
 
