@@ -78,7 +78,7 @@ def test_jacobian_dot(setup_test):
     idyn_jacobian_dot_nu = robot_cfg.idyn_function_values.jacobian_dot_nu
     adam_jacobian_dot_nu = adam_kin_dyn.jacobian_dot(
         "l_sole", state.H, state.joints_pos, state.base_vel, state.joints_vel
-    ) @ np.concatenate((state.base_vel, state.joints_vel))
+    ) @ torch.concatenate((state.base_vel, state.joints_vel))
     assert idyn_jacobian_dot_nu - adam_jacobian_dot_nu.numpy() == pytest.approx(
         0.0, abs=1e-5
     )
