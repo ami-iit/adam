@@ -94,7 +94,7 @@ class CasadiLikeFactory(ArrayLikeFactory):
         return CasadiLike(cs.SX.eye(x))
 
     @staticmethod
-    def array(x) -> CasadiLike:
+    def asarray(x) -> CasadiLike:
         """
         Returns:
             CasadiLike: Vector wrapping *x
@@ -121,16 +121,33 @@ class CasadiLikeFactory(ArrayLikeFactory):
             # Handle empty list/tuple
             if not x:
                 return CasadiLike(cs.DM([]))
-            # Check if all items are numeric
             if all(isinstance(item, (int, float)) for item in x):
                 # All numeric, can safely convert to DM
                 return CasadiLike(cs.DM(x))
-            else:
+            if all(isinstance(item, cs.SX) for item in x):
                 return CasadiLike(cs.SX(x))
+            else:
+                return CasadiLike(cs.DM(x))
 
         raise TypeError(
             f"Unsupported type: {type(x)}. Must be numeric, list/tuple/np.ndarray of numerics, or SX."
         )
+
+    def zeros_like(self, x: CasadiLike) -> CasadiLike:
+        """
+        Returns:
+            CasadiLike: Matrix of zeros with the same shape as x
+        """
+        shape = x.array.shape
+        return CasadiLike(cs.SX.zeros(*shape))
+
+    def ones_like(self, x: CasadiLike) -> CasadiLike:
+        """
+        Returns:
+            CasadiLike: Matrix of ones with the same shape as x
+        """
+        shape = x.array.shape
+        return CasadiLike(cs.SX.ones(*shape))
 
 
 class SpatialMath(SpatialMath):
