@@ -15,8 +15,8 @@ class Pose:
 
     @staticmethod
     def build(xyz: npt.ArrayLike, rpy: npt.ArrayLike, math: SpatialMath) -> "Pose":
-        xyz = math.array(xyz)
-        rpy = math.array(rpy)
+        xyz = math.asarray(xyz)
+        rpy = math.asarray(rpy)
         return Pose(xyz, rpy)
 
     @staticmethod
@@ -50,7 +50,7 @@ class Inertia:
         izz: npt.DTypeLike,
         math: SpatialMath,
     ) -> "Inertia":
-        matrix = math.array(
+        matrix = math.asarray(
             [
                 [ixx, ixy, ixz],
                 [ixy, iyy, iyz],

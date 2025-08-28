@@ -100,7 +100,7 @@ class ArrayLikeFactory(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def array(self, x: npt.ArrayLike) -> npt.ArrayLike:
+    def asarray(self, x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             x (npt.ArrayLike): array
@@ -287,7 +287,7 @@ class SpatialMath:
         T = self.factory.eye(4)
         R = self.R_from_RPY(rpy)
         T[:3, :3] = R
-        T[:3, 3] = self.factory.array(xyz) + q * self.factory.array(axis)
+        T[:3, 3] = self.factory.asarray(xyz) + q * self.factory.asarray(axis)
         return T
 
     def H_from_Pos_RPY(self, xyz: npt.ArrayLike, rpy: npt.ArrayLike) -> npt.ArrayLike:
@@ -628,11 +628,11 @@ class SpatialMath:
         """
         return self.factory.eye(x)
 
-    def array(self, x: npt.ArrayLike) -> npt.ArrayLike:
+    def asarray(self, x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             x (npt.ArrayLike): array
         Returns:
             npt.ArrayLike: array
         """
-        return self.factory.array(x)
+        return self.factory.asarray(x)

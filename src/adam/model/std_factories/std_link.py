@@ -27,7 +27,7 @@ class StdLink(Link):
         inertial = link.inertial
         if inertial is None:
             return Inertial(
-                mass=self.math.array(0),
+                mass=self.math.asarray(0),
                 inertia=Inertia.zero(self.math),
                 origin=Pose.zero(self.math),
             )
@@ -41,7 +41,7 @@ class StdLink(Link):
             izz=inertial.inertia.izz,
             math=self.math,
         )
-        mass = self.math.array(inertial.mass)
+        mass = self.math.asarray(inertial.mass)
         pose = Pose.build(inertial.origin.xyz, inertial.origin.rpy, self.math)
         return Inertial(mass=mass, inertia=inertia, origin=pose)
 

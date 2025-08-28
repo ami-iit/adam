@@ -34,7 +34,7 @@ class StdJoint(Joint):
         Returns:
             npt.ArrayLike: set the axis
         """
-        return None if axis is None else self.math.array(axis)
+        return None if axis is None else self.math.asarray(axis)
 
     def _set_origin(self, origin: Pose) -> Pose:
         """
@@ -55,10 +55,10 @@ class StdJoint(Joint):
             Limits: set the limits
         """
         return Limits(
-            lower=None if limit is None else self.math.array(limit.lower),
-            upper=None if limit is None else self.math.array(limit.upper),
-            effort=None if limit is None else self.math.array(limit.effort),
-            velocity=None if limit is None else self.math.array(limit.velocity),
+            lower=None if limit is None else self.math.asarray(limit.lower),
+            upper=None if limit is None else self.math.asarray(limit.upper),
+            effort=None if limit is None else self.math.asarray(limit.effort),
+            velocity=None if limit is None else self.math.asarray(limit.velocity),
         )
 
     def homogeneous(self, q: npt.ArrayLike) -> npt.ArrayLike:
@@ -122,16 +122,8 @@ class StdJoint(Joint):
         if self.type == "fixed":
             return self.math.zeros(6, 1)
         elif self.type in ["revolute", "continuous"]:
-            return self.math.vertcat(
-                self.math.zeros(3, 1),
-                self.axis[0],
-                self.axis[1],
-                self.axis[2],
-            )
+            axis = self.axis.array
+            return self.math.asarray([0, 0, 0, axis[0], axis[1], axis[2]])
         elif self.type in ["prismatic"]:
-            return self.math.vertcat(
-                self.axis[0],
-                self.axis[1],
-                self.axis[2],
-                self.math.zeros(3, 1),
-            )
+            axis = self.axis.array
+            return self.math.asarray([axis[0], axis[1], axis[2], 0, 0, 0])
