@@ -553,7 +553,7 @@ class RBDAlgorithms:
             if isinstance(arg, ArrayLike):
                 converted.append(arg)
             else:
-                converted.append(self.math.array(arg))
+                converted.append(self.math.asarray(arg))
 
         # If there's only one argument, return it directly
         return converted[0] if len(converted) == 1 else converted
