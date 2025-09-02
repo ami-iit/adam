@@ -60,11 +60,14 @@ class InverseKinematics:
         self.opti = cs.Opti()
         self.base_pos = self.opti.variable(3)  # translation (x,y,z)
         self.base_quat = self.opti.variable(4)  # unit quaternion (x,y,z,w)
-        self.joint_var = self.opti.variable(self.ndof)
+        self.joint_pos = self.opti.variable(self.ndof)
+        self.base_homogeneous = SE3.from_position_quaternion(
+            self.base_pos, self.base_quat
+        ).as_matrix()
         self.opti.set_initial(self.base_pos, [0, 0, 0])  # default to origin
         self.opti.set_initial(self.base_quat, [0, 0, 0, 1])  # identity quaternion
         self.opti.subject_to(cs.sumsqr(self.base_quat) == 1)  # enforce unit quaternion
-        self.opti.set_initial(self.joint_var, np.zeros(self.ndof))  # default to zero
+        self.opti.set_initial(self.joint_pos, np.zeros(self.ndof))  # default to zero
 
         self.targets: dict[str, Target] = {}
         self.cost_terms: list[cs.MX] = []
@@ -81,6 +84,25 @@ class InverseKinematics:
         self.set_default_joint_limit_constraints()
 
         self.opti.solver("ipopt", solver_settings)
+
+    def get_opti_variables(self) -> dict[str, cs.SX]:
+        """Get the optimization variables of the IK solver.
+
+        Returns:
+            dict[str, cs.SX]: Dictionary containing the optimization variables.
+
+            - "base_pos": Position of the base (3D vector).
+            - "base_quat": Quaternion representing the base orientation (4D vector with x, y, z, w).
+            - "joint_pos": Joint variables (Vector with length equal to the number of non-fixed joints).
+            - "base_homogeneous": Homogeneous transformation matrix of the base (4x4 matrix, from position and quaternion).
+
+        """
+        return {
+            "base_pos": self.base_pos,
+            "base_quat": self.base_quat,
+            "joint_pos": self.joint_pos,
+            "base_homogeneous": self.base_homogeneous,
+        }
 
     def set_solver(self, solver_name: str, solver_settings: dict[str, Any]):
         """Set the solver for the optimization problem.
@@ -117,7 +139,7 @@ class InverseKinematics:
                 if joint_limit is not None:
                     self.opti.subject_to(
                         self.opti.bounded(
-                            joint_limit.lower, self.joint_var[i], joint_limit.upper
+                            joint_limit.lower, self.joint_pos[i], joint_limit.upper
                         )
                     )
 
@@ -133,7 +155,7 @@ class InverseKinematics:
             raise ValueError("Bounds must match the number of degrees of freedom")
         for i in range(self.ndof):
             self.opti.subject_to(
-                self.opti.bounded(lower_bounds[i], self.joint_var[i], upper_bounds[i])
+                self.opti.bounded(lower_bounds[i], self.joint_pos[i], upper_bounds[i])
             )
 
     def add_target_position(
@@ -160,7 +182,7 @@ class InverseKinematics:
         p_des = self.opti.parameter(3)
         self.opti.set_value(p_des, np.zeros(3))  # default to origin
         p_fk = self.kd.forward_kinematics_fun(frame)(
-            self.base_transform(), self.joint_var
+            self.base_transform(), self.joint_pos
         )[:3, 3]
 
         if as_soft_constraint:
@@ -199,10 +221,10 @@ class InverseKinematics:
         if parent_frame == child_frame:
             raise ValueError("Parent and child frames must be different")
         H_parent = self.kd.forward_kinematics_fun(parent_frame)(
-            self.base_transform(), self.joint_var
+            self.base_transform(), self.joint_pos
         )
         H_child = self.kd.forward_kinematics_fun(child_frame)(
-            self.base_transform(), self.joint_var
+            self.base_transform(), self.joint_pos
         )
         p_parent, p_child = H_parent[:3, 3], H_child[:3, 3]
         R_parent, R_child = H_parent[:3, :3], H_child[:3, :3]
@@ -290,10 +312,10 @@ class InverseKinematics:
             )
             frame_i, frame_j = frames_list[i], frames_list[i + 1]
             p_i = self.kd.forward_kinematics_fun(frame_i)(
-                self.base_transform(), self.joint_var
+                self.base_transform(), self.joint_pos
             )[:3, 3]
             p_j = self.kd.forward_kinematics_fun(frame_j)(
-                self.base_transform(), self.joint_var
+                self.base_transform(), self.joint_pos
             )[:3, 3]
             dist_sq = cs.sumsqr(p_i - p_j)
             self.opti.subject_to(dist_sq >= distance**2)
@@ -318,7 +340,7 @@ class InverseKinematics:
         R_des = self.opti.parameter(3, 3)
         self.opti.set_value(R_des, np.eye(3))  # default to identity rotation
         H_fk = self.kd.forward_kinematics_fun(frame)(
-            self.base_transform(), self.joint_var
+            self.base_transform(), self.joint_pos
         )
         R_fk = H_fk[:3, :3]
         # proxy for rotation error: trace(R) = 1 + 2 * cos(theta), where theta is the angle of rotation
@@ -359,7 +381,7 @@ class InverseKinematics:
         self.opti.set_value(p_des, np.zeros(3))  # default to origin
         self.opti.set_value(R_des, np.eye(3))  # default to identity rotation
         H_fk = self.kd.forward_kinematics_fun(frame)(
-            self.base_transform(), self.joint_var
+            self.base_transform(), self.joint_pos
         )
         p_fk, R_fk = H_fk[:3, 3], H_fk[:3, :3]
 
@@ -486,7 +508,7 @@ class InverseKinematics:
         quat = SO3.from_matrix(rot).as_quat().coeffs()  # (x,y,z,w)
         self.opti.set_initial(self.base_pos, pos)
         self.opti.set_initial(self.base_quat, quat)
-        self.opti.set_initial(self.joint_var, joint_values)
+        self.opti.set_initial(self.joint_pos, joint_values)
 
     def solve(self):
         """Solve the optimization problem."""
@@ -499,7 +521,7 @@ class InverseKinematics:
                 self.base_quat, self._cached_sol.value(self.base_quat)
             )
             self.opti.set_initial(
-                self.joint_var, self._cached_sol.value(self.joint_var)
+                self.joint_pos, self._cached_sol.value(self.joint_pos)
             )
         self._cached_sol = self.opti.solve()
 
@@ -516,7 +538,7 @@ class InverseKinematics:
             raise RuntimeError("No solution yet - call solve() first")
         pos = self._cached_sol.value(self.base_pos)
         quat = self._cached_sol.value(self.base_quat)
-        joints = self._cached_sol.value(self.joint_var)
+        joints = self._cached_sol.value(self.joint_pos)
         H = SE3.from_position_quaternion(pos, quat).as_matrix()  # 4x4 numpy
         return np.array(H), np.array(joints)
 
@@ -556,3 +578,20 @@ class InverseKinematics:
         """
         if self.targets[frame].target_type is not expected:
             raise ValueError(f"Target '{frame}' is not of type {expected.name}")
+
+    def add_cost(self, cost: cs.MX):
+        """Add a custom cost term to the optimization problem.
+
+        This method appends the provided cost term to the `cost_terms` list. 
+        During the `_finalize_problem` step, all cost terms in this list are 
+        combined using `cs.sum(cs.vertcat(*self.cost_terms))` and minimized 
+        as part of the objective function.
+
+        Note: This method ensures that the optimization graph is still modifiable 
+        before adding the cost term. Once the problem is finalized (after the 
+        first call to `solve()`), no new cost terms can be added.
+        Args:
+            cost (cs.MX): The cost term to add.
+        """
+        self._ensure_graph_modifiable()
+        self.cost_terms.append(cost)
