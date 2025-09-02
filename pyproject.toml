@@ -38,7 +38,7 @@ jax = ["jax==0.6.0", "jaxlib"]
 casadi = ["casadi"]
 pytorch = ["torch", "jax", "jaxlib", "jax2torch"]
 test = [
-  "jax==0.6.0"
+  "jax==0.6.0",
   "jaxlib",
   "casadi",
   "torch",
