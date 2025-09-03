@@ -1,5 +1,4 @@
 import abc
-
 import numpy.typing as npt
 
 
@@ -48,9 +47,9 @@ class ArrayLike(abc.ABC):
     def __getitem__(self, item):
         pass
 
-    @abc.abstractmethod
-    def __setitem__(self, key, value):
-        pass
+    # @abc.abstractmethod
+    # def __setitem__(self, key, value):
+    #     pass
 
     @abc.abstractmethod
     def __truediv__(self, other):
@@ -73,6 +72,7 @@ class ArrayLike(abc.ABC):
     def as_list(self):
         for i in range(len(self.array)):
             yield self.array[i]
+
 
 class ArrayLikeFactory(abc.ABC):
     """Abstract class for a generic Array wrapper. Every method should be implemented for every data type."""
@@ -107,6 +107,40 @@ class ArrayLikeFactory(abc.ABC):
 
         Returns:
             npt.ArrayLike: array
+        """
+        pass
+
+    @abc.abstractmethod
+    def ones_like(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): array
+
+        Returns:
+            npt.ArrayLike: one array with the same shape as x
+        """
+        pass
+
+    @abc.abstractmethod
+    def zeros_like(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): array
+
+        Returns:
+            npt.ArrayLike: one array with the same shape as x
+        """
+        pass
+
+    @abc.abstractmethod
+    def tile(self, x: npt.ArrayLike, reps: tuple) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): input array
+            reps (tuple): repetition factors for each dimension
+
+        Returns:
+            npt.ArrayLike: tiled array
         """
         pass
 
@@ -149,6 +183,42 @@ class SpatialMath:
         pass
 
     @abc.abstractmethod
+    def concatenate(self, x: npt.ArrayLike, axis: int) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): elements
+            axis (int): axis along which to concatenate
+
+        Returns:
+            npt.ArrayLike: concatenation of elements x along axis
+        """
+        pass
+
+    @abc.abstractmethod
+    def stack(self, x: npt.ArrayLike, axis: int) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): elements
+            axis (int): axis along which to stack
+
+        Returns:
+            npt.ArrayLike: stacked elements x along axis
+        """
+        pass
+
+    @abc.abstractmethod
+    def tile(self, x: npt.ArrayLike, reps: tuple) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): input array
+            reps (tuple): repetition factors for each dimension
+
+        Returns:
+            npt.ArrayLike: tiled array
+        """
+        pass
+
+    @abc.abstractmethod
     def mtimes(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
         pass
 
@@ -178,21 +248,50 @@ class SpatialMath:
     def skew(self, x):
         pass
 
-    def R_from_axis_angle(self, axis: npt.ArrayLike, q: npt.ArrayLike) -> npt.ArrayLike:
+    def R_from_axis_angle(self, axis, q):
+        """
+        axis: (...,3) - normalized axis vector, batched if q is batched
+        q   : (...,)  - rotation angle, batched or scalar
+        returns: (...,3,3) - rotation matrix
+        """
+        c = self.cos(q)
+        s = self.sin(q)
+
+        # Expand scalars for matrix operations
+        # c = self.factory.asarray(c.array[..., None, None])
+        # s = self.factory.asarray(s.array[..., None, None])
+
+        # Build rotation matrix components
+        I = self.factory.eye(q.array.shape + (3,))
+        K = self.skew(axis)  # skew-symmetric matrix
+        K_squared = K @ K  # K²
+        ones = self.factory.ones_like(c)
+        return I + self.sxm(s, K) + self.sxm((ones - c), K_squared)
+
+    def tile(self, x: npt.ArrayLike, reps: tuple) -> npt.ArrayLike:
         """
         Args:
-            axis (npt.ArrayLike): axis vector
-            q (npt.ArrayLike): angle value
+            x (npt.ArrayLike): input array
+            reps (tuple): repetition factors for each dimension
 
         Returns:
-            npt.ArrayLike: rotation matrix from axis-angle representation
+            npt.ArrayLike: tiled array
         """
-        cq, sq = self.cos(q), self.sin(q)
-        return (
-            cq * (self.factory.eye(3) - self.outer(axis, axis))
-            + sq * self.skew(axis)
-            + self.outer(axis, axis)
-        )
+        return self.factory.tile(x, reps)
+
+    def sxm(self, s: npt.ArrayLike, m: npt.ArrayLike) -> npt.ArrayLike:
+        """Computes scalar multiplication with a matrix
+
+        Args:
+            s (npt.ArrayLike): scalar value
+            m (npt.ArrayLike): matrix to be multiplied
+
+        Returns:
+            npt.ArrayLike: result of the multiplication
+        """
+        c = self.factory.asarray(s.array[..., None, None])
+        s = self.factory.asarray(s.array[..., None, None])
+        return c * m
 
     def Rx(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -202,13 +301,13 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: rotation matrix around x axis
         """
-        R = self.factory.eye(3)
-        cq, sq = self.cos(q), self.sin(q)
-        R[1, 1] = cq
-        R[1, 2] = -sq
-        R[2, 1] = sq
-        R[2, 2] = cq
-        return R
+        c, s = self.cos(q), self.sin(q)
+        one = self.factory.ones_like(c)
+        zero = self.factory.zeros_like(c)
+        row0 = self.stack([one, zero, zero], axis=-1)
+        row1 = self.stack([zero, c, -s], axis=-1)
+        row2 = self.stack([zero, s, c], axis=-1)
+        return self.stack([row0, row1, row2], axis=-2)
 
     def Ry(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -218,13 +317,13 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: rotation matrix around y axis
         """
-        R = self.factory.eye(3)
-        cq, sq = self.cos(q), self.sin(q)
-        R[0, 0] = cq
-        R[0, 2] = sq
-        R[2, 0] = -sq
-        R[2, 2] = cq
-        return R
+        c, s = self.cos(q), self.sin(q)
+        one = self.factory.ones_like(c)
+        zero = self.factory.zeros_like(c)
+        row0 = self.stack([c, zero, s], axis=-1)
+        row1 = self.stack([zero, one, zero], axis=-1)
+        row2 = self.stack([-s, zero, c], axis=-1)
+        return self.stack([row0, row1, row2], axis=-2)
 
     def Rz(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -234,13 +333,13 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: rotation matrix around z axis
         """
-        R = self.factory.eye(3)
-        cq, sq = self.cos(q), self.sin(q)
-        R[0, 0] = cq
-        R[0, 1] = -sq
-        R[1, 0] = sq
-        R[1, 1] = cq
-        return R
+        c, s = self.cos(q), self.sin(q)
+        one = self.factory.ones_like(c)
+        zero = self.factory.zeros_like(c)
+        row0 = self.stack([c, -s, zero], axis=-1)
+        row1 = self.stack([s, c, zero], axis=-1)
+        row2 = self.stack([zero, zero, one], axis=-1)
+        return self.stack([row0, row1, row2], axis=-2)
 
     def H_revolute_joint(
         self,
@@ -259,13 +358,44 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: Homogeneous transform
         """
-        T = self.factory.eye(4)
-        R = self.R_from_RPY(rpy) @ self.R_from_axis_angle(axis, q)
-        T[:3, :3] = R
-        T[0, 3] = xyz[0]
-        T[1, 3] = xyz[1]
-        T[2, 3] = xyz[2]
-        return T
+        # Check if q is batched to determine if we need to handle batching
+        q_is_batched = q.array.ndim > 0 and q.array.shape != ()
+
+        if q_is_batched:
+            # make all the joint properties batched
+            batch_size = q.array.shape[0]
+
+            # Ensure xyz is batched
+            if xyz.array.ndim == 1:
+                xyz = self.factory.asarray(
+                    xyz.array.unsqueeze(0).expand(batch_size, -1)
+                )
+
+            # Ensure rpy is batched
+            if rpy.array.ndim == 1:
+                rpy = self.factory.asarray(
+                    rpy.array.unsqueeze(0).expand(batch_size, -1)
+                )
+
+            # Ensure axis is batched
+            if axis.array.ndim == 1:
+                axis = self.factory.asarray(
+                    axis.array.unsqueeze(0).expand(batch_size, -1)
+                )
+        R_rpy = self.R_from_RPY(rpy)
+        R_axis = self.R_from_axis_angle(axis, q)
+        R = R_rpy @ R_axis
+        return self.homogeneous(R, xyz)
+
+    def homogeneous(self, R, p):
+        # Ensure p has the right shape for concatenation
+        if p.array.ndim == R.array.ndim - 1:
+            p = self.factory.asarray(p.array[..., None])  # Add last dimension
+        top = self.concatenate([R, p], axis=-1)  # (...,3,4)
+        zeros_row = self.factory.zeros_like(R[..., :1, :])  # (...,1,3)
+        ones_col = self.factory.ones_like(R[..., :1, :1])  # (...,1,1)
+        bottom = self.concatenate([zeros_row, ones_col], axis=-1)  # (...,1,4)
+        return self.concatenate([top, bottom], axis=-2)  # (...,4,4)
 
     def H_prismatic_joint(
         self,
@@ -284,11 +414,9 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: Homogeneous transform
         """
-        T = self.factory.eye(4)
         R = self.R_from_RPY(rpy)
-        T[:3, :3] = R
-        T[:3, 3] = self.factory.asarray(xyz) + q * self.factory.asarray(axis)
-        return T
+        p = self.factory.asarray(xyz) + q * self.factory.asarray(axis)
+        return self.homogeneous(R, p)
 
     def H_from_Pos_RPY(self, xyz: npt.ArrayLike, rpy: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -299,12 +427,8 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: Homegeneous transform
         """
-        T = self.factory.eye(4)
-        T[:3, :3] = self.R_from_RPY(rpy)
-        T[0, 3] = xyz[0]
-        T[1, 3] = xyz[1]
-        T[2, 3] = xyz[2]
-        return T
+        R = self.R_from_RPY(rpy)
+        return self.homogeneous(R, xyz)
 
     def R_from_RPY(self, rpy: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -314,7 +438,7 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: Rotation matrix
         """
-        return self.Rz(rpy[2]) @ self.Ry(rpy[1]) @ self.Rx(rpy[0])
+        return self.Rz(rpy[..., 2]) @ self.Ry(rpy[..., 1]) @ self.Rx(rpy[..., 0])
 
     def X_revolute_joint(
         self,
@@ -375,6 +499,11 @@ class SpatialMath:
         p = -T[:3, :3].T @ T[:3, 3]
         return self.spatial_transform(R, p)
 
+    def _X_from_H(self, T):
+        R = self.swapaxes(T[..., :3, :3], -1, -2)
+        p = -(R @ T[..., :3, 3:4])[..., :, 0]
+        return self.spatial_transform(R, p)
+
     def spatial_transform(self, R: npt.ArrayLike, p: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
@@ -384,11 +513,14 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: spatial transform
         """
-        X = self.factory.zeros(6, 6)
-        X[:3, :3] = R
-        X[3:, 3:] = R
-        X[:3, 3:] = self.skew(p) @ R
-        return X
+        if p.ndim >= 2 and p.shape[-1] == 1:
+            p = p[..., :, 0]  # (...,3)
+
+        Sp = self.skew(p)  # (...,3,3)
+        zeros = self.factory.zeros_like(R)
+        top = self.concatenate([R, Sp @ R], axis=-1)  # (...,3,6)
+        bottom = self.concatenate([zeros, R], axis=-1)  # (...,3,6)
+        return self.concatenate([top, bottom], axis=-2)  # (...,6,6)
 
     def spatial_inertia(
         self,
@@ -474,13 +606,9 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: adjoint matrix
         """
-        R = H[:3, :3]
-        p = H[:3, 3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R
-        X[3:6, 3:6] = R
-        X[:3, 3:6] = self.skew(p) @ R
-        return X
+        R = H[..., :3, :3]
+        p = H[..., :3, 3]
+        return self.spatial_transform(R, p)
 
     def adjoint_derivative(self, H: npt.ArrayLike, v: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -491,15 +619,54 @@ class SpatialMath:
             npt.ArrayLike: adjoint matrix derivative
         """
 
-        R = H[:3, :3]
-        p = H[:3, 3]
-        R_dot = self.skew(v[3:]) @ R
-        p_dot = v[:3] - self.skew(p) @ v[3:]
-        X = self.factory.zeros(6, 6)
-        X[:3, :3] = R_dot
-        X[3:6, 3:6] = R_dot
-        X[:3, 3:6] = self.skew(p_dot) @ R + self.skew(p) @ R_dot
-        return X
+        R = H[..., :3, :3]
+        p = H[..., :3, 3]
+        Rdot = self.skew(v[..., 3:]) @ R
+        omega = v[..., 3:]
+        lin_vel = v[..., :3]
+        if omega.shape[-1] == 3:
+            # promote to column for consistent matmul semantics
+            omega_col = omega[..., None]
+            lin_vel = lin_vel[..., None]
+        else:
+            omega_col = omega
+            lin_vel = lin_vel
+
+        pdot = lin_vel - self.skew(p) @ omega_col
+
+        Z = self.factory.zeros_like(R)
+        S = self.skew(pdot) @ R + self.skew(p) @ Rdot
+        top = self.concatenate([Rdot, S], axis=-1)  # (...,3,6)
+        bottom = self.concatenate([Z, Rdot], axis=-1)  # (...,3,6)
+        return self.concatenate([top, bottom], axis=-2)  # (...,6,6)
+
+    def mxv(self, m: npt.ArrayLike, v: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            m (npt.ArrayLike): Matrix
+            v (npt.ArrayLike): Vector
+        Returns:
+            npt.ArrayLike: Result of matrix-vector multiplication
+        """
+        print(f"shape  m @ v[..., None]: {( m @ v[..., None]).shape}")
+        res = m @ v[..., None]
+        print(f"shape res: {res.shape}")
+        print(f"shape res[..., 0]: {res[..., 0].shape}")
+        return res[..., 0]  # Remove the extra dimension
+
+    def vxs(self, v: npt.ArrayLike, c: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            v (npt.ArrayLike): Vector
+            s (npt.ArrayLike): Scalar
+        Returns:
+            npt.ArrayLike: Result of vector cross product with scalar multiplication
+        """
+        if v.shape[-1] == 1:
+            v = v[..., 0]
+        c = c[..., None]  # Add extra dimension
+        print(f"shape v {v.shape}, shape c {c.shape}")
+        return v * c
 
     def adjoint_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -508,13 +675,10 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: adjoint matrix
         """
-        R = H[:3, :3]
-        p = H[:3, 3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R.T
-        X[3:6, 3:6] = R.T
-        X[:3, 3:6] = -R.T @ self.skew(p)
-        return X
+        R = H[..., :3, :3]
+        p = H[..., :3, 3:4]
+        RT = self.swapaxes(R, -1, -2)
+        return self.spatial_transform(RT, -(RT @ p)[..., :, 0])
 
     def adjoint_inverse_derivative(
         self, H: npt.ArrayLike, v: npt.ArrayLike
@@ -526,15 +690,17 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: adjoint matrix derivative
         """
-        R = H[:3, :3]
-        p = H[:3, 3]
-        R_dot = self.skew(v[3:]) @ R
-        p_dot = v[:3] - self.skew(p) @ v[3:]
-        X = self.factory.zeros(6, 6)
-        X[:3, :3] = R_dot.T
-        X[3:6, 3:6] = R_dot.T
-        X[:3, 3:6] = -R_dot.T @ self.skew(p) - R.T @ self.skew(p_dot)
-        return X
+        R = H[..., :3, :3]
+        p = H[..., :3, 3]
+        R_dot = self.skew(v[..., 3:]) @ R
+        p_dot = v[..., :3] - self.skew(p) @ v[..., 3:]
+        R_T = self.swapaxes(R, -1, -2)
+        R_dot_T = self.swapaxes(R_dot, -1, -2)
+        Z = self.factory.zeros_like(R)
+        TR = -R_dot_T @ self.skew(p) - R_T @ self.skew(p_dot)
+        top = self.concatenate([R_dot_T, TR], axis=-1)  # (...,3,6)
+        bottom = self.concatenate([Z, R_dot_T], axis=-1)  # (...,3,6)
+        return self.concatenate([top, bottom], axis=-2)  # (...,6,6)
 
     def adjoint_mixed(self, H: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -543,11 +709,15 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: adjoint matrix
         """
-        R = H[:3, :3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R
-        X[3:6, 3:6] = R
-        return X
+        R = H[..., :3, :3]
+        Z = self.factory.zeros_like(R)
+        return self.concatenate(
+            [
+                self.concatenate([R, Z], axis=-1),
+                self.concatenate([Z, R], axis=-1),
+            ],
+            axis=-2,
+        )
 
     def adjoint_mixed_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -556,11 +726,12 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: adjoint matrix
         """
-        R = H[:3, :3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R.T
-        X[3:6, 3:6] = R.T
-        return X
+        RT = self.swapaxes(H[..., :3, :3], -1, -2)
+        Z = self.zeros_like(RT)
+        return self.concatenate(
+            [self.concatenate([RT, Z], axis=-1), self.concatenate([Z, RT], axis=-1)],
+            axis=-2,
+        )
 
     def adjoint_mixed_derivative(
         self, H: npt.ArrayLike, v: npt.ArrayLike
@@ -572,12 +743,13 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: adjoint matrix derivative
         """
-        R = H[:3, :3]
-        R_dot = self.skew(v[3:]) @ R
-        X = self.factory.zeros(6, 6)
-        X[:3, :3] = R_dot
-        X[3:6, 3:6] = R_dot
-        return X
+        R = H[..., :3, :3]
+        omega = v[..., 3:]
+        R_dot = self.skew(omega) @ R
+        Z = self.factory.zeros_like(R_dot)
+        top = self.concatenate([R_dot, Z], axis=-1)  # (...,3,6)
+        bottom = self.concatenate([Z, R_dot], axis=-1)  # (...,3,6)
+        return self.concatenate([top, bottom], axis=-2)  # (...,6,6)
 
     def adjoint_mixed_inverse_derivative(
         self, H: npt.ArrayLike, v: npt.ArrayLike
@@ -603,12 +775,17 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: inverse of the homogeneous transform
         """
-        R = H[:3, :3]
-        p = H[:3, 3]
-        T = self.factory.eye(4)
-        T[:3, :3] = R.T
-        T[:3, 3] = -R.T @ p
-        return T
+        R = H[..., :3, :3]  # (...,3,3)
+        p = H[..., :3, 3:4]  # (...,3,1)
+        R_T = self.swapaxes(R, -1, -2)  # (...,3,3)
+        Rp = -(R_T @ p)  # (...,3,1)
+
+        top = self.concatenate([R_T, Rp], axis=-1)  # (...,3,4)
+
+        last_row = self.factory.zeros(H.shape[:-2] + (1, 4))
+        last_row = last_row + self.factory.asarray([0, 0, 0, 1])
+
+        return self.concatenate([top, last_row], axis=-2)  # (...,4,4)
 
     def zeros(self, *x: int) -> npt.ArrayLike:
         """
@@ -636,3 +813,21 @@ class SpatialMath:
             npt.ArrayLike: array
         """
         return self.factory.asarray(x)
+
+    def zeros_like(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): array
+        Returns:
+            npt.ArrayLike: zero array with the same shape as x
+        """
+        return self.factory.zeros_like(x)
+
+    def ones_like(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): array
+        Returns:
+            npt.ArrayLike: one array with the same shape as x
+        """
+        return self.factory.ones_like(x)
