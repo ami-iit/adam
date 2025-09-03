@@ -3,15 +3,15 @@
 import warnings
 
 import jax
-import jax.numpy as jnp
 import numpy as np
 import torch
 from jax2torch import jax2torch
 
 from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
-from adam.jax.jax_like import SpatialMath
+from adam.pytorch.torch_like import SpatialMath
 from adam.model import Model, URDFModelFactory
+from adam.core.array_api_math import spec_from_reference
 
 
 class KinDynComputationsBatch:
@@ -23,8 +23,12 @@ class KinDynComputationsBatch:
         self,
         urdfstring: str,
         joints_name_list: list = None,
+        device: torch.device = (
+            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        ),
+        dtype: torch.dtype = torch.float32,
         root_link: str = None,
-        gravity: np.array = jnp.array([0, 0, -9.80665, 0, 0, 0]),
+        gravity: torch.Tensor = torch.as_tensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
         """
         Args:
@@ -32,12 +36,13 @@ class KinDynComputationsBatch:
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
-        math = SpatialMath()
+        ref = torch.tensor(0.0, dtype=dtype, device=device)
+        math = SpatialMath(spec_from_reference(ref))
         factory = URDFModelFactory(path=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
-        self.g = gravity
+        self.g = gravity.to(dtype=dtype, device=device)
         self.funcs = {}
         if root_link is not None:
             warnings.warn(
@@ -69,27 +74,8 @@ class KinDynComputationsBatch:
             M (torch.Tensor): The batch Mass Matrix
         """
 
-        return self.mass_matrix_fun()(base_transform, joint_positions)
-
-    def mass_matrix_fun(self):
-        """Returns the Mass Matrix functions computed the CRBA as a pytorch function
-
-        Returns:
-            M (pytorch function): Mass Matrix
-        """
-
-        if self.funcs.get("mass_matrix") is not None:
-            return self.funcs["mass_matrix"]
-        print("[INFO] Compiling mass matrix function")
-
-        def fun(base_transform, joint_positions):
-            [M, _] = self.rbdalgos.crba(base_transform, joint_positions)
-            return M.array
-
-        vmapped_fun = jax.vmap(fun, in_axes=(0, 0))
-        jit_vmapped_fun = jax.jit(vmapped_fun)
-        self.funcs["mass_matrix"] = jax2torch(jit_vmapped_fun)
-        return self.funcs["mass_matrix"]
+        M, _ = self.rbdalgos.crba(base_transform, joint_positions)[0]
+        return M.array
 
     def centroidal_momentum_matrix(
         self, base_transform: torch.Tensor, joint_positions: torch.Tensor
@@ -104,55 +90,15 @@ class KinDynComputationsBatch:
             Jcc (torch.Tensor): Centroidal Momentum matrix
         """
 
-        return self.centroidal_momentum_matrix_fun()(base_transform, joint_positions)
-
-    def centroidal_momentum_matrix_fun(self):
-        """Returns the Centroidal Momentum Matrix functions computed the CRBA as a pytorch function
-
-        Returns:
-            Jcc (pytorch function): Centroidal Momentum matrix
-        """
-
-        if self.funcs.get("centroidal_momentum_matrix") is not None:
-            return self.funcs["centroidal_momentum_matrix"]
-        print("[INFO] Compiling centroidal momentum matrix function")
-
-        def fun(base_transform, joint_positions):
-            [_, Jcm] = self.rbdalgos.crba(base_transform, joint_positions)
-            return Jcm.array
-
-        vmapped_fun = jax.vmap(fun, in_axes=(0, 0))
-        jit_vmapped_fun = jax.jit(vmapped_fun)
-        self.funcs["centroidal_momentum_matrix"] = jax2torch(jit_vmapped_fun)
-        return self.funcs["centroidal_momentum_matrix"]
+        # return self.centroidal_momentum_matrix_fun()(base_transform, joint_positions)
+        _, Jcm = self.rbdalgos.crba(base_transform, joint_positions)
+        return Jcm.array
 
     def relative_jacobian(
         self, frame: str, joint_positions: torch.Tensor
     ) -> torch.Tensor:
 
-        return self.relative_jacobian_fun(frame)(joint_positions)
-
-    def relative_jacobian_fun(self, frame: str):
-        """Returns the Jacobian between the root link and a specified frame frames as a pytorch function
-
-        Args:
-            frame (str): The tip of the chain
-
-        Returns:
-            J (pytorch function): The Jacobian between the root and the frame
-        """
-
-        if self.funcs.get(f"relative_jacobian_{frame}") is not None:
-            return self.funcs[f"relative_jacobian_{frame}"]
-        print(f"[INFO] Compiling relative jacobian function for {frame} frame")
-
-        def fun(joint_positions):
-            return self.rbdalgos.relative_jacobian(frame, joint_positions).array
-
-        vmapped_fun = jax.vmap(fun)
-        jit_vmapped_fun = jax.jit(vmapped_fun)
-        self.funcs[f"relative_jacobian_{frame}"] = jax2torch(jit_vmapped_fun)
-        return self.funcs[f"relative_jacobian_{frame}"]
+        return self.rbdalgos.relative_jacobian(frame, joint_positions).array
 
     def jacobian_dot(
         self,
@@ -175,36 +121,9 @@ class KinDynComputationsBatch:
             Jdot (torch.Tensor): The Jacobian derivative relative to the frame
         """
 
-        return self.jacobian_dot_fun(frame)(
-            base_transform, joint_positions, base_velocity, joint_velocities
-        )
-
-    def jacobian_dot_fun(
-        self,
-        frame: str,
-    ):
-        """Returns the Jacobian derivative between the root and the specified frame as a pytorch function
-
-        Args:
-            frame (str): The frame to which the jacobian will be computed
-
-        Returns:
-            Jdot (pytorch function): The Jacobian derivative between the root and the frame
-        """
-
-        if self.funcs.get(f"jacobian_dot_{frame}") is not None:
-            return self.funcs[f"jacobian_dot_{frame}"]
-        print(f"[INFO] Compiling jacobian dot function for {frame} frame")
-
-        def fun(base_transform, joint_positions, base_velocity, joint_velocities):
-            return self.rbdalgos.jacobian_dot(
-                frame, base_transform, joint_positions, base_velocity, joint_velocities
-            ).array
-
-        vmapped_fun = jax.vmap(fun, in_axes=(0, 0, 0, 0))
-        jit_vmapped_fun = jax.jit(vmapped_fun)
-        self.funcs[f"jacobian_dot_{frame}"] = jax2torch(jit_vmapped_fun)
-        return self.funcs[f"jacobian_dot_{frame}"]
+        return self.rbdalgos.jacobian_dot(
+            frame, base_transform, joint_positions, base_velocity, joint_velocities
+        ).array
 
     def forward_kinematics(
         self, frame: str, base_transform: torch.Tensor, joint_positions: torch.Tensor
@@ -218,31 +137,10 @@ class KinDynComputationsBatch:
             H (torch.Tensor): The fk represented as Homogenous transformation matrix
         """
 
-        return self.forward_kinematics_fun(frame)(base_transform, joint_positions)
-
-    def forward_kinematics_fun(self, frame: str):
-        """Computes the forward kinematics between the root and the specified frame as a pytorch function
-
-        Args:
-            frame (str): The frame to which the fk will be computed
-
-        Returns:
-            H (pytorch function): The fk represented as Homogenous transformation matrix
-        """
-
-        if self.funcs.get(f"forward_kinematics_{frame}") is not None:
-            return self.funcs[f"forward_kinematics_{frame}"]
-        print(f"[INFO] Compiling forward kinematics function for {frame} frame")
-
-        def fun(base_transform, joint_positions):
-            return self.rbdalgos.forward_kinematics(
-                frame, base_transform, joint_positions
-            ).array
-
-        vmapped_fun = jax.vmap(fun, in_axes=(0, 0))
-        jit_vmapped_fun = jax.jit(vmapped_fun)
-        self.funcs[f"forward_kinematics_{frame}"] = jax2torch(jit_vmapped_fun)
-        return self.funcs[f"forward_kinematics_{frame}"]
+        # return self.forward_kinematics_fun(frame)(base_transform, joint_positions)
+        return self.rbdalgos.forward_kinematics(
+            frame, base_transform, joint_positions
+        ).array
 
     def jacobian(
         self, frame: str, base_transform: torch.Tensor, joint_positions: torch.Tensor
@@ -257,7 +155,7 @@ class KinDynComputationsBatch:
         Returns:
             J (torch.Tensor): The Jacobian between the root and the frame
         """
-        return self.jacobian_fun(frame)(base_transform, joint_positions)
+        return self.rbdalgos.jacobian(frame, base_transform, joint_positions).array
 
     def jacobian_fun(self, frame: str):
         """Returns the Jacobian relative to the specified frame as a pytorch function
@@ -286,7 +184,7 @@ class KinDynComputationsBatch:
         joint_positions: torch.Tensor,
         base_velocity: torch.Tensor,
         joint_velocities: torch.Tensor,
-    ) -> jnp.array:
+    ) -> torch.Tensor:
         """Returns the bias force of the floating-base dynamics equation,
         using a reduced RNEA (no acceleration and external forces)
 
@@ -421,7 +319,7 @@ class KinDynComputationsBatch:
         Returns:
             CoM (torch.Tensor): The CoM position
         """
-        return self.CoM_position_fun()(base_transform, joint_positions)
+        return self.rbdalgos.CoM_position(base_transform, joint_positions).array
 
     def CoM_position_fun(self):
         """Returns the CoM position as a pytorch function
