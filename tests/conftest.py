@@ -10,7 +10,6 @@ import pytest
 import requests
 
 from adam import Representations
-from adam.numpy.numpy_like import SpatialMath
 from scipy.spatial.transform import Rotation
 
 
