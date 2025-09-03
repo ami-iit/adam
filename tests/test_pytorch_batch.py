@@ -6,28 +6,38 @@ from jax import config
 
 from adam.pytorch import KinDynComputationsBatch
 
-config.update("jax_enable_x64", True)
+# config.update("jax_enable_x64", True)
 
 
 @pytest.fixture(scope="module")
 def setup_test(tests_setup) -> KinDynComputationsBatch | RobotCfg | State:
     robot_cfg, state = tests_setup
+    device = torch.device("cpu")
+    
     adam_kin_dyn = KinDynComputationsBatch(
-        robot_cfg.model_path, robot_cfg.joints_name_list
+        robot_cfg.model_path, robot_cfg.joints_name_list, device=device
     )
     adam_kin_dyn.set_frame_velocity_representation(robot_cfg.velocity_representation)
     # convert state quantities to torch tensors and tile them
-    n_samples = 2
-    state.H = torch.tile(torch.tensor(state.H), (n_samples, 1, 1)).requires_grad_()
-    state.joints_pos = torch.tile(
-        torch.tensor(state.joints_pos), (n_samples, 1)
-    ).requires_grad_()
-    state.base_vel = torch.tile(
-        torch.tensor(state.base_vel), (n_samples, 1)
-    ).requires_grad_()
-    state.joints_vel = torch.tile(
-        torch.tensor(state.joints_vel), (n_samples, 1)
-    ).requires_grad_()
+    n_samples = 10
+    state.H = (
+        torch.tile(torch.tensor(state.H), (n_samples, 1, 1)).to(device).requires_grad_()
+    )
+    state.joints_pos = (
+        torch.tile(torch.tensor(state.joints_pos), (n_samples, 1))
+        .to(device)
+        .requires_grad_()
+    )
+    state.base_vel = (
+        torch.tile(torch.tensor(state.base_vel), (n_samples, 1))
+        .to(device)
+        .requires_grad_()
+    )
+    state.joints_vel = (
+        torch.tile(torch.tensor(state.joints_vel), (n_samples, 1))
+        .to(device)
+        .requires_grad_()
+    )
     return adam_kin_dyn, robot_cfg, state, n_samples
 
 
@@ -154,7 +164,7 @@ def test_fk(setup_test):
         adam_H.sum().backward()
     except:
         raise ValueError(adam_H)
-    assert adam_H[0].detach().numpy() - idyn_H == pytest.approx(0.0, abs=1e-4)
+    assert adam_H[0].cpu().detach().numpy() - idyn_H == pytest.approx(0.0, abs=1e-4)
     assert adam_H.shape == (n_samples, 4, 4)
 
 
