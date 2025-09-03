@@ -151,13 +151,12 @@ class RBDAlgorithms:
             base_transform, joint_positions
         )
         chain = self.model.get_joints_chain(self.root_link, frame)
-        I_H_L = self.math.factory.eye(4)
-        I_H_L = I_H_L @ base_transform
+        I_H_L = base_transform
         for joint in chain:
             q_ = (
-                joint_positions[joint.idx]
+                joint_positions[..., joint.idx]
                 if joint.idx is not None
-                else self.math.zeros(1)
+                else self.math.zeros_like(joint_positions[..., 0])
             )
             H_joint = joint.homogeneous(q=q_)
             I_H_L = I_H_L @ H_joint
@@ -177,24 +176,35 @@ class RBDAlgorithms:
             J (npt.ArrayLike): The Joints Jacobian relative to the frame
         """
         joint_positions = self._convert_to_arraylike(joint_positions)
+
+        batch_size = (
+            joint_positions.shape[:-1] if len(joint_positions.shape) >= 2 else ()
+        )
+
         chain = self.model.get_joints_chain(self.root_link, frame)
-        eye = self.math.factory.eye(4)
+        eye = self.math.factory.eye(batch_size + (4,))
         B_H_j = eye
-        J = self.math.factory.zeros(6, self.NDoF)
+        # J = self.math.factory.zeros(6, self.NDoF)
         B_H_L = self.forward_kinematics(frame, eye, joint_positions)
         L_H_B = self.math.homogeneous_inverse(B_H_L)
+        cols = [None] * self.NDoF
         for joint in chain:
             q = (
-                joint_positions[joint.idx]
+                joint_positions[..., joint.idx]
                 if joint.idx is not None
-                else self.math.zeros(1)
+                else self.math.zeros_like(joint_positions[..., 0])
             )
             H_j = joint.homogeneous(q=q)
             B_H_j = B_H_j @ H_j
             L_H_j = L_H_B @ B_H_j
+            # if joint.idx is not None:
+            #     J[:, joint.idx] = self.math.adjoint(L_H_j) @ joint.motion_subspace()
             if joint.idx is not None:
-                J[:, joint.idx] = self.math.adjoint(L_H_j) @ joint.motion_subspace()
-        return J
+                cols[joint.idx] = self.math.adjoint(L_H_j) @ joint.motion_subspace()
+
+        zero_col = self.math.zeros(batch_size + (6,))
+        cols = [zero_col if col is None else col for col in cols]
+        return self.math.stack(cols, axis=-1)
 
     def jacobian(
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
@@ -202,14 +212,13 @@ class RBDAlgorithms:
         base_transform, joint_positions = self._convert_to_arraylike(
             base_transform, joint_positions
         )
+
         eye = self.math.factory.eye(4)
         J = self.joints_jacobian(frame, joint_positions)
         B_H_L = self.forward_kinematics(frame, eye, joint_positions)
         L_X_B = self.math.adjoint_inverse(B_H_L)
-        J_tot = self.math.factory.zeros(6, self.NDoF + 6)
-        J_tot[:6, :6] = L_X_B
-        J_tot[:, 6:] = J
-
+        J_tot = self.math.concatenate([L_X_B, J], axis=-1)
+        w_H_B = base_transform
         if (
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
@@ -217,10 +226,24 @@ class RBDAlgorithms:
             return J_tot
         # let's move to mixed representation
         elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            w_H_L = base_transform @ B_H_L
+            w_H_L = w_H_B @ B_H_L
             LI_X_L = self.math.adjoint_mixed(w_H_L)
-            X = self.math.factory.eye(6 + self.NDoF)
-            X[:6, :6] = self.math.adjoint_mixed_inverse(base_transform)
+
+            # Create transformation matrix X in block form for better readability
+            top_left = self.math.adjoint_mixed_inverse(base_transform)
+            top_right = self.math.factory.zeros(
+                joint_positions.shape[:-1] + (6, self.NDoF)
+            )
+            bottom_left = self.math.factory.zeros(
+                joint_positions.shape[:-1] + (self.NDoF, 6)
+            )
+            bottom_right = self.math.factory.eye(
+                joint_positions.shape[:-1] + (self.NDoF,)
+            )
+            top = self.math.concatenate([top_left, top_right], axis=-1)
+            bottom = self.math.concatenate([bottom_left, bottom_right], axis=-1)
+            X = self.math.concatenate([top, bottom], axis=-2)
+
             J_tot = LI_X_L @ J_tot @ X
             return J_tot
         else:
@@ -263,37 +286,31 @@ class RBDAlgorithms:
         base_velocity: npt.ArrayLike,
         joint_velocities: npt.ArrayLike,
     ) -> npt.ArrayLike:
-        """Returns the Jacobian derivative relative to the specified frame
+        """Returns the Jacobian time derivative for `frame`."""
 
-        Args:
-            frame (str): The frame to which the jacobian will be computed
-            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
-            joint_positions (npt.ArrayLike): The joints position
-            base_velocity (npt.ArrayLike): The base velocity
-            joint_velocities (npt.ArrayLike): The joints velocity
-
-        Returns:
-            J_dot (npt.ArrayLike): The Jacobian derivative relative to the frame
-        """
+        # Wrap inputs once
         base_transform, joint_positions, base_velocity, joint_velocities = (
             self._convert_to_arraylike(
                 base_transform, joint_positions, base_velocity, joint_velocities
             )
         )
 
-        chain = self.model.get_joints_chain(self.root_link, frame)
-        eye = self.math.factory.eye(4)
-        # initialize the transform from the base to a generic link j in the chain
-        B_H_j = eye
-        J = self.math.factory.zeros(6, self.NDoF + 6)
-        J_dot = self.math.factory.zeros(6, self.NDoF + 6)
-        # The homogeneous transform from the base to the frame
-        B_H_L = self.forward_kinematics(frame, eye, joint_positions)
-        L_H_B = self.math.homogeneous_inverse(B_H_L)
+        # Batch shape helpers
+        batch_size = (
+            joint_positions.shape[:-1] if len(joint_positions.shape) >= 2 else ()
+        )
 
+        I4 = self.math.factory.eye(batch_size + (4,))  # batched identity (… ,4,4)
+
+        # Base→frame with unit base; then its inverse
+        B_H_L = self.forward_kinematics(frame, I4, joint_positions)  # (… ,4,4)
+        L_H_B = self.math.homogeneous_inverse(B_H_L)  # (… ,4,4)
+
+        # Base velocity in BODY_FIXED or MIXED representation
         if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            # Convert base velocity from mixed to left trivialized representation
-            B_v_IB = self.math.adjoint_mixed_inverse(base_transform) @ base_velocity
+            B_v_IB = self.math.mxv(
+                self.math.adjoint_mixed_inverse(base_transform), base_velocity
+            )
         elif (
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
@@ -304,58 +321,94 @@ class RBDAlgorithms:
                 "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
             )
 
-        v = self.math.adjoint(L_H_B) @ B_v_IB
-        a = self.math.adjoint_derivative(L_H_B, v) @ B_v_IB
-        J[:, :6] = self.math.adjoint(L_H_B)
-        J_dot[:, :6] = self.math.adjoint_derivative(L_H_B, v)
+        # Spatial velocity/acceleration in frame L
+        v = self.math.mxv(self.math.adjoint(L_H_B), B_v_IB)  # (… ,6)
+        a = self.math.mxv(
+            self.math.adjoint_derivative(L_H_B, v), B_v_IB
+        )  # (… ,6) or (… ,6,1)
+
+        # Base Jacobian (6 cols) and a simple split for J̇_base (kept from your logic)
+        J_base_full = self.math.adjoint_inverse(B_H_L)  # (… ,6,6)
+        J_base_cols = [J_base_full[..., :, i] for i in range(6)]  # 6 × (… ,6)
+        J_dot_base_full = self.math.adjoint_derivative(L_H_B, v)
+        J_dot_base_cols = [J_dot_base_full[..., :, i] for i in range(6)]
+
+        # Traverse chain
+        cols: list = [None] * self.NDoF
+        cols_dot: list = [None] * self.NDoF
+
+        B_H_j = I4
+        chain = self.model.get_joints_chain(self.root_link, frame)
+
         for joint in chain:
-            q = (
-                joint_positions[joint.idx]
-                if joint.idx is not None
-                else self.math.zeros(1)
-            )
-            q_dot = (
-                joint_velocities[joint.idx]
-                if joint.idx is not None
-                else self.math.zeros(1)
-            )
-            H_j = joint.homogeneous(q=q)
+            # Joint state (broadcast over batch automatically)
+            if joint.idx is not None:
+                q = joint_positions[..., joint.idx]  # (… ,)
+                q_dot = joint_velocities[..., joint.idx]  # (… ,)
+            else:
+                # non-actuated joints: zero
+                q = self.math.factory.zeros(batch_size + ())  # scalar per batch
+                q_dot = self.math.factory.zeros(batch_size + ())
+
+            # Kinematics to joint j and to frame L
+            H_j = joint.homogeneous(q=q)  # (… ,4,4)
             B_H_j = B_H_j @ H_j
             L_H_j = L_H_B @ B_H_j
-            J_j = self.math.adjoint(L_H_j) @ joint.motion_subspace()
-            v += J_j * q_dot
-            J_dot_j = self.math.adjoint_derivative(L_H_j, v) @ joint.motion_subspace()
-            a += J_dot_j * q_dot
-            if joint.idx is not None:
-                J[:, joint.idx + 6] = J_j
-                J_dot[:, joint.idx + 6] = J_dot_j
 
+            # Joint column and its derivative
+            S = joint.motion_subspace()  # (… ,6,1) or (… ,6)
+            J_j = self.math.adjoint(L_H_j) @ S  # (… ,6,1) or (… ,6)
+
+            v = v + self.math.vxs(J_j, q_dot)  # (… ,6)
+            J_dot_j = self.math.adjoint_derivative(L_H_j, v) @ S  # (… ,6,1) or (… ,6)
+            a = a + self.math.vxs(J_dot_j, q_dot)  # (… ,6)
+
+            if joint.idx is not None:
+                cols[joint.idx] = J_j
+                cols_dot[joint.idx] = J_dot_j
+
+        # Fill missing columns with zeros
+        zero_col = self.math.factory.zeros(batch_size + (6,))
+        cols = [zero_col if c is None else c for c in cols]
+        cols_dot = [zero_col if c is None else c for c in cols_dot]
+
+        # Stack into (… ,6, ndofs_total)
+        J = self.math.stack([*J_base_cols, *cols], axis=-1)
+        J_dot = self.math.stack([*J_dot_base_cols, *cols_dot], axis=-1)
+
+        # If BODY_FIXED, we’re done
         if (
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
         ):
             return J_dot
-        # let's move to mixed representation
-        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            I_H_L = base_transform @ B_H_j
-            LI_X_L = self.math.adjoint_mixed(I_H_L)
-            X = self.math.factory.eye(6 + self.NDoF)
-            X[:6, :6] = self.math.adjoint_mixed_inverse(base_transform)
-            I_H_L = self.forward_kinematics(frame, base_transform, joint_positions)
-            LI_v_L = self.math.adjoint_mixed(I_H_L) @ v  # v = L_v_IL
-            LI_X_L_dot = self.math.adjoint_mixed_derivative(I_H_L, LI_v_L)
-            X_dot = self.math.factory.zeros(6 + self.NDoF, 6 + self.NDoF)
-            B_H_I = self.math.homogeneous_inverse(base_transform)
-            X_dot[:6, :6] = self.math.adjoint_mixed_derivative(B_H_I, -B_v_IB)
-            derivative_1 = LI_X_L_dot @ J @ X
-            derivative_2 = LI_X_L @ J_dot @ X
-            derivative_3 = LI_X_L @ J @ X_dot
-            J_dot = derivative_1 + derivative_2 + derivative_3
-            return J_dot
-        else:
-            raise NotImplementedError(
-                "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
-            )
+
+        # MIXED representation conversion (block-assembled, batch-friendly)
+        I_H_L = self.forward_kinematics(frame, base_transform, joint_positions)
+        LI_X_L = self.math.adjoint_mixed(I_H_L)
+        LI_v_L = self.math.mxv(LI_X_L, v)
+        LI_X_L_dot = self.math.adjoint_mixed_derivative(I_H_L, LI_v_L)
+
+        adj_mixed_inv = self.math.adjoint_mixed_inverse(base_transform)
+        bshape = adj_mixed_inv.shape[:-2]
+
+        Z_6xN = self.math.factory.zeros(batch_size + (6, self.NDoF))
+        Z_Nx6 = self.math.factory.zeros(batch_size + (self.NDoF, 6))
+        I_N = self.math.factory.eye(batch_size + (self.NDoF,))
+
+        top = self.math.concatenate([adj_mixed_inv, Z_6xN], axis=-1)
+        bottom = self.math.concatenate([Z_Nx6, I_N], axis=-1)
+        X = self.math.concatenate([top, bottom], axis=-2)
+
+        B_H_I = self.math.homogeneous_inverse(base_transform)
+        B_H_I_deriv = self.math.adjoint_mixed_derivative(B_H_I, -B_v_IB)
+
+        Z_NxN = self.math.factory.zeros(batch_size + (self.NDoF, self.NDoF))
+        topd = self.math.concatenate([B_H_I_deriv, Z_6xN], axis=-1)
+        bottomd = self.math.concatenate([Z_Nx6, Z_NxN], axis=-1)
+        X_dot = self.math.concatenate([topd, bottomd], axis=-2)
+
+        return (LI_X_L_dot @ J @ X) + (LI_X_L @ J_dot @ X) + (LI_X_L @ J @ X_dot)
 
     def CoM_position(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
@@ -372,14 +425,22 @@ class RBDAlgorithms:
         base_transform, joint_positions = self._convert_to_arraylike(
             base_transform, joint_positions
         )
-        com_pos = self.math.factory.zeros(3, 1)
+        batch_size = (
+            joint_positions.shape[:-1] if len(joint_positions.shape) >= 2 else ()
+        )
+
+        com_pos = self.math.factory.zeros(batch_size + (3,))
         for item in self.model.tree:
             link = item.link
             I_H_l = self.forward_kinematics(link.name, base_transform, joint_positions)
             H_link = link.homogeneous()
+            # if batch_size:
+            #     H_link = self.math.factory.tile(H_link, batch_size + (1, 1))
             # Adding the link transform
             I_H_l = I_H_l @ H_link
-            com_pos += I_H_l[:3, 3] * link.inertial.mass
+            # Extract position and reshape to match batch dimensions
+            link_pos = I_H_l[..., :3, 3:4]  # Keep as column vector with batch dims
+            com_pos += self.math.vxs(link_pos, link.inertial.mass)
         com_pos /= self._convert_to_arraylike(self.get_total_mass())
         return com_pos
 
