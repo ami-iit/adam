@@ -459,8 +459,8 @@ class SpatialMath:
         """
         # TODO: give Featherstone reference
         T = self.H_revolute_joint(xyz, rpy, axis, q)
-        R = T[:3, :3].T
-        p = -T[:3, :3].T @ T[:3, 3]
+        R = self.swapaxes(T[..., :3, :3], -1, -2)
+        p = self.mxv(-R, T[..., :3, 3])
         return self.spatial_transform(R, p)
 
     def X_prismatic_joint(
@@ -531,7 +531,7 @@ class SpatialMath:
     ) -> npt.ArrayLike:
         """
         Args:
-            I (npt.ArrayLike): inertia values from urdf
+            inertia_matrix (npt.ArrayLike): inertia values from urdf
             mass (npt.ArrayLike): mass value from urdf
             c (npt.ArrayLike): origin of the link from urdf
             rpy (npt.ArrayLike): orientation of the link from the urdf
@@ -539,14 +539,27 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: the 6x6 inertia matrix expressed at the origin of the link (with rotation)
         """
-        IO = self.factory.zeros(6, 6)
+        # Compute components
         Sc = self.skew(c)
         R = self.R_from_RPY(rpy)
-        IO[3:, 3:] = R @ inertia_matrix @ R.T + mass * Sc @ Sc.T
-        IO[3:, :3] = mass * Sc
-        IO[:3, 3:] = mass * Sc.T
-        IO[:3, :3] = self.factory.eye(3) * mass
-        return IO
+
+        # Top-left: mass * I3
+        mass_I3 = self.sxm(mass, self.factory.eye(3))
+
+        # Top-right and bottom-left: mass * Sc and mass * Sc.T
+        mass_Sc = self.sxm(mass, Sc)
+        mass_Sc_T = self.swapaxes(mass_Sc, -1, -2)
+
+        # Bottom-right: R @ inertia_matrix @ R.T + mass * Sc @ Sc.T
+        rotated_inertia = R @ inertia_matrix @ self.swapaxes(R, -1, -2)
+        Sc_squared = Sc @ Sc.T
+        bottom_right = rotated_inertia + self.sxm(mass, Sc_squared)
+
+        # Construct the full matrix using concatenation
+        top = self.concatenate([mass_I3, mass_Sc], axis=-1)  # (3,6)
+        bottom = self.concatenate([mass_Sc_T, bottom_right], axis=-1)  # (3,6)
+
+        return self.concatenate([top, bottom], axis=-2)  # (6,6)
 
     def spatial_inertial_with_parameters(self, I, mass, c, rpy):
         """
@@ -648,10 +661,7 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: Result of matrix-vector multiplication
         """
-        print(f"shape  m @ v[..., None]: {( m @ v[..., None]).shape}")
         res = m @ v[..., None]
-        print(f"shape res: {res.shape}")
-        print(f"shape res[..., 0]: {res[..., 0].shape}")
         return res[..., 0]  # Remove the extra dimension
 
     def vxs(self, v: npt.ArrayLike, c: npt.ArrayLike) -> npt.ArrayLike:
