@@ -120,7 +120,9 @@ class StdJoint(Joint):
             npt.ArrayLike: motion subspace of the joint
         """
         if self.type == "fixed":
-            return self.math.zeros(6, 1)
+            return self.math.zeros(
+                6,
+            )
         elif self.type in ["revolute", "continuous"]:
             axis = self.axis.array
             return self.math.asarray([0, 0, 0, axis[0], axis[1], axis[2]])
