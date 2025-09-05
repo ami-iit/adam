@@ -219,6 +219,42 @@ class SpatialMath:
         pass
 
     @abc.abstractmethod
+    def squeeze(self, x: npt.ArrayLike, axis: int) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): elements
+            axis (int): axis along which to squeeze
+
+        Returns:
+            npt.ArrayLike: squeezed elements x along axis
+        """
+        pass
+
+    @abc.abstractmethod
+    def unsqueeze(self, x: npt.ArrayLike, axis: int) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): elements
+            axis (int): axis along which to unsqueeze
+
+        Returns:
+            npt.ArrayLike: unsqueezed elements x along axis
+        """
+        pass
+
+    @abc.abstractmethod
+    def transpose(self, x: npt.ArrayLike, dims: tuple) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): input array
+            dims (tuple): permutation of dimensions
+
+        Returns:
+            npt.ArrayLike: transposed array
+        """
+        pass
+
+    @abc.abstractmethod
     def mtimes(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
         pass
 
@@ -591,11 +627,16 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: spatial skew matrix
         """
-        X = self.factory.zeros(6, 6)
-        X[:3, :3] = self.skew(v[3:])
-        X[:3, 3:] = self.skew(v[:3])
-        X[3:, 3:] = self.skew(v[3:])
-        return X
+        omega = v[..., 3:]  # Angular part
+        vel = v[..., :3]  # Linear part
+
+        skew_omega = self.skew(omega)
+        skew_vel = self.skew(vel)
+        zeros = self.factory.zeros_like(skew_omega)
+
+        top = self.concatenate([skew_omega, skew_vel], axis=-1)  # (...,3,6)
+        bottom = self.concatenate([zeros, skew_omega], axis=-1)  # (...,3,6)
+        return self.concatenate([top, bottom], axis=-2)  # (...,6,6)
 
     def spatial_skew_star(self, v: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -605,7 +646,8 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: negative spatial skew matrix traspose
         """
-        return -self.spatial_skew(v).T
+        # return -self.spatial_skew(v).T
+        return -self.swapaxes(self.spatial_skew(v), -1, -2)
 
     def adjoint(self, H: npt.ArrayLike) -> npt.ArrayLike:
         """
