@@ -528,9 +528,9 @@ class RBDAlgorithms:
         a = self.math.mxv(self.math.adjoint_derivative(L_H_B, v), B_v_IB)
 
         J_base_full = self.math.adjoint_inverse(B_H_L)
-        J_base_cols = [J_base_full[..., :, i:i+1] for i in range(6)]
+        J_base_cols = [J_base_full[..., :, i : i + 1] for i in range(6)]
         J_dot_base_full = self.math.adjoint_derivative(L_H_B, v)
-        J_dot_base_cols = [J_dot_base_full[..., :, i:i+1] for i in range(6)]
+        J_dot_base_cols = [J_dot_base_full[..., :, i : i + 1] for i in range(6)]
 
         cols: list = [None] * self.NDoF
         cols_dot: list = [None] * self.NDoF
@@ -645,6 +645,9 @@ class RBDAlgorithms:
         base_transform, joint_positions = self._convert_to_arraylike(
             base_transform, joint_positions
         )
+        batch_size = (
+            joint_positions.shape[:-1] if len(joint_positions.shape) >= 2 else ()
+        )
         ori_frame_velocity_representation = self.frame_velocity_representation
         self.frame_velocity_representation = Representations.MIXED_REPRESENTATION
         _, Jcm = self.crba(base_transform, joint_positions)
@@ -652,11 +655,17 @@ class RBDAlgorithms:
             ori_frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
         ):
-            X = self.math.factory.eye(6 + self.NDoF)
-            X[:6, :6] = self.math.adjoint_mixed(base_transform)
+            Xm = self.math.adjoint_mixed(base_transform)
+            In = self.math.factory.eye(batch_size + (self.NDoF,))
+            Z6n = self.math.factory.zeros(batch_size + (6, self.NDoF))
+            Zn6 = self.math.factory.zeros(batch_size + (self.NDoF, 6))
+
+            top = self.math.concatenate([Xm, Z6n], axis=-1)
+            bot = self.math.concatenate([Zn6, In], axis=-1)
+            X = self.math.concatenate([top, bot], axis=-2)
             Jcm = Jcm @ X
         self.frame_velocity_representation = ori_frame_velocity_representation
-        return Jcm[:3, :] / self._convert_to_arraylike(self.get_total_mass())
+        return Jcm[..., :3, :] / self._convert_to_arraylike(self.get_total_mass())
 
     def get_total_mass(self):
         """Returns the total mass of the robot
@@ -666,7 +675,7 @@ class RBDAlgorithms:
         """
         return self.model.get_total_mass()
 
-    def rnea(
+    def reference_rnea(
         self,
         base_transform: npt.ArrayLike,
         joint_positions: npt.ArrayLike,
@@ -767,6 +776,160 @@ class RBDAlgorithms:
 
         tau[:6] = B_X_BI.T @ tau[:6]
         return tau
+
+    def rnea(
+        self,
+        base_transform: npt.ArrayLike,
+        joint_positions: npt.ArrayLike,
+        base_velocity: npt.ArrayLike,
+        joint_velocities: npt.ArrayLike,
+        g: npt.ArrayLike,
+    ) -> npt.ArrayLike:
+        """
+        Batched Recursive Newton–Euler (reduced: no joint/base accelerations, no external forces).
+        Returns tau with shape (..., 6+n, 1). No item assignment; no squeeze helper.
+        """
+        base_transform, joint_positions, base_velocity, joint_velocities, g = (
+            self._convert_to_arraylike(
+                base_transform, joint_positions, base_velocity, joint_velocities, g
+            )
+        )
+
+        model = self.model
+        Nnodes = model.N
+        n = model.NDoF
+        root_name = self.root_link
+
+        T = lambda X: self.math.swapaxes(X, -2, -1)  # transpose last two dims
+        batch = joint_positions.shape[:-1] if len(joint_positions.shape) >= 2 else ()
+
+        # gravity map (mixed inverse as in reference)
+        gravity_X = self.math.adjoint_mixed_inverse(base_transform)  # (...,6,6)
+
+        # representation-specific base map and extra term
+        if (
+            self.frame_velocity_representation
+            == Representations.BODY_FIXED_REPRESENTATION
+        ):
+            B_X_BI = self.math.factory.eye(batch + (6,))  # (...,6,6)
+            transformed_acc = self.math.factory.zeros(batch + (6,))  # (...,6)
+        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            B_X_BI = self.math.adjoint_mixed_inverse(base_transform)  # (...,6,6)
+            omega = base_velocity[..., 3:]  # (...,3)
+            vlin = base_velocity[..., :3]  # (...,3)
+            # Use matrix-vector multiplication properly for batched operations
+            skew_omega_times_vlin = self.math.mxv(
+                self.math.skew(omega), vlin
+            )  # (...,3)
+            top3 = -self.math.mxv(B_X_BI[..., :3, :3], skew_omega_times_vlin)  # (...,3)
+            bot3 = self.math.factory.zeros(batch + (3,))
+            transformed_acc = self.math.concatenate([top3, bot3], axis=-1)  # (...,6)
+        else:
+            raise NotImplementedError(
+                "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
+            )
+
+        # base spatial acceleration (bias + gravity)
+        a0 = -(gravity_X @ g) + transformed_acc  # (...,6)
+
+        # ----- forward pass -----
+        Ic, X_p, Phi = [None] * Nnodes, [None] * Nnodes, [None] * Nnodes
+        v, a, f = [None] * Nnodes, [None] * Nnodes, [None] * Nnodes
+
+        for i, node in enumerate(model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            inertia = link_i.spatial_inertia()
+            Ic[i] = self.math.tile(inertia, batch + (1, 1)) if batch else inertia
+
+            if link_i.name == root_name:
+                eye3 = self.math.factory.eye(3)
+                zeros = self.math.factory.zeros((3, 1))
+                xp_root = self.math.spatial_transform(eye3, zeros)
+                phi_root = self.math.factory.eye(6)
+                X_p[i] = self.math.tile(xp_root, batch + (1, 1)) if batch else xp_root
+                Phi[i] = self.math.tile(phi_root, batch + (1, 1)) if batch else phi_root
+                # v[i] = B_X_BI @ base_velocity  # (...,6)
+                v[i] = self.math.mxv(B_X_BI, base_velocity)  # (...,6)
+                # a[i] = X_p[i] @ a0  # (...,6)
+                a[i] = self.math.mxv(X_p[i], a0)  # (...,6)
+            else:
+                # joint state
+                q = (
+                    joint_positions[..., joint_i.idx]
+                    if (joint_i is not None) and (joint_i.idx is not None)
+                    else self.math.zeros_like(joint_positions[..., 0])
+                )
+                qd = (
+                    joint_velocities[..., joint_i.idx]
+                    if (joint_i is not None) and (joint_i.idx is not None)
+                    else self.math.zeros_like(joint_velocities[..., 0])
+                )
+
+                X_p[i] = joint_i.spatial_transform(q=q)  # (...,6,6)
+                Si = joint_i.motion_subspace()  # (...,6,1) usually
+                if len(Si.shape) == 1:
+                    Si = self.math.expand_dims(Si, axis=-1)  # (6,) -> (6,1)
+                Phi[i] = self.math.tile(Si, batch + (1, 1)) if batch else Si
+
+                pi = model.tree.get_idx_from_name(link_pi.name)
+
+                # Phi*qd as a 6-vector: (…,6,1)* (…,)-> (…,6,1) -> take last-dim index 0
+                # phi_qd_vec = (Phi[i] * qd[..., None, None])[..., :, 0]  # (...,6)
+                phi_qd_vec = self.math.vxs(Phi[i], qd)  # (...,6)
+
+                # v[i] = X_p[i] @ v[pi] + phi_qd_vec  # (...,6)
+                v[i] = self.math.mxv(X_p[i], v[pi]) + phi_qd_vec  # (...,6)
+
+                # (skew(v) @ Phi) is (...,6,1) -> take [:,0] to get (...,6)
+                # sv_phi_vec = (self.math.spatial_skew(v[i]) @ Phi[i])[
+                #     ..., :, 0
+                # ]  # (...,6)
+                sv_phi_vec = self.math.mxv(self.math.spatial_skew(v[i]), Phi[i][..., 0])
+                # a[i] = X_p[i] @ a[pi] + sv_phi_vec * qd  # (...,6)
+                a[i] = self.math.mxv(X_p[i], a[pi]) + self.math.vxs(
+                    sv_phi_vec, qd
+                )  # (...,6)
+            # f[i] = Ic[i] @ a[i] + self.math.spatial_skew_star(v[i]) @ (
+            #     Ic[i] @ v[i]
+            # )  # (...,6)
+            f[i] = self.math.mxv(Ic[i], a[i]) + self.math.mxv(
+                self.math.spatial_skew_star(v[i]), self.math.mxv(Ic[i], v[i])
+            )
+
+        # ----- backward pass -----
+        tau_base = None
+        tau_joint_by_idx = {}
+
+        for i, node in reversed(list(enumerate(model.tree))):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            if link_i.name == root_name:
+                tau_base = self.math.mxv(T(Phi[i]), f[i])  # (...,6)
+            elif (joint_i is not None) and (joint_i.idx is not None):
+                # (Phi^T f) -> (...,1,6) @ (...,6) -> (...,1)
+                tau_joint_by_idx[int(joint_i.idx)] = self.math.mxv(
+                    T(Phi[i]), f[i]
+                )  # (...,1)
+
+            if link_i.name != root_name:
+                pi = model.tree.get_idx_from_name(link_pi.name)
+                f[pi] = f[pi] + self.math.mxv(T(X_p[i]), f[i])  # (...,6)
+
+        # base mapping back
+        tau_base = self.math.mxv(T(B_X_BI), tau_base)  # (...,6)
+
+        # ----- stack tau = [tau_base; tau_joints] -----
+        cols = [self.math.expand_dims(tau_base, axis=-1)]  # (...,6,1)
+        for jidx in range(n):
+            col = (
+                tau_joint_by_idx[jidx]
+                if jidx in tau_joint_by_idx
+                else self.math.factory.zeros(batch + (1,))
+            )
+            cols.append(self.math.expand_dims(col, axis=-1))  # (...,1,1)
+
+        return self.math.concatenate(cols, axis=-2)
 
     def aba(self):
         raise NotImplementedError
