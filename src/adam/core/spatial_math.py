@@ -543,23 +543,18 @@ class SpatialMath:
         Sc = self.skew(c)
         R = self.R_from_RPY(rpy)
 
-        # Top-left: mass * I3
         mass_I3 = self.sxm(mass, self.factory.eye(3))
-
-        # Top-right and bottom-left: mass * Sc and mass * Sc.T
         mass_Sc = self.sxm(mass, Sc)
         mass_Sc_T = self.swapaxes(mass_Sc, -1, -2)
 
-        # Bottom-right: R @ inertia_matrix @ R.T + mass * Sc @ Sc.T
         rotated_inertia = R @ inertia_matrix @ self.swapaxes(R, -1, -2)
-        Sc_squared = Sc @ Sc.T
+        Sc_squared = Sc @ self.swapaxes(Sc, -1, -2)
         bottom_right = rotated_inertia + self.sxm(mass, Sc_squared)
 
-        # Construct the full matrix using concatenation
-        top = self.concatenate([mass_I3, mass_Sc], axis=-1)  # (3,6)
-        bottom = self.concatenate([mass_Sc_T, bottom_right], axis=-1)  # (3,6)
-
-        return self.concatenate([top, bottom], axis=-2)  # (6,6)
+        # Correct block placement:
+        top = self.concatenate([mass_I3, mass_Sc_T], axis=-1)  # (...,3,6)
+        bottom = self.concatenate([mass_Sc, bottom_right], axis=-1)  # (...,3,6)
+        return self.concatenate([top, bottom], axis=-2)  # (...,6,6)
 
     def spatial_inertial_with_parameters(self, I, mass, c, rpy):
         """
@@ -675,7 +670,6 @@ class SpatialMath:
         if v.shape[-1] == 1:
             v = v[..., 0]
         c = c[..., None]  # Add extra dimension
-        print(f"shape v {v.shape}, shape c {c.shape}")
         return v * c
 
     def adjoint_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
