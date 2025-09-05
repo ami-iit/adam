@@ -33,18 +33,12 @@ class RBDAlgorithms:
         """
         self.frame_velocity_representation = representation
 
-    def crba(
+    def crba_reference(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-        """This function computes the Composite Rigid body algorithm (Roy Featherstone) that computes the Mass Matrix.
-         The algorithm is complemented with Orin's modifications computing the Centroidal Momentum Matrix
-
-        Args:
-            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
-            joint_positions (npt.ArrayLike): The joints position
-        Returns:
-            M (npt.ArrayLike): Mass Matrix
-            Jcm (npt.ArrayLike): Centroidal Momentum Matrix
+        """
+        This is the reference implementation of the Composite Rigid Body Algorithm (CRBA).
+        It is based on the original implementation and is known to be correct.
         """
 
         base_transform, joint_positions = self._convert_to_arraylike(
@@ -54,22 +48,21 @@ class RBDAlgorithms:
         model_len = self.model.N
         Ic, X_p, Phi = [None] * model_len, [None] * model_len, [None] * model_len
 
-        M = self.math.factory.zeros(self.model.NDoF + 6, self.model.NDoF + 6)
+        M = self.math.factory.zeros((self.model.NDoF + 6, self.model.NDoF + 6))
         for i, node in enumerate(self.model.tree):
             node: Node
             link_i, joint_i, link_pi = node.get_elements()
             Ic[i] = link_i.spatial_inertia()
             if link_i.name == self.root_link:
-                # The first "real" link. The joint is universal.
                 X_p[i] = self.math.spatial_transform(
-                    self.math.factory.eye(3), self.math.factory.zeros(3, 1)
+                    self.math.factory.eye(3), self.math.factory.zeros((3, 1))
                 )
                 Phi[i] = self.math.factory.eye(6)
             else:
                 q = (
                     joint_positions[joint_i.idx]
                     if joint_i.idx is not None
-                    else self.math.zeros(1)
+                    else self.math.zeros_like(joint_positions[0])
                 )
                 X_p[i] = joint_i.spatial_transform(q=q)
                 Phi[i] = joint_i.motion_subspace()
@@ -85,6 +78,7 @@ class RBDAlgorithms:
                 M[joint_i.idx + 6, joint_i.idx + 6] = Phi[i].T @ F
             if link_i.name == self.root_link:
                 M[:6, :6] = Phi[i].T @ F
+
             j = i
             link_j, joint_j, link_pj = self.model.tree[j].get_elements()
             while link_j.name != self.root_link:
@@ -106,7 +100,7 @@ class RBDAlgorithms:
         X_G = [None] * model_len
         O_X_G = self.math.factory.eye(6)
         O_X_G[:3, 3:] = M[:3, 3:6].T / M[0, 0]
-        Jcm = self.math.factory.zeros(6, self.model.NDoF + 6)
+        Jcm = self.math.factory.zeros((6, self.model.NDoF + 6))
         for i, node in enumerate(self.model.tree):
             link_i, joint_i, link_pi = node.get_elements()
             if link_i.name != self.root_link:
@@ -126,14 +120,226 @@ class RBDAlgorithms:
         ):
             return M, Jcm
 
-        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            # Until now the algorithm returns the joint_position quantities in Body Fixed representation
-            # Moving to mixed representation...
+        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
             X_to_mixed = self.math.factory.eye(self.model.NDoF + 6)
             X_to_mixed[:6, :6] = self.math.adjoint_mixed_inverse(base_transform)
             M = X_to_mixed.T @ M @ X_to_mixed
             Jcm = X_to_mixed[:6, :6].T @ Jcm @ X_to_mixed
             return M, Jcm
+        else:
+            raise ValueError(
+                f"Unknown frame velocity representation: {self.frame_velocity_representation}"
+            )
+
+    def crba(self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike):
+        """
+        Batched Composite Rigid Body Algorithm (CRBA) + Orin's Centroidal Momentum Matrix.
+
+        - Mirrors the reference implementation’s control flow for readability.
+        - No array/tensor item-assignments (blocks collected then concatenated).
+        - Supports batched inputs via broadcasting.
+        """
+        base_transform, joint_positions = self._convert_to_arraylike(
+            base_transform, joint_positions
+        )
+
+        model = self.model
+        Nnodes = model.N
+        n = model.NDoF
+        root_name = self.root_link
+
+        # ---------- forward pass: per-node primitives ----------
+        Ic = [None] * Nnodes  # (...,6,6)
+        X_p = [None] * Nnodes  # (...,6,6)
+        Phi = [None] * Nnodes  # (...,6,ri)
+
+        for i, node in enumerate(model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            # spatial inertia (broadcast later as needed)
+            Ic[i] = link_i.spatial_inertia()
+
+            if link_i.name == root_name:
+                # root: X_p = spatial_transform(I, 0), Phi = I_6
+                eye3 = self.math.factory.eye(3)
+                zeros = self.math.factory.zeros((3, 1))
+                X_p[i] = self.math.spatial_transform(eye3, zeros)  # (6,6)
+                Phi[i] = self.math.factory.eye(6)  # (6,6)
+            else:
+                # joint transform and motion subspace
+                if (joint_i is not None) and (joint_i.idx is not None):
+                    q_i = joint_positions[..., joint_i.idx]
+                else:
+                    q_i = self.math.zeros_like(joint_positions[..., 0])
+                X_p[i] = joint_i.spatial_transform(q=q_i)
+
+                Si = joint_i.motion_subspace()
+                if len(Si.shape) == 1:  # (6,) -> (6,1)
+                    Si = self.math.expand_dims(Si, axis=-1)
+                Phi[i] = Si
+
+        # ---------- backward pass: composite inertias ----------
+        T = lambda x: self.math.swapaxes(x, -2, -1)  # transpose last two dims
+        X_p_T = [T(X_p[k]) for k in range(Nnodes)]
+
+        for i, node in reversed(list(enumerate(model.tree))):
+            link_i, joint_i, link_pi = node.get_elements()
+            if link_i.name != root_name:
+                pi = model.tree.get_idx_from_name(link_pi.name)
+                Ic[pi] = Ic[pi] + X_p_T[i] @ Ic[i] @ X_p[i]
+
+        # ---------- map nodes to (row/col) block indices in M ----------
+        # base is block 0 (size 6), actuated joints follow (size 1 each)
+        def block_index(node):
+            link_i, joint_i, _ = node.get_elements()
+            if link_i.name == root_name:
+                return 0
+            if (joint_i is not None) and (joint_i.idx is not None):
+                return 1 + int(joint_i.idx)
+            return None  # fixed joints do not appear in M/Jcm
+
+        # Prepare a (n+1) x (n+1) grid of blocks (filled later, zeros where missing)
+        blocks = [[None for _ in range(n + 1)] for _ in range(n + 1)]
+
+        # ---------- assemble M exactly like the reference ----------
+        for i, node in reversed(list(enumerate(model.tree))):
+            link_i, joint_i, link_pi = node.get_elements()
+            ri = block_index(node)
+
+            F = Ic[i] @ Phi[i]  # (...,6,ri_i)  (ri_i is 6 for base, 1 for joint)
+
+            # Diagonal terms
+            if (
+                (link_i.name != root_name)
+                and (joint_i is not None)
+                and (joint_i.idx is not None)
+            ):
+                # joint diagonal (1x1)
+                blocks[ri][ri] = T(Phi[i]) @ F
+            if link_i.name == root_name:
+                # base diagonal (6x6)
+                blocks[0][0] = T(Phi[i]) @ F
+
+            # Off-diagonal terms along path to root
+            j = i
+            link_j, joint_j, link_pj = model.tree[j].get_elements()
+            while link_j.name != root_name:
+                F = X_p_T[j] @ F
+                j = model.tree.get_idx_from_name(model.tree[j].parent.name)
+                link_j, joint_j, link_pj = model.tree[j].get_elements()
+
+                rj = block_index(model.tree[j])
+                if rj is None:
+                    continue
+
+                Bij = T(F) @ Phi[j]  # shapes adapt: (6,1), (1,6), or (1,1)
+
+                if (
+                    (link_i.name == root_name)
+                    and (joint_j is not None)
+                    and (joint_j.idx is not None)
+                ):
+                    # base–joint and its symmetric
+                    blocks[0][rj] = Bij
+                    blocks[rj][0] = T(Bij)
+
+                elif (
+                    (link_j.name == root_name)
+                    and (joint_i is not None)
+                    and (joint_i.idx is not None)
+                ):
+                    # joint–base and its symmetric
+                    blocks[ri][0] = Bij
+                    blocks[0][ri] = T(Bij)
+
+                elif (
+                    (joint_i is not None)
+                    and (joint_i.idx is not None)
+                    and (joint_j is not None)
+                    and (joint_j.idx is not None)
+                ):
+                    # joint–joint (scalar) and symmetric (same scalar)
+                    blocks[ri][rj] = Bij
+                    blocks[rj][ri] = Bij
+
+        # Replace missing blocks with zeros and concatenate into a full matrix
+        batch = joint_positions.shape[:-1] if len(joint_positions.shape) >= 2 else ()
+        sizes = [6] + [1] * n
+
+        row_tensors = []
+        for r in range(n + 1):
+            row_blocks = []
+            for c in range(n + 1):
+                B = blocks[r][c]
+                if B is None:
+                    B = self.math.factory.zeros(batch + (sizes[r], sizes[c]))
+                row_blocks.append(B)
+            row_tensors.append(self.math.concatenate(row_blocks, axis=-1))
+        M = self.math.concatenate(row_tensors, axis=-2)  # (..., 6+n, 6+n)
+
+        # ---------- Orin’s O_X_G (centroidal transform) ----------
+        A = T(M[..., :3, 3:6]) / M[..., 0, 0][..., None, None]  # (...,3,3)
+        I3 = self.math.factory.eye(batch + (3,))
+        Z3 = self.math.factory.zeros(batch + (3, 3))
+        top = self.math.concatenate([I3, A], axis=-1)  # (...,3,6)
+        bot = self.math.concatenate([Z3, I3], axis=-1)  # (...,3,6)
+        O_X_G = self.math.concatenate([top, bot], axis=-2)  # (...,6,6)
+
+        # ---------- propagate centroidal transform and build Jcm ----------
+        X_G = [None] * Nnodes
+        for i, node in enumerate(model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+            if link_i.name == root_name:
+                X_G[i] = O_X_G
+            else:
+                pi = model.tree.get_idx_from_name(link_pi.name)
+                X_G[i] = X_p[i] @ X_G[pi]
+
+        root_idx = model.tree.get_idx_from_name(root_name)
+        J_base = T(X_G[root_idx]) @ Ic[root_idx] @ Phi[root_idx]  # (...,6,6)
+
+        # collect joint columns in index order
+        idx2node = {}
+        for i, node in enumerate(model.tree):
+            _, joint_i, _ = node.get_elements()
+            if (joint_i is not None) and (joint_i.idx is not None):
+                idx2node[int(joint_i.idx)] = i
+
+        joint_cols = []
+        for jidx in range(n):
+            if jidx in idx2node:
+                i = idx2node[jidx]
+                col = T(X_G[i]) @ Ic[i] @ Phi[i]  # (...,6,1)
+            else:
+                col = self.math.factory.zeros(batch + (6, 1))
+            joint_cols.append(col)
+
+        Jcm = self.math.concatenate([J_base] + joint_cols, axis=-1)  # (...,6,6+n)
+
+        # ---------- representation handling ----------
+        if (
+            self.frame_velocity_representation
+            == Representations.BODY_FIXED_REPRESENTATION
+        ):
+            return M, Jcm
+
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            Xm = self.math.adjoint_mixed_inverse(base_transform)  # (...,6,6)
+            In = self.math.factory.eye(batch + (n,))
+            Z6n = self.math.factory.zeros(batch + (6, n))
+            Zn6 = self.math.factory.zeros(batch + (n, 6))
+
+            top = self.math.concatenate([Xm, Z6n], axis=-1)  # (...,6,6+n)
+            bot = self.math.concatenate([Zn6, In], axis=-1)  # (...,n,6+n)
+            X_to_mixed = self.math.concatenate([top, bot], axis=-2)  # (...,6+n,6+n)
+
+            M_mixed = T(X_to_mixed) @ M @ X_to_mixed
+            Jcm_mixed = T(Xm) @ Jcm @ X_to_mixed
+            return M_mixed, Jcm_mixed
+
+        raise ValueError(
+            f"Unknown frame velocity representation: {self.frame_velocity_representation}"
+        )
 
     def forward_kinematics(
         self, frame, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
