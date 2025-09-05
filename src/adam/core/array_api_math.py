@@ -17,13 +17,22 @@ class ArraySpec:
 
 def spec_from_reference(ref: Any) -> ArraySpec:
     # Force compat namespace when available (useful for PyTorch/JAX).
-    xp = aac.array_namespace(
-        ref, use_compat=True
-    )  # :contentReference[oaicite:0]{index=0}
+    # JAX doesn't have an array-api-compat wrapper, so use use_compat=False for JAX
+    try:
+        xp = aac.array_namespace(
+            ref, use_compat=True
+        )
+    except ValueError as e:
+        if "JAX does not have an array-api-compat wrapper" in str(e):
+            xp = aac.array_namespace(
+                ref, use_compat=False
+            )
+        else:
+            raise
     dtype = getattr(ref, "dtype", None)
     # aac.device(x) provides spec-like device, including a CPU device for NumPy.
     try:
-        device = aac.device(ref)  # :contentReference[oaicite:1]{index=1}
+        device = aac.device(ref)
     except Exception:
         device = getattr(ref, "device", None)
     return ArraySpec(xp=xp, dtype=dtype, device=device)
@@ -245,3 +254,11 @@ class ArrayAPISpatialMath(SpatialMath):
     def expand_dims(self, x: ArrayAPILike, axis: int) -> ArrayAPILike:
         xp = self._xp(x.array)
         return self.factory.asarray(xp.expand_dims(x.array, axis=axis))
+
+    def unsqueeze(self, x: ArrayAPILike, axis: int) -> ArrayAPILike:
+        xp = self._xp(x.array)
+        return self.factory.asarray(xp.expand_dims(x.array, axis=axis))
+
+    def transpose(self, x: ArrayAPILike, dims: tuple) -> ArrayAPILike:
+        xp = self._xp(x.array)
+        return self.factory.asarray(xp.permute_dims(x.array, dims))
