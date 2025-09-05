@@ -120,12 +120,14 @@ class StdJoint(Joint):
             npt.ArrayLike: motion subspace of the joint
         """
         if self.type == "fixed":
-            return self.math.zeros(
-                6,
-            )
+            return self.math.zeros(6, 1)
         elif self.type in ["revolute", "continuous"]:
-            axis = self.axis.array
-            return self.math.asarray([0, 0, 0, axis[0], axis[1], axis[2]])
+            axis = self.axis
+            z = self.math.zeros(1)
+            return self.math.vertcat(z, z, z, axis[0], axis[1], axis[2])
         elif self.type in ["prismatic"]:
-            axis = self.axis.array
-            return self.math.asarray([axis[0], axis[1], axis[2], 0, 0, 0])
+            axis = self.axis
+            zero = self.math.zeros(
+                3,
+            )
+            return self.math.vertcat(axis[0], axis[1], axis[2], zero, zero, zero)
