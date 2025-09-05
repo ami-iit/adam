@@ -153,18 +153,23 @@ class RBDAlgorithms:
         X_p = [None] * Nnodes  # (...,6,6)
         Phi = [None] * Nnodes  # (...,6,ri)
 
+        batch = joint_positions.shape[:-1] if len(joint_positions.shape) >= 2 else ()
+
         for i, node in enumerate(model.tree):
             link_i, joint_i, link_pi = node.get_elements()
 
-            # spatial inertia (broadcast later as needed)
-            Ic[i] = link_i.spatial_inertia()
+            # spatial inertia (broadcast as needed)
+            inertia = link_i.spatial_inertia()
+            Ic[i] = self.math.tile(inertia, batch + (1, 1)) if batch else inertia
 
             if link_i.name == root_name:
                 # root: X_p = spatial_transform(I, 0), Phi = I_6
                 eye3 = self.math.factory.eye(3)
                 zeros = self.math.factory.zeros((3, 1))
-                X_p[i] = self.math.spatial_transform(eye3, zeros)  # (6,6)
-                Phi[i] = self.math.factory.eye(6)  # (6,6)
+                xp_root = self.math.spatial_transform(eye3, zeros)
+                phi_root = self.math.factory.eye(6)
+                X_p[i] = self.math.tile(xp_root, batch + (1, 1)) if batch else xp_root
+                Phi[i] = self.math.tile(phi_root, batch + (1, 1)) if batch else phi_root
             else:
                 # joint transform and motion subspace
                 if (joint_i is not None) and (joint_i.idx is not None):
@@ -175,8 +180,8 @@ class RBDAlgorithms:
 
                 Si = joint_i.motion_subspace()
                 if len(Si.shape) == 1:  # (6,) -> (6,1)
-                    Si = self.math.expand_dims(Si, axis=-1)
-                Phi[i] = Si
+                    Si = self.math.unsqueeze(Si, axis=-1)
+                Phi[i] = self.math.tile(Si, batch + (1, 1)) if batch else Si
 
         # ---------- backward pass: composite inertias ----------
         T = lambda x: self.math.swapaxes(x, -2, -1)  # transpose last two dims
