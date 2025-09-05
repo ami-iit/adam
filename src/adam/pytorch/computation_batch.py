@@ -2,7 +2,6 @@
 
 import warnings
 
-import jax
 import numpy as np
 import torch
 from jax2torch import jax2torch
@@ -74,7 +73,7 @@ class KinDynComputationsBatch:
             M (torch.Tensor): The batch Mass Matrix
         """
 
-        M, _ = self.rbdalgos.crba(base_transform, joint_positions)[0]
+        M, _ = self.rbdalgos.crba(base_transform, joint_positions)
         return M.array
 
     def centroidal_momentum_matrix(
@@ -90,7 +89,6 @@ class KinDynComputationsBatch:
             Jcc (torch.Tensor): Centroidal Momentum matrix
         """
 
-        # return self.centroidal_momentum_matrix_fun()(base_transform, joint_positions)
         _, Jcm = self.rbdalgos.crba(base_transform, joint_positions)
         return Jcm.array
 
@@ -137,7 +135,6 @@ class KinDynComputationsBatch:
             H (torch.Tensor): The fk represented as Homogenous transformation matrix
         """
 
-        # return self.forward_kinematics_fun(frame)(base_transform, joint_positions)
         return self.rbdalgos.forward_kinematics(
             frame, base_transform, joint_positions
         ).array
@@ -156,27 +153,6 @@ class KinDynComputationsBatch:
             J (torch.Tensor): The Jacobian between the root and the frame
         """
         return self.rbdalgos.jacobian(frame, base_transform, joint_positions).array
-
-    def jacobian_fun(self, frame: str):
-        """Returns the Jacobian relative to the specified frame as a pytorch function
-
-        Args:
-            frame (str): The frame to which the jacobian will be computed
-
-        Returns:
-            J (pytorch function): The Jacobian relative to the frame
-        """
-        if self.funcs.get(f"jacobian_{frame}") is not None:
-            return self.funcs[f"jacobian_{frame}"]
-        print(f"[INFO] Compiling jacobian function for {frame} frame")
-
-        def fun(base_transform, joint_positions):
-            return self.rbdalgos.jacobian(frame, base_transform, joint_positions).array
-
-        vmapped_fun = jax.vmap(fun, in_axes=(0, 0))
-        jit_vmapped_fun = jax.jit(vmapped_fun)
-        self.funcs[f"jacobian_{frame}"] = jax2torch(jit_vmapped_fun)
-        return self.funcs[f"jacobian_{frame}"]
 
     def bias_force(
         self,
@@ -197,29 +173,14 @@ class KinDynComputationsBatch:
         Returns:
             h (torch.Tensor): the bias force
         """
-        return self.bias_force_fun()(
-            base_transform, joint_positions, base_velocity, joint_velocities
-        )
-
-    def bias_force_fun(self):
-        """Returns the bias force of the floating-base dynamics equation as a pytorch function
-
-        Returns:
-            h (pytorch function): the bias force
-        """
-        if self.funcs.get("bias_force") is not None:
-            return self.funcs["bias_force"]
-        print("[INFO] Compiling bias force function")
-
-        def fun(base_transform, joint_positions, base_velocity, joint_velocities):
-            return self.rbdalgos.rnea(
-                base_transform, joint_positions, base_velocity, joint_velocities, self.g
-            ).array.squeeze()
-
-        vmapped_fun = jax.vmap(fun, in_axes=(0, 0, 0, 0))
-        jit_vmapped_fun = jax.jit(vmapped_fun)
-        self.funcs["bias_force"] = jax2torch(jit_vmapped_fun)
-        return self.funcs["bias_force"]
+        gravity = self.g
+        return self.rbdalgos.rnea(
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            gravity,
+        ).array.squeeze()
 
     def coriolis_term(
         self,
@@ -240,33 +201,18 @@ class KinDynComputationsBatch:
         Returns:
             C (torch.Tensor): the Coriolis term
         """
-        return self.coriolis_term_fun()(
-            base_transform, joint_positions, base_velocity, joint_velocities
+        gravity = torch.zeros(
+            (6,),
+            dtype=base_transform.dtype,
+            device=base_transform.device,
         )
-
-    def coriolis_term_fun(self):
-        """Returns the coriolis term of the floating-base dynamics equation as a pytorch function
-
-        Returns:
-            C (pytorch function): the Coriolis term
-        """
-        if self.funcs.get("coriolis_term") is not None:
-            return self.funcs["coriolis_term"]
-        print("[INFO] Compiling coriolis term function")
-
-        def fun(base_transform, joint_positions, base_velocity, joint_velocities):
-            return self.rbdalgos.rnea(
-                base_transform,
-                joint_positions,
-                base_velocity.reshape(6, 1),
-                joint_velocities,
-                np.zeros(6),
-            ).array.squeeze()
-
-        vmapped_fun = jax.vmap(fun, in_axes=(0, 0, 0, 0))
-        jit_vmapped_fun = jax.jit(vmapped_fun)
-        self.funcs["coriolis_term"] = jax2torch(jit_vmapped_fun)
-        return self.funcs["coriolis_term"]
+        return self.rbdalgos.rnea(
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            gravity,
+        ).array.squeeze()
 
     def gravity_term(
         self, base_transform: torch.Tensor, joint_positions: torch.Tensor
@@ -281,31 +227,20 @@ class KinDynComputationsBatch:
         Returns:
             G (jnp.array): the gravity term
         """
-        return self.gravity_term_fun()(base_transform, joint_positions)
-
-    def gravity_term_fun(self):
-        """Returns the gravity term of the floating-base dynamics equation as a pytorch function
-
-        Returns:
-            G (pytorch function): the gravity term
-        """
-        if self.funcs.get("gravity_term") is not None:
-            return self.funcs["gravity_term"]
-        print("[INFO] Compiling gravity term function")
-
-        def fun(base_transform, joint_positions):
-            return self.rbdalgos.rnea(
-                base_transform,
-                joint_positions,
-                np.zeros(6).reshape(6, 1),
-                np.zeros(self.NDoF),
-                self.g,
-            ).array.squeeze()
-
-        vmapped_fun = jax.vmap(fun, in_axes=(0, 0))
-        jit_vmapped_fun = jax.jit(vmapped_fun)
-        self.funcs["gravity_term"] = jax2torch(jit_vmapped_fun)
-        return self.funcs["gravity_term"]
+        batch_size = base_transform.shape[:-2]
+        base_velocity = torch.zeros(
+            batch_size + (6,),
+            dtype=base_transform.dtype,
+            device=base_transform.device,
+        )
+        joint_velocities = torch.zeros_like(joint_positions)
+        return self.rbdalgos.rnea(
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            self.g,
+        ).array.squeeze()
 
     def CoM_position(
         self, base_transform: torch.Tensor, joint_positions: torch.Tensor
@@ -321,24 +256,6 @@ class KinDynComputationsBatch:
         """
         return self.rbdalgos.CoM_position(base_transform, joint_positions).array
 
-    def CoM_position_fun(self):
-        """Returns the CoM position as a pytorch function
-
-        Returns:
-            CoM (pytorch function): The CoM position
-        """
-        if self.funcs.get("CoM_position") is not None:
-            return self.funcs["CoM_position"]
-        print("[INFO] Compiling CoM position function")
-
-        def fun(base_transform, joint_positions):
-            return self.rbdalgos.CoM_position(base_transform, joint_positions).array
-
-        vmapped_fun = jax.vmap(fun, in_axes=(0, 0))
-        jit_vmapped_fun = jax.jit(vmapped_fun)
-        self.funcs["CoM_position"] = jax2torch(jit_vmapped_fun)
-        return self.funcs["CoM_position"]
-
     def CoM_jacobian(
         self, base_transform: torch.Tensor, joint_positions: torch.Tensor
     ) -> torch.Tensor:
@@ -351,25 +268,7 @@ class KinDynComputationsBatch:
         Returns:
             Jcom (torch.Tensor): The CoM Jacobian
         """
-        return self.CoM_jacobian_fun()(base_transform, joint_positions)
-
-    def CoM_jacobian_fun(self):
-        """Returns the CoM Jacobian as a pytorch function
-
-        Returns:
-            Jcom (pytorch function): The CoM Jacobian
-        """
-        if self.funcs.get("CoM_jacobian") is not None:
-            return self.funcs["CoM_jacobian"]
-        print("[INFO] Compiling CoM Jacobian function")
-
-        def fun(base_transform, joint_positions):
-            return self.rbdalgos.CoM_jacobian(base_transform, joint_positions).array
-
-        vmapped_fun = jax.vmap(fun, in_axes=(0, 0))
-        jit_vmapped_fun = jax.jit(vmapped_fun)
-        self.funcs["CoM_jacobian"] = jax2torch(jit_vmapped_fun)
-        return self.funcs["CoM_jacobian"]
+        return self.rbdalgos.CoM_jacobian(base_transform, joint_positions).array
 
     def get_total_mass(self) -> float:
         """Returns the total mass of the robot
