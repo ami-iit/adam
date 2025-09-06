@@ -325,9 +325,9 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: result of the multiplication
         """
-        c = self.factory.asarray(s.array[..., None, None])
-        s = self.factory.asarray(s.array[..., None, None])
-        return c * m
+        # s = self.factory.asarray(s.array[..., None, None])
+        s = s[..., None, None]
+        return s * m
 
     def Rx(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -395,26 +395,26 @@ class SpatialMath:
             npt.ArrayLike: Homogeneous transform
         """
         # Check if q is batched to determine if we need to handle batching
-        q_is_batched = q.array.ndim > 0 and q.array.shape != ()
+        q_is_batched = q.ndim > 0 and q.shape != ()
 
         if q_is_batched:
             # make all the joint properties batched
             batch_size = q.array.shape[0]
 
             # Ensure xyz is batched
-            if xyz.array.ndim == 1:
+            if xyz.ndim == 1:
                 xyz = self.factory.asarray(
                     xyz.array.unsqueeze(0).expand(batch_size, -1)
                 )
 
             # Ensure rpy is batched
-            if rpy.array.ndim == 1:
+            if rpy.ndim == 1:
                 rpy = self.factory.asarray(
                     rpy.array.unsqueeze(0).expand(batch_size, -1)
                 )
 
             # Ensure axis is batched
-            if axis.array.ndim == 1:
+            if axis.ndim == 1:
                 axis = self.factory.asarray(
                     axis.array.unsqueeze(0).expand(batch_size, -1)
                 )
@@ -425,7 +425,7 @@ class SpatialMath:
 
     def homogeneous(self, R, p):
         # Ensure p has the right shape for concatenation
-        if p.array.ndim == R.array.ndim - 1:
+        if p.ndim == R.ndim - 1:
             p = self.factory.asarray(p.array[..., None])  # Add last dimension
         top = self.concatenate([R, p], axis=-1)  # (...,3,4)
         zeros_row = self.factory.zeros_like(R[..., :1, :])  # (...,1,3)
