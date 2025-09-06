@@ -920,17 +920,18 @@ class RBDAlgorithms:
         tau_base = self.math.mxv(T(B_X_BI), tau_base)  # (...,6)
 
         # ----- stack tau = [tau_base; tau_joints] -----
-        cols = [tau_base]  # (...,6)
+        tau_joints = []
         for jidx in range(n):
             col = (
                 tau_joint_by_idx[jidx]
                 if jidx in tau_joint_by_idx
                 else self.math.factory.zeros(batch + (1,))
             )
-            cols.append(col)  # (...,1)
+            tau_joints.append(col)
 
-        tau_stacked = self.math.concatenate(cols, axis=-1)  # (...,6+n)
-        return self.math.expand_dims(tau_stacked, axis=-1)  # (...,6+n,1)
+        tau_joints_vec = self.math.concatenate(tau_joints, axis=-1)
+
+        return self.math.concatenate([tau_base, tau_joints_vec], axis=-1)
 
     def aba(self):
         raise NotImplementedError
