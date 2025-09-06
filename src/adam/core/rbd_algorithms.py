@@ -830,7 +830,7 @@ class RBDAlgorithms:
             )
 
         # base spatial acceleration (bias + gravity)
-        a0 = -(gravity_X @ g) + transformed_acc  # (...,6)
+        a0 = -(self.math.mxv(gravity_X, g)) + transformed_acc  # (...,6)
 
         # ----- forward pass -----
         Ic, X_p, Phi = [None] * Nnodes, [None] * Nnodes, [None] * Nnodes
@@ -920,16 +920,17 @@ class RBDAlgorithms:
         tau_base = self.math.mxv(T(B_X_BI), tau_base)  # (...,6)
 
         # ----- stack tau = [tau_base; tau_joints] -----
-        cols = [self.math.expand_dims(tau_base, axis=-1)]  # (...,6,1)
+        cols = [tau_base]  # (...,6)
         for jidx in range(n):
             col = (
                 tau_joint_by_idx[jidx]
                 if jidx in tau_joint_by_idx
                 else self.math.factory.zeros(batch + (1,))
             )
-            cols.append(self.math.expand_dims(col, axis=-1))  # (...,1,1)
+            cols.append(col)  # (...,1)
 
-        return self.math.concatenate(cols, axis=-2)
+        tau_stacked = self.math.concatenate(cols, axis=-1)  # (...,6+n)
+        return self.math.expand_dims(tau_stacked, axis=-1)  # (...,6+n,1)
 
     def aba(self):
         raise NotImplementedError
