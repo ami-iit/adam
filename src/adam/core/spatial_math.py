@@ -231,18 +231,6 @@ class SpatialMath:
         pass
 
     @abc.abstractmethod
-    def unsqueeze(self, x: npt.ArrayLike, axis: int) -> npt.ArrayLike:
-        """
-        Args:
-            x (npt.ArrayLike): elements
-            axis (int): axis along which to unsqueeze
-
-        Returns:
-            npt.ArrayLike: unsqueezed elements x along axis
-        """
-        pass
-
-    @abc.abstractmethod
     def transpose(self, x: npt.ArrayLike, dims: tuple) -> npt.ArrayLike:
         """
         Args:
@@ -293,12 +281,8 @@ class SpatialMath:
         c = self.cos(q)
         s = self.sin(q)
 
-        # Expand scalars for matrix operations
-        # c = self.factory.asarray(c.array[..., None, None])
-        # s = self.factory.asarray(s.array[..., None, None])
-
         # Build rotation matrix components
-        I = self.factory.eye(q.array.shape + (3,))
+        I = self.factory.eye(q.shape + (3,))
         K = self.skew(axis)  # skew-symmetric matrix
         K_squared = K @ K  # K²
         ones = self.factory.ones_like(c)
@@ -325,7 +309,6 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: result of the multiplication
         """
-        # s = self.factory.asarray(s.array[..., None, None])
         s = s[..., None, None]
         return s * m
 
@@ -399,7 +382,7 @@ class SpatialMath:
 
         if q_is_batched:
             # make all the joint properties batched
-            batch_size = q.array.shape[0]
+            batch_size = q.shape[0]
 
             # Ensure xyz is batched using standard numpy-style broadcasting
             if xyz.ndim == 1:
@@ -549,8 +532,6 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: spatial transform
         """
-        if p.ndim >= 2 and p.shape[-1] == 1:
-            p = p[..., :, 0]  # (...,3)
 
         Sp = self.skew(p)  # (...,3,3)
         zeros = self.factory.zeros_like(R)
