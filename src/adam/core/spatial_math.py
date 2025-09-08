@@ -671,18 +671,18 @@ class SpatialMath:
 
         R = H[..., :3, :3]
         p = H[..., :3, 3]
-        Rdot = self.skew(v[..., 3:]) @ R
-        omega = v[..., 3:]
-        lin_vel = v[..., :3]
-        if omega.shape[-1] == 3:
+        v_linear = v[..., :3]
+        v_angular = v[..., 3:]
+        Rdot = self.skew(v_angular) @ R
+        if v_angular.shape[-1] == 3:
             # promote to column for consistent matmul semantics
-            omega_col = omega[..., None]
-            lin_vel = lin_vel[..., None]
+            omega_col = v_angular[..., None]
+            v_linear = v_linear[..., None]
         else:
-            omega_col = omega
-            lin_vel = lin_vel
+            omega_col = v_angular
+            v_linear = v_linear
 
-        pdot = lin_vel - self.skew(p) @ omega_col
+        pdot = v_linear - self.skew(p) @ omega_col
 
         Z = self.factory.zeros_like(R)
         S = self.skew(pdot) @ R + self.skew(p) @ Rdot
