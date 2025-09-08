@@ -163,18 +163,19 @@ class ArrayAPIFactory(ArrayLikeFactory):
 
     def asarray(self, x) -> ArrayAPILike:
         # preserve the gradient if x is a torch tensor (check if it has "requires_grad_" attribute)
+        # it could be moved to the torch-like class, but maybe here is more visible
         if getattr(x, "requires_grad_", False):
             return self._like(x)
         return self._like(self._xp.asarray(x, dtype=self._dtype, device=self._device))
 
     def zeros_like(self, x: ArrayAPILike) -> ArrayAPILike:
         return self._like(
-            self._xp.zeros_like(x.array, dtype=x.array.dtype, device=x.array.device)
+            self._xp.zeros_like(x.array, dtype=x.array.dtype)
         )
 
     def ones_like(self, x: ArrayAPILike) -> ArrayAPILike:
         return self._like(
-            self._xp.ones_like(x.array, dtype=x.array.dtype, device=x.array.device)
+            self._xp.ones_like(x.array, dtype=x.array.dtype)
         )
 
     def tile(self, x: ArrayAPILike, reps: tuple) -> ArrayAPILike:
