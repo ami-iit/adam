@@ -270,7 +270,7 @@ class CasadiLikeFactory(ArrayLikeFactory):
             CasadiLike: Array with single dimensions removed
         """
         shape = x.array.shape
-        
+
         if axis is None:
             # Remove all single dimensions
             new_shape = tuple(dim for dim in shape if dim != 1)
@@ -281,12 +281,12 @@ class CasadiLikeFactory(ArrayLikeFactory):
             if axis >= len(shape) or shape[axis] != 1:
                 # Axis doesn't exist or doesn't have size 1, return unchanged
                 return x
-            new_shape = shape[:axis] + shape[axis+1:]
-        
+            new_shape = shape[:axis] + shape[axis + 1 :]
+
         if len(new_shape) == 0:
             # Result would be scalar, keep as (1,) for CasADi compatibility
             new_shape = (1,)
-        
+
         return CasadiLike(x.array.reshape(*new_shape))
 
 
@@ -304,15 +304,14 @@ class SpatialMath(SpatialMath):
         Returns:
             CasadiLike: the skew symmetric matrix from x
         """
-        if isinstance(x, CasadiLike):
-            # Check if x.array is empty or has wrong size
-            if x.array.size1() == 0 or x.array.size2() == 0:
-                raise ValueError(
-                    f"skew received empty array: {x.array.size1()}x{x.array.size2()}"
-                )
-            return CasadiLike(cs.skew(x.array))
-        else:
+        if not isinstance(x, CasadiLike):
             return CasadiLike(cs.skew(x))
+        # Check if x.array is empty or has wrong size
+        if x.array.size1() == 0 or x.array.size2() == 0:
+            raise ValueError(
+                f"skew received empty array: {x.array.size1()}x{x.array.size2()}"
+            )
+        return CasadiLike(cs.skew(x.array))
 
     @staticmethod
     def sin(x: npt.ArrayLike) -> CasadiLike:
@@ -354,10 +353,6 @@ class SpatialMath(SpatialMath):
         Returns:
             CasadiLike:  vertical concatenation of elements
         """
-        # here the logic is a bit convoluted: x is a tuple containing CasadiLike
-        # cs.vertcat accepts *args. A list of cs types is created extracting the value
-        # from the CasadiLike stored in the tuple x.
-        # Then the list is unpacked with the * operator.
         y = [xi.array for xi in x]
         return CasadiLike(cs.vertcat(*y))
 
@@ -386,14 +381,10 @@ class SpatialMath(SpatialMath):
         # Extract CasADi arrays from CasadiLike objects
         arrays = [xi.array for xi in x]
 
-        if axis == -1:  # Stack along last dimension (horizontal)
+        if axis in {-1, 1}:
             return CasadiLike(cs.horzcat(*arrays))
-        elif axis == -2:  # Stack along second-to-last dimension (vertical)
+        elif axis in {-2, 0}:
             return CasadiLike(cs.vertcat(*arrays))
-        elif axis == 0:  # Stack along first dimension (vertical for 2D)
-            return CasadiLike(cs.vertcat(*arrays))
-        elif axis == 1:  # Stack along second dimension (horizontal for 2D)
-            return CasadiLike(cs.horzcat(*arrays))
         else:
             raise NotImplementedError(f"CasADi stack not implemented for axis={axis}")
 
@@ -426,7 +417,7 @@ class SpatialMath(SpatialMath):
             ):
                 # Two column vectors - stack vertically to create longer column vector
                 return CasadiLike(cs.vertcat(arr1, arr2))
-            
+
             # Check if we have incompatible shapes that need flattening
             # E.g., trying to concatenate (6,) or (6,1) with (1,23)
             if len(arr1.shape) <= 2 and len(arr2.shape) <= 2:
@@ -434,28 +425,32 @@ class SpatialMath(SpatialMath):
                 try:
                     # Try normal concatenation first
                     return CasadiLike(cs.horzcat(arr1, arr2))
-                except:
+                except Exception:
                     # If that fails, flatten and try vertical concatenation
                     # Flatten arrays to vectors
-                    flat1 = arr1.reshape((-1, 1)) if len(arr1.shape) == 1 or arr1.shape[1] != 1 else arr1
-                    flat2 = arr2.reshape((-1, 1)) if len(arr2.shape) == 1 or arr2.shape[1] != 1 else arr2
-                    
+                    flat1 = (
+                        arr1.reshape((-1, 1))
+                        if len(arr1.shape) == 1 or arr1.shape[1] != 1
+                        else arr1
+                    )
+                    flat2 = (
+                        arr2.reshape((-1, 1))
+                        if len(arr2.shape) == 1 or arr2.shape[1] != 1
+                        else arr2
+                    )
+
                     # If one is a row vector, transpose it to column
                     if len(flat1.shape) == 2 and flat1.shape[0] == 1:
                         flat1 = flat1.T
                     if len(flat2.shape) == 2 and flat2.shape[0] == 1:
                         flat2 = flat2.T
-                        
+
                     return CasadiLike(cs.vertcat(flat1, flat2))
 
-        if axis == -1:  # Concatenate along last dimension (horizontal)
+        if axis in {-1, 1}:
             return CasadiLike(cs.horzcat(*arrays))
-        elif axis == -2:  # Concatenate along second-to-last dimension (vertical)
+        elif axis in {-2, 0}:
             return CasadiLike(cs.vertcat(*arrays))
-        elif axis == 0:  # Concatenate along first dimension (vertical for 2D)
-            return CasadiLike(cs.vertcat(*arrays))
-        elif axis == 1:  # Concatenate along second dimension (horizontal for 2D)
-            return CasadiLike(cs.horzcat(*arrays))
         else:
             raise NotImplementedError(
                 f"CasADi concatenate not implemented for axis={axis}"
@@ -508,7 +503,7 @@ class SpatialMath(SpatialMath):
 
         # Perform matrix multiplication
         result = cs.mtimes(m.array, v_array)
-        
+
         # Keep result as column vector for proper concatenation
         return CasadiLike(result)
 
@@ -531,13 +526,10 @@ class SpatialMath(SpatialMath):
 
         # Handle scalar extraction from (1, 1) matrix
         c_array = c.array
-        if len(c_array.shape) == 2 and c_array.shape == (1, 1):
-            c_array = c_array[0, 0]  # Extract scalar from (1, 1) matrix
-        elif len(c_array.shape) == 2 and c_array.shape[0] == 1:
-            c_array = c_array[0, 0]  # Extract scalar from (1, n) matrix
-        elif len(c_array.shape) == 2 and c_array.shape[1] == 1:
-            c_array = c_array[0, 0]  # Extract scalar from (n, 1) matrix
-
+        if len(c_array.shape) == 2 and (
+            c_array.shape == (1, 1) or c_array.shape[0] == 1 or c_array.shape[1] == 1
+        ):
+            c_array = c_array[0, 0]
         # For CasADi, scalar multiplication should work directly
         result = v_array * c_array
         return CasadiLike(result)
