@@ -558,7 +558,7 @@ class SpatialMath:
         bottom = self.concatenate([mass_Sc, bottom_right], axis=-1)  # (...,3,6)
         return self.concatenate([top, bottom], axis=-2)  # (...,6,6)
 
-    def spatial_inertial_with_parameters(self, I, mass, c, rpy):
+    def spatial_inertial_with_parameters(self, inertia_matrix, mass, c, rpy):
         """
         Args:
             I (npt.ArrayLike): inertia values parametric
@@ -569,21 +569,23 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: the 6x6 inertia matrix parametric expressed at the origin of the link (with rotation)
         """
-        IO = self.factory.zeros(6, 6)
+        inertia_matrix = inertia_matrix.matrix if hasattr(inertia_matrix, "matrix") else inertia_matrix
+        # Compute components
         Sc = self.skew(c)
-        R = self.factory.zeros(3, 3)
-        R_temp = self.R_from_RPY(rpy)
-        inertia_matrix = self.vertcat(
-            self.horzcat(I.ixx, I.ixy, I.ixz),
-            self.horzcat(I.ixy, I.iyy, I.iyz),
-            self.horzcat(I.ixz, I.iyz, I.izz),
-        )
+        R = self.R_from_RPY(rpy)
 
-        IO[3:, 3:] = R_temp @ inertia_matrix @ R_temp.T + mass * Sc @ Sc.T
-        IO[3:, :3] = mass * Sc
-        IO[:3, 3:] = mass * Sc.T
-        IO[:3, :3] = self.factory.eye(3) * mass
-        return IO
+        mass_I3 = self.sxm(mass, self.factory.eye(3))
+        mass_Sc = self.sxm(mass, Sc)
+        mass_Sc_T = self.swapaxes(mass_Sc, -1, -2)
+
+        rotated_inertia = R @ inertia_matrix @ self.swapaxes(R, -1, -2)
+        Sc_squared = Sc @ self.swapaxes(Sc, -1, -2)
+        bottom_right = rotated_inertia + self.sxm(mass, Sc_squared)
+
+        # Correct block placement:
+        top = self.concatenate([mass_I3, mass_Sc_T], axis=-1)  # (...,3,6)
+        bottom = self.concatenate([mass_Sc, bottom_right], axis=-1)  # (...,3,6)
+        return self.concatenate([top, bottom], axis=-2)  # (...,6,6)
 
     def spatial_skew(self, v: npt.ArrayLike) -> npt.ArrayLike:
         """
