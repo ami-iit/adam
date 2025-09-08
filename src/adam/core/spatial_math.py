@@ -401,23 +401,23 @@ class SpatialMath:
             # make all the joint properties batched
             batch_size = q.array.shape[0]
 
-            # Ensure xyz is batched
+            # Ensure xyz is batched using standard numpy-style broadcasting
             if xyz.ndim == 1:
-                xyz = self.factory.asarray(
-                    xyz.array.unsqueeze(0).expand(batch_size, -1)
-                )
+                xp = self._xp(xyz.array)
+                xyz_batched = xp.tile(xyz.array[None, :], (batch_size, 1))
+                xyz = self.factory.asarray(xyz_batched)
 
             # Ensure rpy is batched
             if rpy.ndim == 1:
-                rpy = self.factory.asarray(
-                    rpy.array.unsqueeze(0).expand(batch_size, -1)
-                )
+                xp = self._xp(rpy.array)
+                rpy_batched = xp.tile(rpy.array[None, :], (batch_size, 1))
+                rpy = self.factory.asarray(rpy_batched)
 
             # Ensure axis is batched
             if axis.ndim == 1:
-                axis = self.factory.asarray(
-                    axis.array.unsqueeze(0).expand(batch_size, -1)
-                )
+                xp = self._xp(axis.array)
+                axis_batched = xp.tile(axis.array[None, :], (batch_size, 1))
+                axis = self.factory.asarray(axis_batched)
         R_rpy = self.R_from_RPY(rpy)
         R_axis = self.R_from_axis_angle(axis, q)
         R = R_rpy @ R_axis
