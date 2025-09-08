@@ -19,14 +19,10 @@ def spec_from_reference(ref: Any) -> ArraySpec:
     # Force compat namespace when available (useful for PyTorch/JAX).
     # JAX doesn't have an array-api-compat wrapper, so use use_compat=False for JAX
     try:
-        xp = aac.array_namespace(
-            ref, use_compat=True
-        )
+        xp = aac.array_namespace(ref, use_compat=True)
     except ValueError as e:
         if "JAX does not have an array-api-compat wrapper" in str(e):
-            xp = aac.array_namespace(
-                ref, use_compat=False
-            )
+            xp = aac.array_namespace(ref, use_compat=False)
         else:
             raise
     dtype = getattr(ref, "dtype", None)
@@ -51,14 +47,6 @@ class ArrayAPILike(ArrayLike):
     # -------- basics
     def __getitem__(self, idx) -> "ArrayAPILike":
         return self.__class__(self.array[idx])
-
-    # def __setitem__(self, idx, value):
-    #     v = getattr(value, "array", value).reshape(self.array[idx].shape)
-    #     try:  # JAX path
-    #         self.array = self.array.at[idx].set(v)
-    #     except AttributeError:  # NumPy / Torch
-    #         self.array[idx] = v
-    #     return self
 
     @property
     def shape(self):
@@ -169,14 +157,10 @@ class ArrayAPIFactory(ArrayLikeFactory):
         return self._like(self._xp.asarray(x, dtype=self._dtype, device=self._device))
 
     def zeros_like(self, x: ArrayAPILike) -> ArrayAPILike:
-        return self._like(
-            self._xp.zeros_like(x.array, dtype=x.array.dtype)
-        )
+        return self._like(self._xp.zeros_like(x.array, dtype=x.array.dtype))
 
     def ones_like(self, x: ArrayAPILike) -> ArrayAPILike:
-        return self._like(
-            self._xp.ones_like(x.array, dtype=x.array.dtype)
-        )
+        return self._like(self._xp.ones_like(x.array, dtype=x.array.dtype))
 
     def tile(self, x: ArrayAPILike, reps: tuple) -> ArrayAPILike:
         return self._like(self._xp.tile(x.array, reps))
@@ -253,10 +237,6 @@ class ArrayAPISpatialMath(SpatialMath):
         return self.factory.asarray(xp.swapaxes(x.array, axis1, axis2))
 
     def expand_dims(self, x: ArrayAPILike, axis: int) -> ArrayAPILike:
-        xp = self._xp(x.array)
-        return self.factory.asarray(xp.expand_dims(x.array, axis=axis))
-
-    def unsqueeze(self, x: ArrayAPILike, axis: int) -> ArrayAPILike:
         xp = self._xp(x.array)
         return self.factory.asarray(xp.expand_dims(x.array, axis=axis))
 
