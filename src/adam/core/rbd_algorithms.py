@@ -81,8 +81,6 @@ class RBDAlgorithms:
                 X_p[i] = joint_i.spatial_transform(q=q_i)
 
                 Si = joint_i.motion_subspace()
-                if len(Si.shape) == 1:  # (6,) -> (6,1)
-                    Si = self.math.unsqueeze(Si, axis=-1)
                 Phi[i] = self.math.tile(Si, batch + (1, 1)) if batch else Si
 
         # ---------- backward pass: composite inertias ----------
