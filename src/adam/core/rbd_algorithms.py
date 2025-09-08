@@ -501,9 +501,7 @@ class RBDAlgorithms:
             )
         )
 
-        batch_size = (
-            joint_positions.shape[:-1] if len(joint_positions.shape) >= 2 else ()
-        )
+        batch_size = base_transform.shape[:-2] if len(base_transform.shape) > 2 else ()
 
         I4 = self.math.factory.eye(batch_size + (4,))
 
@@ -615,9 +613,7 @@ class RBDAlgorithms:
         base_transform, joint_positions = self._convert_to_arraylike(
             base_transform, joint_positions
         )
-        batch_size = (
-            joint_positions.shape[:-1] if len(joint_positions.shape) >= 2 else ()
-        )
+        batch_size = base_transform.shape[:-2] if len(base_transform.shape) > 2 else ()
 
         com_pos = self.math.factory.zeros(batch_size + (3,))
         for item in self.model.tree:
@@ -645,9 +641,7 @@ class RBDAlgorithms:
         base_transform, joint_positions = self._convert_to_arraylike(
             base_transform, joint_positions
         )
-        batch_size = (
-            joint_positions.shape[:-1] if len(joint_positions.shape) >= 2 else ()
-        )
+        batch_size = base_transform.shape[:-2] if len(base_transform.shape) > 2 else ()
         ori_frame_velocity_representation = self.frame_velocity_representation
         self.frame_velocity_representation = Representations.MIXED_REPRESENTATION
         _, Jcm = self.crba(base_transform, joint_positions)
@@ -801,7 +795,7 @@ class RBDAlgorithms:
         root_name = self.root_link
 
         T = lambda X: self.math.swapaxes(X, -2, -1)  # transpose last two dims
-        batch = joint_positions.shape[:-1] if len(joint_positions.shape) >= 2 else ()
+        batch_size = base_transform.shape[:-2] if len(base_transform.shape) > 2 else ()
 
         # gravity map (mixed inverse as in reference)
         gravity_X = self.math.adjoint_mixed_inverse(base_transform)  # (...,6,6)
@@ -811,8 +805,8 @@ class RBDAlgorithms:
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
         ):
-            B_X_BI = self.math.factory.eye(batch + (6,))  # (...,6,6)
-            transformed_acc = self.math.factory.zeros(batch + (6,))  # (...,6)
+            B_X_BI = self.math.factory.eye(batch_size + (6,))  # (...,6,6)
+            transformed_acc = self.math.factory.zeros(batch_size + (6,))  # (...,6)
         elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
             B_X_BI = self.math.adjoint_mixed_inverse(base_transform)  # (...,6,6)
             omega = base_velocity[..., 3:]  # (...,3)
@@ -822,7 +816,7 @@ class RBDAlgorithms:
                 self.math.skew(omega), vlin
             )  # (...,3)
             top3 = -self.math.mxv(B_X_BI[..., :3, :3], skew_omega_times_vlin)  # (...,3)
-            bot3 = self.math.factory.zeros(batch + (3,))
+            bot3 = self.math.factory.zeros(batch_size + (3,))
             transformed_acc = self.math.concatenate([top3, bot3], axis=-1)  # (...,6)
         else:
             raise NotImplementedError(
@@ -837,18 +831,29 @@ class RBDAlgorithms:
         v, a, f = [None] * Nnodes, [None] * Nnodes, [None] * Nnodes
 
         for i, node in enumerate(model.tree):
+            node: Node
             link_i, joint_i, link_pi = node.get_elements()
 
             inertia = link_i.spatial_inertia()
-            Ic[i] = self.math.tile(inertia, batch + (1, 1)) if batch else inertia
+            Ic[i] = (
+                self.math.tile(inertia, batch_size + (1, 1)) if batch_size else inertia
+            )
 
             if link_i.name == root_name:
                 eye3 = self.math.factory.eye(3)
                 zeros = self.math.factory.zeros((3, 1))
                 xp_root = self.math.spatial_transform(eye3, zeros)
                 phi_root = self.math.factory.eye(6)
-                X_p[i] = self.math.tile(xp_root, batch + (1, 1)) if batch else xp_root
-                Phi[i] = self.math.tile(phi_root, batch + (1, 1)) if batch else phi_root
+                X_p[i] = (
+                    self.math.tile(xp_root, batch_size + (1, 1))
+                    if batch_size
+                    else xp_root
+                )
+                Phi[i] = (
+                    self.math.tile(phi_root, batch_size + (1, 1))
+                    if batch_size
+                    else phi_root
+                )
                 # v[i] = B_X_BI @ base_velocity  # (...,6)
                 v[i] = self.math.mxv(B_X_BI, base_velocity)  # (...,6)
                 # a[i] = X_p[i] @ a0  # (...,6)
@@ -867,35 +872,25 @@ class RBDAlgorithms:
                 )
 
                 X_p[i] = joint_i.spatial_transform(q=q)  # (...,6,6)
-                Si = joint_i.motion_subspace()  # (...,6,1) usually
-                if len(Si.shape) == 1:
-                    Si = self.math.expand_dims(Si, axis=-1)  # (6,) -> (6,1)
-                Phi[i] = self.math.tile(Si, batch + (1, 1)) if batch else Si
-
+                Si = joint_i.motion_subspace()  # (6,)
+                Phi[i] = (
+                    self.math.tile(Si, batch_size + (1, 1)) if batch_size else Si
+                )  # (...,6,1)
                 pi = model.tree.get_idx_from_name(link_pi.name)
 
-                # Phi*qd as a 6-vector: (…,6,1)* (…,)-> (…,6,1) -> take last-dim index 0
-                # phi_qd_vec = (Phi[i] * qd[..., None, None])[..., :, 0]  # (...,6)
-                phi_qd_vec = self.math.vxs(Phi[i], qd)  # (...,6)
+                phi_qd = self.math.vxs(Phi[i], qd)  # (...,6)
 
-                # v[i] = X_p[i] @ v[pi] + phi_qd_vec  # (...,6)
-                v[i] = self.math.mxv(X_p[i], v[pi]) + phi_qd_vec  # (...,6)
-
-                # (skew(v) @ Phi) is (...,6,1) -> take [:,0] to get (...,6)
-                # sv_phi_vec = (self.math.spatial_skew(v[i]) @ Phi[i])[
-                #     ..., :, 0
-                # ]  # (...,6)
-                sv_phi_vec = self.math.mxv(self.math.spatial_skew(v[i]), Phi[i][..., 0])
-                # a[i] = X_p[i] @ a[pi] + sv_phi_vec * qd  # (...,6)
-                a[i] = self.math.mxv(X_p[i], a[pi]) + self.math.vxs(
-                    sv_phi_vec, qd
+                v[i] = self.math.mxv(X_p[i], v[pi]) + phi_qd  # (...,6)
+                a[i] = self.math.mxv(X_p[i], a[pi]) + self.math.mxv(
+                    self.math.spatial_skew(v[i]), phi_qd
                 )  # (...,6)
+
             # f[i] = Ic[i] @ a[i] + self.math.spatial_skew_star(v[i]) @ (
             #     Ic[i] @ v[i]
             # )  # (...,6)
             f[i] = self.math.mxv(Ic[i], a[i]) + self.math.mxv(
                 self.math.spatial_skew_star(v[i]), self.math.mxv(Ic[i], v[i])
-            )
+            )  # (...,6)
 
         # ----- backward pass -----
         tau_base = None
@@ -921,11 +916,11 @@ class RBDAlgorithms:
 
         # ----- stack tau = [tau_base; tau_joints] -----
         tau_joints = []
-        for jidx in range(n):
+        for ii in range(n):
             col = (
-                tau_joint_by_idx[jidx]
-                if jidx in tau_joint_by_idx
-                else self.math.factory.zeros(batch + (1,))
+                tau_joint_by_idx[ii]
+                if ii in tau_joint_by_idx
+                else self.math.factory.zeros(batch_size + (1,))
             )
             tau_joints.append(col)
 
