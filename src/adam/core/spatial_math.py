@@ -219,18 +219,6 @@ class SpatialMath:
         pass
 
     @abc.abstractmethod
-    def squeeze(self, x: npt.ArrayLike, axis: int) -> npt.ArrayLike:
-        """
-        Args:
-            x (npt.ArrayLike): elements
-            axis (int): axis along which to squeeze
-
-        Returns:
-            npt.ArrayLike: squeezed elements x along axis
-        """
-        pass
-
-    @abc.abstractmethod
     def transpose(self, x: npt.ArrayLike, dims: tuple) -> npt.ArrayLike:
         """
         Args:
