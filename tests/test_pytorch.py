@@ -5,8 +5,6 @@ from conftest import RobotCfg, State
 
 from adam.pytorch import KinDynComputations
 
-torch.set_default_dtype(torch.float64)
-
 
 @pytest.fixture(scope="module")
 def setup_test(tests_setup) -> KinDynComputations | RobotCfg | State:
@@ -78,7 +76,7 @@ def test_jacobian_dot(setup_test):
     idyn_jacobian_dot_nu = robot_cfg.idyn_function_values.jacobian_dot_nu
     adam_jacobian_dot_nu = adam_kin_dyn.jacobian_dot(
         "l_sole", state.H, state.joints_pos, state.base_vel, state.joints_vel
-    ) @ np.concatenate((state.base_vel, state.joints_vel))
+    ) @ torch.concatenate((state.base_vel, state.joints_vel), axis=0)
     assert idyn_jacobian_dot_nu - adam_jacobian_dot_nu.numpy() == pytest.approx(
         0.0, abs=1e-5
     )
