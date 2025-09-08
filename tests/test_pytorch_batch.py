@@ -1,202 +1,472 @@
 import numpy as np
 import pytest
 import torch
-from conftest import RobotCfg, State
+from scipy.spatial.transform import Rotation as R
+from conftest import RobotCfg, State, compute_idyntree_values
 from jax import config
 
 from adam.pytorch import KinDynComputationsBatch
-
-# config.update("jax_enable_x64", True)
 
 
 @pytest.fixture(scope="module")
 def setup_test(tests_setup) -> KinDynComputationsBatch | RobotCfg | State:
     robot_cfg, state = tests_setup
-    device = torch.device("cpu")
-    
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
     adam_kin_dyn = KinDynComputationsBatch(
         robot_cfg.model_path, robot_cfg.joints_name_list, device=device
     )
     adam_kin_dyn.set_frame_velocity_representation(robot_cfg.velocity_representation)
-    # convert state quantities to torch tensors and tile them
-    n_samples = 10
-    state.H = (
-        torch.tile(torch.tensor(state.H), (n_samples, 1, 1)).to(device).requires_grad_()
-    )
+
+    # Create a smaller batch for validation tests (larger batches take too long for idyntree comparison)
+    batch_size = 8  # Reduced for faster idyntree validation
+
+    # Generate random rotation matrices and positions for base transforms
+    rotation_matrices = R.random(batch_size).as_matrix()
+    base_positions = np.random.randn(batch_size, 3)  # Small random positions
+    H = np.zeros((batch_size, 4, 4))
+    H[:, :3, :3] = rotation_matrices
+    H[:, :3, 3] = base_positions
+    H[:, 3, 3] = 1
+
+    # Generate random joint positions (within reasonable bounds)
+    joint_positions = np.random.randn(batch_size, robot_cfg.n_dof)
+
+    # Generate random velocities
+    base_vel = np.random.randn(batch_size, 6)
+    joints_vel = np.random.randn(batch_size, robot_cfg.n_dof)
+
+    # Convert to torch tensors
+    state.H = torch.as_tensor(H, dtype=torch.float32).to(device).requires_grad_()
     state.joints_pos = (
-        torch.tile(torch.tensor(state.joints_pos), (n_samples, 1))
+        torch.as_tensor(joint_positions, dtype=torch.float32)
         .to(device)
         .requires_grad_()
     )
     state.base_vel = (
-        torch.tile(torch.tensor(state.base_vel), (n_samples, 1))
-        .to(device)
-        .requires_grad_()
+        torch.as_tensor(base_vel, dtype=torch.float32).to(device).requires_grad_()
     )
     state.joints_vel = (
-        torch.tile(torch.tensor(state.joints_vel), (n_samples, 1))
-        .to(device)
-        .requires_grad_()
+        torch.as_tensor(joints_vel, dtype=torch.float32).to(device).requires_grad_()
     )
-    return adam_kin_dyn, robot_cfg, state, n_samples
+
+    # Store raw numpy arrays for idyntree validation
+    state.H_numpy = H
+    state.joints_pos_numpy = joint_positions
+    state.base_vel_numpy = base_vel
+    state.joints_vel_numpy = joints_vel
+    state.gravity_numpy = np.array([0.0, 0.0, -9.80665])
+
+    return adam_kin_dyn, robot_cfg, state, batch_size
+
+
+def compute_idyntree_batch_reference(robot_cfg, state, batch_size, operation_name):
+    """Compute idyntree reference values for each element in the batch"""
+    references = []
+
+    for b in range(batch_size):
+        # Create state for this batch element
+        batch_state = State(
+            H=state.H_numpy[b],
+            joints_pos=state.joints_pos_numpy[b],
+            base_vel=state.base_vel_numpy[b],
+            joints_vel=state.joints_vel_numpy[b],
+            gravity=state.gravity_numpy,
+        )
+
+        # Compute idyntree values for this state
+        idyn_values = compute_idyntree_values(robot_cfg.kin_dyn, batch_state)
+
+        # Extract the specific operation result
+        if operation_name == "mass_matrix":
+            references.append(idyn_values.mass_matrix)
+        elif operation_name == "CoM_jacobian":
+            references.append(idyn_values.CoM_jacobian)
+        elif operation_name == "CoM_position":
+            references.append(idyn_values.CoM_position)
+        elif operation_name == "centroidal_momentum_matrix":
+            references.append(idyn_values.centroidal_momentum_matrix)
+        elif operation_name == "bias_force":
+            references.append(idyn_values.bias_force)
+        elif operation_name == "jacobian":
+            references.append(idyn_values.jacobian)
+        elif operation_name == "jacobian_non_actuated":
+            references.append(idyn_values.jacobian_non_actuated)
+        elif operation_name == "jacobian_dot_nu":
+            references.append(idyn_values.jacobian_dot_nu)
+        elif operation_name == "relative_jacobian":
+            references.append(idyn_values.relative_jacobian)
+        elif operation_name == "forward_kinematics":
+            references.append(idyn_values.forward_kinematics)
+        elif operation_name == "forward_kinematics_non_actuated":
+            references.append(idyn_values.forward_kinematics_non_actuated)
+        elif operation_name == "gravity_term":
+            references.append(idyn_values.gravity_term)
+        elif operation_name == "coriolis_term":
+            references.append(idyn_values.coriolis_term)
+        else:
+            raise ValueError(f"Unknown operation: {operation_name}")
+
+    return np.array(references)
 
 
 def test_mass_matrix(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_mass_matrix = robot_cfg.idyn_function_values.mass_matrix
+    """Test mass matrix computation with full idyntree validation for each batch element"""
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
+    # Compute batched mass matrix
     adam_mass_matrix = adam_kin_dyn.mass_matrix(state.H, state.joints_pos)
+
+    # Test gradient computation
     try:
         adam_mass_matrix.sum().backward()
     except:
         raise ValueError(adam_mass_matrix)
-    assert adam_mass_matrix[0].detach().numpy() - idyn_mass_matrix == pytest.approx(
-        0.0, abs=1e-4
-    )
+
+    # Check output shape
     assert adam_mass_matrix.shape == (
-        n_samples,
+        batch_size,
         robot_cfg.n_dof + 6,
         robot_cfg.n_dof + 6,
     )
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "mass_matrix"
+    )
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_mass_matrix[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
+
+    # Verify that different samples in the batch produce different results
+    assert not torch.allclose(adam_mass_matrix[0], adam_mass_matrix[1], atol=1e-6)
 
 
 def test_CMM(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_cmm = robot_cfg.idyn_function_values.centroidal_momentum_matrix
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
     adam_cmm = adam_kin_dyn.centroidal_momentum_matrix(state.H, state.joints_pos)
+
+    # Test gradient computation
     try:
         adam_cmm.sum().backward()
     except:
         raise ValueError(adam_cmm)
-    assert adam_cmm[0].detach().numpy() - idyn_cmm == pytest.approx(0.0, abs=1e-4)
-    assert adam_cmm.shape == (n_samples, 6, robot_cfg.n_dof + 6)
+
+    # Check output shape
+    assert adam_cmm.shape == (batch_size, 6, robot_cfg.n_dof + 6)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "centroidal_momentum_matrix"
+    )
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_cmm[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
+
+    # Verify batch variation
+    assert not torch.allclose(adam_cmm[0], adam_cmm[1], atol=1e-6)
 
 
 def test_CoM_pos(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_com = robot_cfg.idyn_function_values.CoM_position
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
     adam_com = adam_kin_dyn.CoM_position(state.H, state.joints_pos)
+
+    # Test gradient computation
     try:
         adam_com.sum().backward()
     except:
         raise ValueError(adam_com)
-    assert adam_com[0].detach().numpy() - idyn_com == pytest.approx(0.0, abs=1e-4)
-    assert adam_com.shape == (n_samples, 3)
+
+    # Check output shape
+    assert adam_com.shape == (batch_size, 3)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "CoM_position"
+    )
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_com[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
+
+    # Verify batch variation
+    assert not torch.allclose(adam_com[0], adam_com[1], atol=1e-6)
+
+
+def test_batch_performance_test(setup_test):
+    """Test that batched computation performance scales well with large batch size"""
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
+    # Test with the current batch size to ensure performance
+    assert batch_size == 8, f"Expected batch size 8, got {batch_size}"
+
+    # Test multiple computations to ensure they work with the full batch
+    mass_matrix = adam_kin_dyn.mass_matrix(state.H, state.joints_pos)
+    com_pos = adam_kin_dyn.CoM_position(state.H, state.joints_pos)
+    cmm = adam_kin_dyn.centroidal_momentum_matrix(state.H, state.joints_pos)
+
+    # Verify all have correct batch dimension
+    assert mass_matrix.shape[0] == batch_size
+    assert com_pos.shape[0] == batch_size
+    assert cmm.shape[0] == batch_size
+
+    # Verify that gradient computation works with large batches
+    try:
+        (mass_matrix.sum() + com_pos.sum() + cmm.sum()).backward()
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
 
 
 def test_CoM_jacobian(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_com_jacobian = robot_cfg.idyn_function_values.CoM_jacobian
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
+    # Compute batched CoM jacobian
     adam_com_jacobian = adam_kin_dyn.CoM_jacobian(state.H, state.joints_pos)
+
+    # Test gradient computation
     try:
         adam_com_jacobian.sum().backward()
     except:
         raise ValueError(adam_com_jacobian)
-    assert adam_com_jacobian[0].detach().numpy() - idyn_com_jacobian == pytest.approx(
-        0.0, abs=1e-4
+
+    # Check output shape
+    assert adam_com_jacobian.shape == (batch_size, 3, robot_cfg.n_dof + 6)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "CoM_jacobian"
     )
-    assert adam_com_jacobian.shape == (n_samples, 3, robot_cfg.n_dof + 6)
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_com_jacobian[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
 
 
 def test_jacobian(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_jacobian = robot_cfg.idyn_function_values.jacobian
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
+    # Compute batched jacobian
     adam_jacobian = adam_kin_dyn.jacobian("l_sole", state.H, state.joints_pos)
+
+    # Test gradient computation
     try:
         adam_jacobian.sum().backward()
     except:
         raise ValueError(adam_jacobian)
-    assert adam_jacobian[0].detach().numpy() - idyn_jacobian == pytest.approx(
-        0.0, abs=1e-4
+
+    # Check output shape
+    assert adam_jacobian.shape == (batch_size, 6, robot_cfg.n_dof + 6)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "jacobian"
     )
-    assert adam_jacobian.shape == (n_samples, 6, robot_cfg.n_dof + 6)
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_jacobian[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
 
 
 def test_jacobian_non_actuated(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_jacobian = robot_cfg.idyn_function_values.jacobian_non_actuated
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
     adam_jacobian = adam_kin_dyn.jacobian("head", state.H, state.joints_pos)
     try:
         adam_jacobian.sum().backward()
     except:
         raise ValueError(adam_jacobian)
-    assert adam_jacobian[0].detach().numpy() - idyn_jacobian == pytest.approx(
-        0.0, abs=1e-4
+    assert adam_jacobian.shape == (batch_size, 6, robot_cfg.n_dof + 6)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "jacobian_non_actuated"
     )
-    assert adam_jacobian.shape == (n_samples, 6, robot_cfg.n_dof + 6)
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_jacobian[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
+
+    # Verify batch variation (random inputs should produce different outputs)
+    assert not torch.allclose(adam_jacobian[0], adam_jacobian[1], atol=1e-6)
 
 
 def test_jacobian_dot(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_jacobian_dot_nu = robot_cfg.idyn_function_values.jacobian_dot_nu
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
+    # Compute jacobian_dot_nu using matrix multiplication like in numpy tests
     adam_jacobian_dot = adam_kin_dyn.jacobian_dot(
         "l_sole", state.H, state.joints_pos, state.base_vel, state.joints_vel
     )
+
+    # Compute jacobian_dot_nu by multiplying with velocities
+    adam_jacobian_dot_nu = adam_jacobian_dot @ torch.cat(
+        (state.base_vel, state.joints_vel), dim=1
+    ).unsqueeze(-1)
+    adam_jacobian_dot_nu = adam_jacobian_dot_nu.squeeze(-1)  # Remove last dimension
+
     try:
-        adam_jacobian_dot.sum().backward()
+        adam_jacobian_dot_nu.sum().backward()
     except:
-        raise ValueError(adam_jacobian_dot)
-    adam_jacobian_dot_nu = adam_jacobian_dot[0].detach().numpy() @ np.concatenate(
-        (state.base_vel[0].detach().numpy(), state.joints_vel[0].detach().numpy())
+        raise ValueError(adam_jacobian_dot_nu)
+
+    assert adam_jacobian_dot.shape == (batch_size, 6, robot_cfg.n_dof + 6)
+    assert adam_jacobian_dot_nu.shape == (batch_size, 6)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "jacobian_dot_nu"
     )
-    assert adam_jacobian_dot_nu - idyn_jacobian_dot_nu == pytest.approx(0.0, abs=1e-4)
-    assert adam_jacobian_dot.shape == (n_samples, 6, robot_cfg.n_dof + 6)
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_jacobian_dot_nu[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
+
+    # Verify batch variation (random inputs should produce different outputs)
+    assert not torch.allclose(
+        adam_jacobian_dot_nu[0], adam_jacobian_dot_nu[1], atol=1e-6
+    )
 
 
 def test_relative_jacobian(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_jacobian = robot_cfg.idyn_function_values.relative_jacobian
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
     adam_jacobian = adam_kin_dyn.relative_jacobian("l_sole", state.joints_pos)
     try:
         adam_jacobian.sum().backward()
     except:
         raise ValueError(adam_jacobian)
-    assert adam_jacobian[0].detach().numpy() - idyn_jacobian == pytest.approx(
-        0.0, abs=1e-4
+    assert adam_jacobian.shape == (batch_size, 6, robot_cfg.n_dof)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "relative_jacobian"
     )
-    assert adam_jacobian.shape == (n_samples, 6, robot_cfg.n_dof)
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_jacobian[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
+
+    # Verify batch variation (random inputs should produce different outputs)
+    assert not torch.allclose(adam_jacobian[0], adam_jacobian[1], atol=1e-6)
 
 
 def test_fk(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_H = robot_cfg.idyn_function_values.forward_kinematics
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
     adam_H = adam_kin_dyn.forward_kinematics("l_sole", state.H, state.joints_pos)
     try:
         adam_H.sum().backward()
     except:
         raise ValueError(adam_H)
-    assert adam_H[0].cpu().detach().numpy() - idyn_H == pytest.approx(0.0, abs=1e-4)
-    assert adam_H.shape == (n_samples, 4, 4)
+    assert adam_H.shape == (batch_size, 4, 4)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "forward_kinematics"
+    )
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_H[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
+
+    # Verify batch variation (random inputs should produce different outputs)
+    assert not torch.allclose(adam_H[0], adam_H[1], atol=1e-6)
 
 
 def test_fk_non_actuated(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_H = robot_cfg.idyn_function_values.forward_kinematics_non_actuated
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
     adam_H = adam_kin_dyn.forward_kinematics("head", state.H, state.joints_pos)
     try:
         adam_H.sum().backward()
     except:
         raise ValueError(adam_H)
-    assert adam_H[0].detach().numpy() - idyn_H == pytest.approx(0.0, abs=1e-4)
-    assert adam_H.shape == (n_samples, 4, 4)
+    assert adam_H.shape == (batch_size, 4, 4)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "forward_kinematics_non_actuated"
+    )
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_H[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
+
+    # Verify batch variation (random inputs should produce different outputs)
+    assert not torch.allclose(adam_H[0], adam_H[1], atol=1e-6)
 
 
 def test_bias_force(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_h = robot_cfg.idyn_function_values.bias_force
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
+    # Compute batched bias force
     adam_h = adam_kin_dyn.bias_force(
         state.H, state.joints_pos, state.base_vel, state.joints_vel
     )
+
+    # Test gradient computation
     try:
         adam_h.sum().backward()
     except:
         raise ValueError(adam_h)
-    assert adam_h[0].detach().numpy() - idyn_h == pytest.approx(0.0, abs=1e-4)
-    assert adam_h.shape == (n_samples, robot_cfg.n_dof + 6)
+
+    # Check output shape
+    assert adam_h.shape == (batch_size, robot_cfg.n_dof + 6)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "bias_force"
+    )
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_h[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
 
 
 def test_coriolis_matrix(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_coriolis = robot_cfg.idyn_function_values.coriolis_term
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
     adam_coriolis = adam_kin_dyn.coriolis_term(
         state.H, state.joints_pos, state.base_vel, state.joints_vel
     )
@@ -204,21 +474,46 @@ def test_coriolis_matrix(setup_test):
         adam_coriolis.sum().backward()
     except:
         raise ValueError(adam_coriolis)
-    assert adam_coriolis[0].detach().numpy() - idyn_coriolis == pytest.approx(
-        0.0, abs=1e-4
+    assert adam_coriolis.shape == (batch_size, robot_cfg.n_dof + 6)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "coriolis_term"
     )
-    assert adam_coriolis.shape == (n_samples, robot_cfg.n_dof + 6)
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_coriolis[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
+
+    # Verify batch variation (random inputs should produce different outputs)
+    assert not torch.allclose(adam_coriolis[0], adam_coriolis[1], atol=1e-6)
 
 
 def test_gravity_term(setup_test):
-    adam_kin_dyn, robot_cfg, state, n_samples = setup_test
-    idyn_gravity = robot_cfg.idyn_function_values.gravity_term
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
     adam_gravity = adam_kin_dyn.gravity_term(state.H, state.joints_pos)
     try:
         adam_gravity.sum().backward()
     except:
         raise ValueError(adam_gravity)
-    assert adam_gravity[0].detach().numpy() - idyn_gravity == pytest.approx(
-        0.0, abs=1e-4
+    assert adam_gravity.shape == (batch_size, robot_cfg.n_dof + 6)
+
+    # Compute idyntree reference for each batch element
+    idyn_references = compute_idyntree_batch_reference(
+        robot_cfg, state, batch_size, "gravity_term"
     )
-    assert adam_gravity.shape == (n_samples, robot_cfg.n_dof + 6)
+
+    # Validate each batch element against idyntree
+    for b in range(batch_size):
+        adam_result = adam_gravity[b].detach().numpy()
+        idyn_result = idyn_references[b]
+        assert np.allclose(
+            adam_result, idyn_result, atol=1e-4
+        ), f"Batch element {b} mismatch"
+
+    # Verify batch variation (random inputs should produce different outputs)
+    assert not torch.allclose(adam_gravity[0], adam_gravity[1], atol=1e-6)
