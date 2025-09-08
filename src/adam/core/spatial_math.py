@@ -47,9 +47,6 @@ class ArrayLike(abc.ABC):
     def __getitem__(self, item):
         pass
 
-    # @abc.abstractmethod
-    # def __setitem__(self, key, value):
-    #     pass
 
     @abc.abstractmethod
     def __truediv__(self, other):
