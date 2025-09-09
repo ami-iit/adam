@@ -44,17 +44,17 @@ def setup_test(tests_setup) -> KinDynComputationsBatch | RobotCfg | State:
     joints_vel = np.random.randn(batch_size, robot_cfg.n_dof)
 
     # Convert to torch tensors
-    state.H = torch.as_tensor(H, dtype=torch.float32).to(device).requires_grad_()
+    state.H = torch.as_tensor(H, dtype=torch.float64).to(device).requires_grad_()
     state.joints_pos = (
-        torch.as_tensor(joint_positions, dtype=torch.float32)
+        torch.as_tensor(joint_positions, dtype=torch.float64)
         .to(device)
         .requires_grad_()
     )
     state.base_vel = (
-        torch.as_tensor(base_vel, dtype=torch.float32).to(device).requires_grad_()
+        torch.as_tensor(base_vel, dtype=torch.float64).to(device).requires_grad_()
     )
     state.joints_vel = (
-        torch.as_tensor(joints_vel, dtype=torch.float32).to(device).requires_grad_()
+        torch.as_tensor(joints_vel, dtype=torch.float64).to(device).requires_grad_()
     )
 
     # Store raw numpy arrays for idyntree validation
