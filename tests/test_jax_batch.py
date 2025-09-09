@@ -4,11 +4,10 @@ import jax.numpy as jnp
 from jax import grad, jacfwd, config
 from scipy.spatial.transform import Rotation as R
 from conftest import RobotCfg, State, compute_idyntree_values
+from adam.jax import KinDynComputations
 
 # Enable 64-bit precision for better numerical accuracy
 config.update("jax_enable_x64", True)
-
-from adam.jax import KinDynComputations
 
 
 @pytest.fixture(scope="module")
@@ -18,8 +17,8 @@ def setup_test(tests_setup) -> tuple[KinDynComputations, RobotCfg, State, int]:
     adam_kin_dyn = KinDynComputations(robot_cfg.model_path, robot_cfg.joints_name_list)
     adam_kin_dyn.set_frame_velocity_representation(robot_cfg.velocity_representation)
 
-    # Create a smaller batch for validation tests (larger batches take too long for idyntree comparison)
-    batch_size = 8  # Reduced for faster idyntree validation
+    # Create a smaller batch for validation tests
+    batch_size = 8
 
     # Generate random rotation matrices and positions for base transforms
     rotation_matrices = R.random(batch_size).as_matrix()
@@ -321,7 +320,7 @@ def test_jacobian_non_actuated(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
 
     # Create vectorized jacobian functi
-    adam_jacobian = adam_kin_dyn.jacobian("head",state.H, state.joints_pos)
+    adam_jacobian = adam_kin_dyn.jacobian("head", state.H, state.joints_pos)
 
     # Test gradient computation
     def jacobian_sum(H, joints_pos):
@@ -357,23 +356,30 @@ def test_jacobian_dot(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
 
     # Compute jacobian_dot_nu using matrix multiplication like in PyTorch tests
-    adam_jacobian_dot = adam_kin_dyn.jacobian_dot("l_sole", state.H, state.joints_pos, state.base_vel, state.joints_vel)
+    adam_jacobian_dot = adam_kin_dyn.jacobian_dot(
+        "l_sole", state.H, state.joints_pos, state.base_vel, state.joints_vel
+    )
 
     # Compute jacobian_dot_nu by multiplying with velocities
-    adam_jacobian_dot_nu = adam_jacobian_dot @ jnp.concatenate(
-        (state.base_vel, state.joints_vel), axis=1
-    )[..., jnp.newaxis]
+    adam_jacobian_dot_nu = (
+        adam_jacobian_dot
+        @ jnp.concatenate((state.base_vel, state.joints_vel), axis=1)[..., jnp.newaxis]
+    )
     adam_jacobian_dot_nu = adam_jacobian_dot_nu.squeeze(-1)  # Remove last dimension
 
     # Test gradient computation
     def jacobian_dot_nu_sum(H, joints_pos, base_vel, joints_vel):
-        jac_dot = adam_kin_dyn.jacobian_dot("l_sole", H, joints_pos, base_vel, joints_vel)
+        jac_dot = adam_kin_dyn.jacobian_dot(
+            "l_sole", H, joints_pos, base_vel, joints_vel
+        )
         vels = jnp.concatenate([base_vel, joints_vel], axis=1)
         return (jac_dot @ vels[..., jnp.newaxis]).squeeze(-1).sum()
 
     grad_fn = grad(jacobian_dot_nu_sum, argnums=(0, 1, 2, 3))
     try:
-        grad_results = grad_fn(state.H, state.joints_pos, state.base_vel, state.joints_vel)
+        grad_results = grad_fn(
+            state.H, state.joints_pos, state.base_vel, state.joints_vel
+        )
         assert all(g is not None for g in grad_results)
     except Exception as e:
         raise ValueError(f"Gradient computation failed: {e}")
@@ -436,7 +442,6 @@ def test_relative_jacobian(setup_test):
 def test_fk(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
 
-
     adam_H = adam_kin_dyn.forward_kinematics("l_sole", state.H, state.joints_pos)
 
     # Test gradient computation
@@ -472,7 +477,7 @@ def test_fk(setup_test):
 def test_fk_non_actuated(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
 
-    adam_H = adam_kin_dyn.forward_kinematics("head",state.H, state.joints_pos)
+    adam_H = adam_kin_dyn.forward_kinematics("head", state.H, state.joints_pos)
 
     # Test gradient computation
     def fk_sum(H, joints_pos):
@@ -517,7 +522,9 @@ def test_bias_force(setup_test):
 
     grad_fn = grad(bias_force_sum, argnums=(0, 1, 2, 3))
     try:
-        grad_results = grad_fn(state.H, state.joints_pos, state.base_vel, state.joints_vel)
+        grad_results = grad_fn(
+            state.H, state.joints_pos, state.base_vel, state.joints_vel
+        )
         assert all(g is not None for g in grad_results)
     except Exception as e:
         raise ValueError(f"Gradient computation failed: {e}")
@@ -552,7 +559,9 @@ def test_coriolis_matrix(setup_test):
 
     grad_fn = grad(coriolis_sum, argnums=(0, 1, 2, 3))
     try:
-        grad_results = grad_fn(state.H, state.joints_pos, state.base_vel, state.joints_vel)
+        grad_results = grad_fn(
+            state.H, state.joints_pos, state.base_vel, state.joints_vel
+        )
         assert all(g is not None for g in grad_results)
     except Exception as e:
         raise ValueError(f"Gradient computation failed: {e}")

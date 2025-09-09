@@ -7,12 +7,13 @@ from jax import config
 
 from adam.pytorch import KinDynComputationsBatch
 
+
 def to_numpy(x):
     """Convert a torch tensor to a numpy array, handling gradients if present."""
     if x.device.type == "cuda":
         x = x.cpu()
     return x.detach().numpy()
-    
+
 
 @pytest.fixture(scope="module")
 def setup_test(tests_setup) -> KinDynComputationsBatch | RobotCfg | State:
@@ -24,8 +25,8 @@ def setup_test(tests_setup) -> KinDynComputationsBatch | RobotCfg | State:
     )
     adam_kin_dyn.set_frame_velocity_representation(robot_cfg.velocity_representation)
 
-    # Create a smaller batch for validation tests (larger batches take too long for idyntree comparison)
-    batch_size = 8  # Reduced for faster idyntree validation
+    # Create a smaller batch for validation tests
+    batch_size = 8
 
     # Generate random rotation matrices and positions for base transforms
     rotation_matrices = R.random(batch_size).as_matrix()
