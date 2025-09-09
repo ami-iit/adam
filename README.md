@@ -18,19 +18,21 @@
 
 ### Table of contents
 
-- [🐍 Dependencies](#-dependencies)
-- [💾 Installation](#-installation)
-  - [🐍 Installation with pip](#-installation-with-pip)
-  - [📦 Installation with conda](#-installation-with-conda)
-    - [Installation from conda-forge package](#installation-from-conda-forge-package)
-  - [🔨 Installation from repo](#-installation-from-repo)
-- [🚀 Usage](#-usage)
-  - [Jax interface](#jax-interface)
-  - [CasADi interface](#casadi-interface)
-  - [PyTorch interface](#pytorch-interface)
-  - [PyTorch Batched interface](#pytorch-batched-interface)
-- [🦸‍♂️ Contributing](#️-contributing)
-- [Todo](#todo)
+- [adam](#adam)
+    - [Table of contents](#table-of-contents)
+  - [🐍 Dependencies](#-dependencies)
+  - [💾 Installation](#-installation)
+    - [🐍 Installation with pip](#-installation-with-pip)
+    - [📦 Installation with conda](#-installation-with-conda)
+      - [Installation from conda-forge package](#installation-from-conda-forge-package)
+    - [🔨 Installation from repo](#-installation-from-repo)
+  - [🚀 Usage](#-usage)
+    - [Jax interface](#jax-interface)
+    - [CasADi interface](#casadi-interface)
+    - [PyTorch interface](#pytorch-interface)
+    - [PyTorch Batched interface](#pytorch-batched-interface)
+  - [🦸‍♂️ Contributing](#️-contributing)
+  - [Todo](#todo)
 
 ## 🐍 Dependencies
 
@@ -43,7 +45,7 @@ Other requisites are:
 - `casadi`
 - `pytorch`
 - `numpy`
-- `jax2torch`
+- `array-api-compat`
 
 They will be installed in the installation step!
 
@@ -158,13 +160,13 @@ Install in a conda environment the required dependencies:
 - **PyTorch** interface dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge pytorch numpy lxml prettytable matplotlib urdfdom-py jax2torch
+  mamba create -n adamenv -c conda-forge pytorch numpy lxml prettytable matplotlib urdfdom-py array-api-compat
   ```
 
 - **ALL** interfaces dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge jax casadi pytorch numpy lxml prettytable matplotlib urdfdom-py jax2torch
+  mamba create -n adamenv -c conda-forge jax casadi pytorch numpy lxml prettytable matplotlib urdfdom-py array-api-compat
   ```
 
 Activate the environment, clone the repo and install the library:
