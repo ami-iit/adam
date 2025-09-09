@@ -22,6 +22,7 @@ class TorchLike(ArrayAPILike):
 
     array: torch.Tensor
 
+
 class TorchLikeFactory(ArrayAPIFactory):
 
     def __init__(self, spec: ArraySpec | None = None):

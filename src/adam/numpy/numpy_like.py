@@ -22,6 +22,7 @@ class NumpyLike(ArrayAPILike):
 
     array: np.ndarray
 
+
 class NumpyLikeFactory(ArrayAPIFactory):
 
     def __init__(self, spec: ArraySpec | None = None):

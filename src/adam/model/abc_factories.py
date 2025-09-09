@@ -69,7 +69,6 @@ class Inertia:
         return self.matrix
 
 
-
 @dataclasses.dataclass
 class Limits:
     """Limits class"""
