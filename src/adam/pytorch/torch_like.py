@@ -22,12 +22,6 @@ class TorchLike(ArrayAPILike):
 
     array: torch.Tensor
 
-    # def __post_init__(self):
-    #     """Converts array to double precision"""
-    #     if self.array.dtype != torch.float64:
-    #         self.array = self.array.double()
-
-
 class TorchLikeFactory(ArrayAPIFactory):
 
     def __init__(self, spec: ArraySpec | None = None):
