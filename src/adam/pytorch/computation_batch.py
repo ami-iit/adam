@@ -4,7 +4,6 @@ import warnings
 
 import numpy as np
 import torch
-from jax2torch import jax2torch
 
 from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
@@ -14,8 +13,11 @@ from adam.core.array_api_math import spec_from_reference
 
 
 class KinDynComputationsBatch:
-    """This is a small class that retrieves robot quantities using Jax for Floating Base systems.
-    These functions are vmapped and jit compiled and passed to jax2torch to convert them to PyTorch functions.
+    """
+    A PyTorch-based class for batch kinematic and dynamic computations on robotic systems.
+
+    Provides efficient processing of robot kinematics and dynamics calculations using PyTorch tensors.
+    Supports GPU acceleration and automatic differentiation for robotic applications.
     """
 
     def __init__(
@@ -25,7 +27,7 @@ class KinDynComputationsBatch:
         device: torch.device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         ),
-        dtype: torch.dtype = torch.float32,
+        dtype: torch.dtype = torch.float64,
         root_link: str = None,
         gravity: torch.Tensor = torch.as_tensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
