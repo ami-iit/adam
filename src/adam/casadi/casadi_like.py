@@ -104,8 +104,14 @@ class CasadiLike(ArrayLike):
 class CasadiLikeFactory(ArrayLikeFactory):
     """ArrayLikeFactory for CasADi. Drops batch dims (>2) since CasADi is 2-D only."""
 
-    @staticmethod
-    def zeros(*x: npt.ArrayLike) -> CasadiLike:
+    def __init__(self, xp: Union[cs.SX, cs.DM, None] = None):
+
+        self._xp = cs.SX if xp is None else xp
+
+        # else:
+        #     super().__init__(CasadiLike, xp)
+
+    def zeros(self, *x: npt.ArrayLike) -> CasadiLike:
         # Accept zeros((..batch.., r, c)) or zeros(r, c)
         if len(x) == 1 and isinstance(x[0], (tuple, list)):
             shp = tuple(x[0])
@@ -115,39 +121,62 @@ class CasadiLikeFactory(ArrayLikeFactory):
             shp = shp[-2:]
         if len(shp) == 0:
             shp = (1,)
-        return CasadiLike(cs.SX.zeros(*shp))
+        return CasadiLike(self._xp.zeros(*shp))
 
     def eye(self, x: npt.ArrayLike) -> CasadiLike:
         # Accept eye(n) or eye((..batch.., n))
         n = x[-1] if isinstance(x, (tuple, list)) else x
-        return CasadiLike(cs.SX.eye(int(n)))
+        return CasadiLike(self._xp.eye(int(n)))
 
-    @staticmethod
-    def asarray(x) -> CasadiLike:
-        if isinstance(x, (cs.SX, cs.DM)):
-            return CasadiLike(x)
-        if isinstance(x, (int, float)):
-            return CasadiLike(cs.DM(x))
-        # numpy arrays arrive as cs.np.ndarray under casadi
-        if isinstance(x, cs.np.ndarray):
-            return CasadiLike(cs.DM(x))
-        if isinstance(x, (list, tuple)):
+    def asarray(self, x) -> CasadiLike:
+        """
+        Convert input to a CasadiLike array.
+
+        This method handles various input types and converts them to CasadiLike objects
+        using appropriate CasADi operations for concatenation and array construction.
+
+        Args:
+            x: Input to convert. Can be:
+            - Empty list: Returns empty CasadiLike array
+            - List of CasADi objects (cs.SX, cs.DM): Horizontally concatenated
+            - List of lists/tuples: Creates 2D array with vertical and horizontal concatenation
+            - Numbers or lists of numbers: Direct conversion to CasadiLike
+
+        Returns:
+            CasadiLike: A CasadiLike object wrapping the converted input.
+
+        Examples:
+            - Empty list [] -> CasadiLike with empty array
+            - [sx1, sx2] -> CasadiLike with horizontally concatenated SX objects
+            - [[1, 2], [3, 4]] -> CasadiLike with 2x2 matrix
+            - 5 or [1, 2, 3] -> CasadiLike with direct conversion
+        """
+        # Handle empty list case
+        if isinstance(x, list):
             if not x:
-                return CasadiLike(cs.DM([]))
-            if all(isinstance(it, (int, float)) for it in x):
-                return CasadiLike(cs.DM(x))
-            if all(isinstance(it, cs.SX) for it in x):
-                return CasadiLike(cs.SX(x))
-            return CasadiLike(cs.DM(x))
-        raise TypeError(f"Unsupported type for asarray: {type(x)}")
+                return CasadiLike(self._xp([]))
+            # List contains CasADi objects - concatenate horizontally
+            if any(isinstance(it, (cs.SX, cs.DM)) for it in x):
+                return CasadiLike(self._xp(cs.horzcat(*x)))
+            # List of lists/tuples - create 2D array with vertical and horizontal concatenation
+            if all(isinstance(it, (list, tuple)) for it in x):
+                return CasadiLike(
+                    self._xp(
+                        cs.vertcat(
+                            *[cs.horzcat(*[self._xp(e) for e in it]) for it in x]
+                        )
+                    )
+                )
+        # Direct conversion for numbers or lists of numbers
+        return CasadiLike(self._xp(x))
 
     def zeros_like(self, x: CasadiLike) -> CasadiLike:
         r, c = x.array.shape if len(x.array.shape) == 2 else (x.array.numel(), 1)
-        return CasadiLike(cs.SX.zeros(r, c))
+        return CasadiLike(self._xp.zeros(r, c))
 
     def ones_like(self, x: CasadiLike) -> CasadiLike:
         r, c = x.array.shape if len(x.array.shape) == 2 else (x.array.numel(), 1)
-        return CasadiLike(cs.SX.ones(r, c))
+        return CasadiLike(self._xp.ones(r, c))
 
     def tile(self, x: CasadiLike, reps: tuple) -> CasadiLike:
         # No batching in CasADi: return input unchanged.
@@ -157,8 +186,8 @@ class CasadiLikeFactory(ArrayLikeFactory):
 class SpatialMath(_SpatialMath):
     """CasADi backend for SpatialMath. Keeps the same high-level API."""
 
-    def __init__(self):
-        super().__init__(CasadiLikeFactory())
+    def __init__(self, spec=None):
+        super().__init__(CasadiLikeFactory(spec))
 
     @staticmethod
     def sin(x: CasadiLike) -> CasadiLike:
