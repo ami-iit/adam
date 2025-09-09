@@ -47,7 +47,6 @@ class ArrayLike(abc.ABC):
     def __getitem__(self, item):
         pass
 
-
     @abc.abstractmethod
     def __truediv__(self, other):
         pass
@@ -544,7 +543,6 @@ class SpatialMath:
         # Compute components
         Sc = self.skew(c)
         R = self.R_from_RPY(rpy)
-
         mass_I3 = self.sxm(mass, self.factory.eye(3))
         mass_Sc = self.sxm(mass, Sc)
         mass_Sc_T = self.swapaxes(mass_Sc, -1, -2)
@@ -569,7 +567,6 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: the 6x6 inertia matrix parametric expressed at the origin of the link (with rotation)
         """
-        inertia_matrix = inertia_matrix.matrix if hasattr(inertia_matrix, "matrix") else inertia_matrix
         Sc = self.skew(c)
         R = self.R_from_RPY(rpy)
 
