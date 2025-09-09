@@ -146,7 +146,9 @@ class ArrayAPIFactory(ArrayLikeFactory):
         return self._like(
             self._xp.eye(x, dtype=self._dtype, device=self._device)
             if batch is None
-            else self._xp.broadcast_to(self._xp.eye(x), batch + (x, x))
+            else self._xp.broadcast_to(
+                self._xp.eye(x, dtype=self._dtype, device=self._device), batch + (x, x)
+            )
         )
 
     def asarray(self, x) -> ArrayAPILike:
