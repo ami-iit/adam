@@ -19,4 +19,4 @@ dependencies:
   - jax
   - pytorch
   - requests
-  - array_api_compat
+  - array-api-compat

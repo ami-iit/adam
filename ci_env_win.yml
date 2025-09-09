@@ -17,4 +17,4 @@ dependencies:
   - icub-models
   - idyntree >=11.0.0
   - requests
-  - array_api_compat
+  - array-api-compat
