@@ -7,6 +7,12 @@ from jax import config
 
 from adam.pytorch import KinDynComputationsBatch
 
+def to_numpy(x):
+    """Convert a torch tensor to a numpy array, handling gradients if present."""
+    if x.device.type == "cuda":
+        x = x.cpu()
+    return x.detach().numpy()
+    
 
 @pytest.fixture(scope="module")
 def setup_test(tests_setup) -> KinDynComputationsBatch | RobotCfg | State:
@@ -137,7 +143,7 @@ def test_mass_matrix(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_mass_matrix[b].detach().numpy()
+        adam_result = to_numpy(adam_mass_matrix[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -167,7 +173,7 @@ def test_CMM(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_cmm[b].detach().numpy()
+        adam_result = to_numpy(adam_cmm[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -197,7 +203,7 @@ def test_CoM_pos(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_com[b].detach().numpy()
+        adam_result = to_numpy(adam_com[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -253,7 +259,7 @@ def test_CoM_jacobian(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_com_jacobian[b].detach().numpy()
+        adam_result = to_numpy(adam_com_jacobian[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -282,7 +288,7 @@ def test_jacobian(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_jacobian[b].detach().numpy()
+        adam_result = to_numpy(adam_jacobian[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -305,7 +311,7 @@ def test_jacobian_non_actuated(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_jacobian[b].detach().numpy()
+        adam_result = to_numpy(adam_jacobian[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -344,7 +350,7 @@ def test_jacobian_dot(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_jacobian_dot_nu[b].detach().numpy()
+        adam_result = to_numpy(adam_jacobian_dot_nu[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -372,7 +378,7 @@ def test_relative_jacobian(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_jacobian[b].detach().numpy()
+        adam_result = to_numpy(adam_jacobian[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -398,7 +404,7 @@ def test_fk(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_H[b].detach().numpy()
+        adam_result = to_numpy(adam_H[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -424,7 +430,7 @@ def test_fk_non_actuated(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_H[b].detach().numpy()
+        adam_result = to_numpy(adam_H[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -458,7 +464,7 @@ def test_bias_force(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_h[b].detach().numpy()
+        adam_result = to_numpy(adam_h[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -483,7 +489,7 @@ def test_coriolis_matrix(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_coriolis[b].detach().numpy()
+        adam_result = to_numpy(adam_coriolis[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -509,7 +515,7 @@ def test_gravity_term(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = adam_gravity[b].detach().numpy()
+        adam_result = to_numpy(adam_gravity[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
