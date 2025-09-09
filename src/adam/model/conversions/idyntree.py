@@ -19,8 +19,17 @@ def _to_sequence(x) -> list[float]:
     """
     # Unwrap wrapper that stores the underlying array in `.array`
     val = x.array if isinstance(x, ArrayLike) else x
+    if isinstance(val, (cs.DM, cs.SX, cs.MX)):
+        val = [float(v) for v in cs.DM(val).full()]
+        return val
+
+    for i, v in enumerate(val):
+        if isinstance(v, ArrayLike):
+            val[i] = (
+                cs.DM(v).full() if isinstance(v, (cs.DM, cs.SX, cs.MX)) else v.array
+            )
     # Handle CasADi types if available. It should be already a casadi type, but let's be safe
-    val = val.full() if isinstance(val, (cs.DM, cs.SX, cs.MX)) else val
+    val = cs.DM(val).full() if isinstance(val, (cs.DM)) else val
     return [float(v) for v in val]
 
 
@@ -29,7 +38,7 @@ def _to_scalar(x) -> float:
     # Unwrap wrapper that stores the underlying array in `.array`
     val = x.array if isinstance(x, ArrayLike) else x
     # Handle CasADi types if available. It should be already a casadi type, but let's be safe
-    val = val.full() if isinstance(val, (cs.DM, cs.SX, cs.MX)) else val
+    val = cs.DM(val).full() if isinstance(val, (cs.DM, cs.SX, cs.MX)) else val
     return float(val)
 
 
