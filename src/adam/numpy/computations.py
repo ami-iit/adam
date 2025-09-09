@@ -18,6 +18,7 @@ class KinDynComputations:
         self,
         urdfstring: str,
         joints_name_list: list = None,
+        dtype: np.dtype = np.float64,
         root_link: str = None,
         gravity: np.array = np.array([0, 0, -9.80665, 0, 0, 0], dtype=np.float32),
     ) -> None:
@@ -27,13 +28,13 @@ class KinDynComputations:
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
-        ref = np.array(0.0, dtype=np.float64)
+        ref = np.array(0.0, dtype=dtype)
         math = SpatialMath(spec_from_reference(ref))
         factory = URDFModelFactory(path=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = model.NDoF
-        self.g = np.asarray(gravity, dtype=np.float64)
+        self.g = np.asarray(gravity, dtype=dtype)
         if root_link is not None:
             warnings.warn(
                 "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF",
