@@ -335,7 +335,7 @@ class KinDynComputationsParametric:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            base_velocity.reshape(6, 1),
+            base_velocity,
             joint_velocities,
             self.g,
         ).array.squeeze()
@@ -379,7 +379,7 @@ class KinDynComputationsParametric:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            base_velocity.reshape(6, 1),
+            base_velocity,
             joint_velocities,
             np.zeros(6),
         ).array.squeeze()
@@ -418,7 +418,7 @@ class KinDynComputationsParametric:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            np.zeros(6).reshape(6, 1),
+            np.zeros(6),
             np.zeros(self.NDoF),
             self.g,
         ).array.squeeze()
