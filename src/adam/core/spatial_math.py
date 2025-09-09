@@ -239,12 +239,9 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: Homogeneous transform
         """
-        T = self.factory.eye(4)
         R = self.R_from_RPY(rpy) @ self.R_from_axis_angle(axis, q)
-        T[:3, :3] = R
-        T[0, 3] = xyz[0]
-        T[1, 3] = xyz[1]
-        T[2, 3] = xyz[2]
+        T = self.transform(xyz, R)
+
         return T
 
     def H_prismatic_joint(
@@ -460,10 +457,8 @@ class SpatialMath:
         """
         R = H[:3, :3]
         p = H[:3, 3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R
-        X[3:6, 3:6] = R
-        X[:3, 3:6] = self.skew(p) @ R
+        X = self.compose_blocks(R, self.skew(p) @ R,
+                                self.factory.zeros(3, 3), R)
         return X
 
     def adjoint_derivative(self, H: npt.ArrayLike, v: npt.ArrayLike) -> npt.ArrayLike:
@@ -479,10 +474,8 @@ class SpatialMath:
         p = H[:3, 3]
         R_dot = self.skew(v[3:]) @ R
         p_dot = v[:3] - self.skew(p) @ v[3:]
-        X = self.factory.zeros(6, 6)
-        X[:3, :3] = R_dot
-        X[3:6, 3:6] = R_dot
-        X[:3, 3:6] = self.skew(p_dot) @ R + self.skew(p) @ R_dot
+        X = self.compose_blocks(R_dot, self.skew(p_dot) @ R + self.skew(p) @ R_dot,
+                                self.factory.zeros(3, 3), R_dot)
         return X
 
     def adjoint_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
@@ -494,10 +487,8 @@ class SpatialMath:
         """
         R = H[:3, :3]
         p = H[:3, 3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R.T
-        X[3:6, 3:6] = R.T
-        X[:3, 3:6] = -R.T @ self.skew(p)
+        X = self.compose_blocks(R.T, -R.T @ self.skew(p),
+                                self.factory.zeros(3, 3), R.T)
         return X
 
     def adjoint_inverse_derivative(
@@ -514,10 +505,8 @@ class SpatialMath:
         p = H[:3, 3]
         R_dot = self.skew(v[3:]) @ R
         p_dot = v[:3] - self.skew(p) @ v[3:]
-        X = self.factory.zeros(6, 6)
-        X[:3, :3] = R_dot.T
-        X[3:6, 3:6] = R_dot.T
-        X[:3, 3:6] = -R_dot.T @ self.skew(p) - R.T @ self.skew(p_dot)
+        X = self.compose_blocks(R_dot.T, -R_dot.T @ self.skew(p) - R.T @ self.skew(p_dot),
+                                self.factory.zeros(3, 3), R_dot.T)
         return X
 
     def adjoint_mixed(self, H: npt.ArrayLike) -> npt.ArrayLike:
@@ -528,9 +517,9 @@ class SpatialMath:
             npt.ArrayLike: adjoint matrix
         """
         R = H[:3, :3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R
-        X[3:6, 3:6] = R
+        R = H[:3, :3]
+        X = self.compose_blocks(R, self.factory.zeros(3,3),
+                                self.factory.zeros(3,3), R)
         return X
 
     def adjoint_mixed_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
@@ -541,9 +530,8 @@ class SpatialMath:
             npt.ArrayLike: adjoint matrix
         """
         R = H[:3, :3]
-        X = self.factory.eye(6)
-        X[:3, :3] = R.T
-        X[3:6, 3:6] = R.T
+        X = self.compose_blocks(R.T, self.factory.zeros(3,3),
+                                self.factory.zeros(3,3), R.T)
         return X
 
     def adjoint_mixed_derivative(
@@ -558,9 +546,8 @@ class SpatialMath:
         """
         R = H[:3, :3]
         R_dot = self.skew(v[3:]) @ R
-        X = self.factory.zeros(6, 6)
-        X[:3, :3] = R_dot
-        X[3:6, 3:6] = R_dot
+        X = self.compose_blocks(R_dot, self.factory.zeros(3,3),
+                                self.factory.zeros(3,3), R_dot)
         return X
 
     def adjoint_mixed_inverse_derivative(
@@ -575,9 +562,12 @@ class SpatialMath:
         """
         R = H[:3, :3]
         R_dot = self.skew(v[3:]) @ R
-        X = self.factory.zeros(6, 6)
-        X[:3, :3] = R_dot.T
-        X[3:6, 3:6] = R_dot.T
+        # X = self.factory.zeros(6, 6)
+        # X[:3, :3] = R_dot.T
+        # X[3:6, 3:6] = R_dot.T
+
+        X = self.compose_blocks(R_dot.T, self.factory.zeros(3,3),
+                                self.factory.zeros(3,3), R_dot.T)
         return X
 
     def homogeneous_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
@@ -589,7 +579,5 @@ class SpatialMath:
         """
         R = H[:3, :3]
         p = H[:3, 3]
-        T = self.factory.eye(4)
-        T[:3, :3] = R.T
-        T[:3, 3] = -R.T @ p
+        T = self.transform(-R.T @ p, R.T)
         return T
