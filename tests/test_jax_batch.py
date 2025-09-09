@@ -6,7 +6,7 @@ from scipy.spatial.transform import Rotation as R
 from conftest import RobotCfg, State, compute_idyntree_values
 
 # Enable 64-bit precision for better numerical accuracy
-# config.update("jax_enable_x64", True)
+config.update("jax_enable_x64", True)
 
 from adam.jax import KinDynComputations
 
