@@ -157,7 +157,7 @@ class CasadiLikeFactory(ArrayLikeFactory):
                 return CasadiLike(self._xp([]))
             # List contains CasADi objects - concatenate horizontally
             if any(isinstance(it, (cs.SX, cs.DM)) for it in x):
-                return CasadiLike(self._xp(cs.horzcat(*x)))
+                return CasadiLike(self._xp(cs.vertcat(*x)))
             # List of lists/tuples - create 2D array with vertical and horizontal concatenation
             if all(isinstance(it, (list, tuple)) for it in x):
                 return CasadiLike(
