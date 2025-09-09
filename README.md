@@ -160,13 +160,13 @@ Install in a conda environment the required dependencies:
 - **PyTorch** interface dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge pytorch numpy lxml prettytable matplotlib urdfdom-py array-api-compat
+  conda create -n adamenv -c conda-forge pytorch numpy lxml prettytable matplotlib urdfdom-py array-api-compat
   ```
 
 - **ALL** interfaces dependencies:
 
   ```bash
-  mamba create -n adamenv -c conda-forge jax casadi pytorch numpy lxml prettytable matplotlib urdfdom-py array-api-compat
+  conda create -n adamenv -c conda-forge jax casadi pytorch numpy lxml prettytable matplotlib urdfdom-py array-api-compat
   ```
 
 Activate the environment, clone the repo and install the library:
@@ -319,8 +319,6 @@ print(M)
 
 ### PyTorch Batched interface
 
-> [!NOTE]
-> When using this interface, note that the first call of the jitted function can be slow, since JAX needs to compile the function. Then it will be faster!
 
 ```python
 import adam
