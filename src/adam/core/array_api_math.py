@@ -2,7 +2,6 @@ from adam.core.spatial_math import ArrayLike, SpatialMath, ArrayLikeFactory
 import array_api_compat as aac
 from typing import Any, Callable
 from dataclasses import dataclass
-from dataclasses import dataclass
 from types import ModuleType
 from typing import Any, Optional
 import array_api_compat as aac
