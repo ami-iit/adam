@@ -252,7 +252,6 @@ def test_batch_performance_test(setup_test):
 def test_CoM_jacobian(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
 
-    # Create vectorized CoM jacobian function
     adam_com_jacobian = adam_kin_dyn.CoM_jacobian(state.H, state.joints_pos)
 
     # Test gradient computation
@@ -319,7 +318,6 @@ def test_jacobian(setup_test):
 def test_jacobian_non_actuated(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
 
-    # Create vectorized jacobian functi
     adam_jacobian = adam_kin_dyn.jacobian("head", state.H, state.joints_pos)
 
     # Test gradient computation
