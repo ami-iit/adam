@@ -18,6 +18,5 @@ dependencies:
   - idyntree >=11.0.0
   - jax
   - pytorch
-  - jax2torch
   - requests
   - array_api_compat
