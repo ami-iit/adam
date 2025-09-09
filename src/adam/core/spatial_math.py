@@ -558,7 +558,7 @@ class SpatialMath:
         bottom = self.concatenate([mass_Sc, bottom_right], axis=-1)  # (...,3,6)
         return self.concatenate([top, bottom], axis=-2)  # (...,6,6)
 
-    def spatial_inertial_with_parameters(self, inertia_matrix, mass, c, rpy):
+    def spatial_inertia_with_parameters(self, inertia_matrix, mass, c, rpy):
         """
         Args:
             I (npt.ArrayLike): inertia values parametric
@@ -570,7 +570,6 @@ class SpatialMath:
             npt.ArrayLike: the 6x6 inertia matrix parametric expressed at the origin of the link (with rotation)
         """
         inertia_matrix = inertia_matrix.matrix if hasattr(inertia_matrix, "matrix") else inertia_matrix
-        # Compute components
         Sc = self.skew(c)
         R = self.R_from_RPY(rpy)
 
