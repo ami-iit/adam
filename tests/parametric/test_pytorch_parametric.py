@@ -8,6 +8,13 @@ from adam.parametric.pytorch import KinDynComputationsParametric
 torch.set_default_dtype(torch.float64)
 
 
+def to_numpy(x):
+    """Convert a torch tensor to a numpy array, handling gradients if present."""
+    if x.device.type == "cuda":
+        x = x.cpu()
+    return x.detach().numpy()
+
+
 @pytest.fixture(scope="module")
 def setup_test(tests_setup) -> KinDynComputationsParametric | RobotCfg | State:
     robot_cfg, state = tests_setup
@@ -15,19 +22,20 @@ def setup_test(tests_setup) -> KinDynComputationsParametric | RobotCfg | State:
     if robot_cfg.robot_name != "StickBot":
         pytest.skip("Skipping the test because the model is not StickBot")
     link_name_list = ["chest"]
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     adam_kin_dyn = KinDynComputationsParametric(
-        robot_cfg.model_path, robot_cfg.joints_name_list, link_name_list
+        robot_cfg.model_path, robot_cfg.joints_name_list, link_name_list, device=device
     )
     # This is the original density value associated to the chest link, computed as mass/volume
     original_density = [628.0724496264945]
     original_length = torch.ones(len(link_name_list))
     adam_kin_dyn.set_frame_velocity_representation(robot_cfg.velocity_representation)
     # convert state quantities to torch tensors
-    state.H = torch.tensor(state.H)
-    state.joints_pos = torch.tensor(state.joints_pos)
-    state.base_vel = torch.tensor(state.base_vel)
-    state.joints_vel = torch.tensor(state.joints_vel)
-    state.gravity = torch.tensor(state.gravity)
+    state.H = torch.as_tensor(state.H, device=device)
+    state.joints_pos = torch.as_tensor(state.joints_pos, device=device)
+    state.base_vel = torch.as_tensor(state.base_vel, device=device)
+    state.joints_vel = torch.as_tensor(state.joints_vel, device=device)
+    state.gravity = torch.as_tensor(state.gravity, device=device)
     return adam_kin_dyn, robot_cfg, state, original_density, original_length
 
 
@@ -37,7 +45,7 @@ def test_mass_matrix(setup_test):
     adam_mass_matrix = adam_kin_dyn.mass_matrix(
         state.H, state.joints_pos, original_length, original_density
     )
-    assert adam_mass_matrix.numpy() - idyn_mass_matrix == pytest.approx(0.0, abs=1e-5)
+    assert to_numpy(adam_mass_matrix) - idyn_mass_matrix == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CMM(setup_test):
@@ -46,7 +54,7 @@ def test_CMM(setup_test):
     adam_cmm = adam_kin_dyn.centroidal_momentum_matrix(
         state.H, state.joints_pos, original_length, original_density
     )
-    assert adam_cmm.numpy() - idyn_cmm == pytest.approx(0.0, abs=1e-5)
+    assert to_numpy(adam_cmm) - idyn_cmm == pytest.approx(0.0, abs=1e-5)
 
 
 def test_CoM_pos(setup_test):
@@ -55,14 +63,14 @@ def test_CoM_pos(setup_test):
     adam_com = adam_kin_dyn.CoM_position(
         state.H, state.joints_pos, original_length, original_density
     )
-    assert adam_com.numpy() - idyn_com == pytest.approx(0.0, abs=1e-5)
+    assert to_numpy(adam_com) - idyn_com == pytest.approx(0.0, abs=1e-5)
 
 
 def test_total_mass(setup_test):
     adam_kin_dyn, robot_cfg, state, original_density, original_length = setup_test
     idyn_total_mass = robot_cfg.idyn_function_values.total_mass
-    assert adam_kin_dyn.get_total_mass(
-        original_length, original_density
+    assert to_numpy(
+        adam_kin_dyn.get_total_mass(original_length, original_density)
     ) - idyn_total_mass == pytest.approx(0.0, abs=1e-5)
 
 
@@ -72,7 +80,7 @@ def test_jacobian(setup_test):
     adam_jacobian = adam_kin_dyn.jacobian(
         "l_sole", state.H, state.joints_pos, original_length, original_density
     )
-    assert adam_jacobian.numpy() - idyn_jacobian == pytest.approx(0.0, abs=1e-5)
+    assert to_numpy(adam_jacobian) - idyn_jacobian == pytest.approx(0.0, abs=1e-5)
 
 
 def test_jacobian_non_actuated(setup_test):
@@ -81,7 +89,7 @@ def test_jacobian_non_actuated(setup_test):
     adam_jacobian = adam_kin_dyn.jacobian(
         "head", state.H, state.joints_pos, original_length, original_density
     )
-    assert adam_jacobian.numpy() - idyn_jacobian == pytest.approx(0.0, abs=1e-5)
+    assert to_numpy(adam_jacobian) - idyn_jacobian == pytest.approx(0.0, abs=1e-5)
 
 
 def test_jacobian_dot(setup_test):
@@ -95,8 +103,8 @@ def test_jacobian_dot(setup_test):
         state.joints_vel,
         original_length,
         original_density,
-    ) @ np.concatenate((state.base_vel, state.joints_vel))
-    assert idyn_jacobian_dot_nu - adam_jacobian_dot_nu.numpy() == pytest.approx(
+    ) @ torch.concatenate((state.base_vel, state.joints_vel), axis=0)
+    assert idyn_jacobian_dot_nu - to_numpy(adam_jacobian_dot_nu) == pytest.approx(
         0.0, abs=1e-5
     )
 
@@ -107,7 +115,7 @@ def test_relative_jacobian(setup_test):
     adam_jacobian = adam_kin_dyn.relative_jacobian(
         "l_sole", state.joints_pos, original_length, original_density
     )
-    assert idyn_jacobian - adam_jacobian.numpy() == pytest.approx(0.0, abs=1e-5)
+    assert idyn_jacobian - to_numpy(adam_jacobian) == pytest.approx(0.0, abs=1e-5)
 
 
 def test_fk(setup_test):
@@ -116,7 +124,7 @@ def test_fk(setup_test):
     adam_H = adam_kin_dyn.forward_kinematics(
         "l_sole", state.H, state.joints_pos, original_length, original_density
     )
-    assert idyn_H - adam_H.numpy() == pytest.approx(0.0, abs=1e-5)
+    assert idyn_H - to_numpy(adam_H) == pytest.approx(0.0, abs=1e-5)
 
 
 def test_fk_non_actuated(setup_test):
@@ -125,7 +133,7 @@ def test_fk_non_actuated(setup_test):
     adam_H = adam_kin_dyn.forward_kinematics(
         "head", state.H, state.joints_pos, original_length, original_density
     )
-    assert idyn_H - adam_H.numpy() == pytest.approx(0.0, abs=1e-5)
+    assert idyn_H - to_numpy(adam_H) == pytest.approx(0.0, abs=1e-5)
 
 
 def test_bias_force(setup_test):
@@ -139,7 +147,7 @@ def test_bias_force(setup_test):
         original_length,
         original_density,
     )
-    assert idyn_bias_force - adam_bias_force.numpy() == pytest.approx(0.0, abs=1e-4)
+    assert idyn_bias_force - to_numpy(adam_bias_force) == pytest.approx(0.0, abs=1e-4)
 
 
 def test_coriolis_term(setup_test):
@@ -153,7 +161,7 @@ def test_coriolis_term(setup_test):
         original_length,
         original_density,
     )
-    assert idyn_coriolis_gravity - adam_coriolis_gravity.numpy() == pytest.approx(
+    assert idyn_coriolis_gravity - to_numpy(adam_coriolis_gravity) == pytest.approx(
         0.0, abs=1e-4
     )
 
@@ -164,4 +172,4 @@ def test_gravity_term(setup_test):
     adam_gravity = adam_kin_dyn.gravity_term(
         state.H, state.joints_pos, original_length, original_density
     )
-    assert np.allclose(idyn_gravity, adam_gravity.numpy(), atol=1e-4)
+    assert np.allclose(idyn_gravity, to_numpy(adam_gravity), atol=1e-4)
