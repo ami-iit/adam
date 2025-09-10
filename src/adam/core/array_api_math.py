@@ -150,7 +150,7 @@ class ArrayAPIFactory(ArrayLikeFactory):
         # preserve the gradient if x is a torch tensor (check if it has "requires_grad_" attribute)
         # it could be moved to the torch-like class, but maybe here is more visible
         if getattr(x, "requires_grad_", False):
-            return self._like(x)
+            return self._like(x.to(device=self._device, dtype=self._dtype))
         return self._like(self._xp.asarray(x, dtype=self._dtype, device=self._device))
 
     def zeros_like(self, x: ArrayAPILike) -> ArrayAPILike:
