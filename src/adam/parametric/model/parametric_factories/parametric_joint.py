@@ -6,6 +6,7 @@ import urdf_parser_py.urdf
 from adam.core.spatial_math import SpatialMath
 from adam.model import Joint, Limits, Pose
 from adam.parametric.model.parametric_factories.parametric_link import ParametricLink
+import math
 
 
 class ParametricJoint(Joint):
@@ -63,11 +64,12 @@ class ParametricJoint(Joint):
         Returns:
             Limits: set the limits
         """
+        joint_lim = math.inf if self.type == "prismatic" else 2 * math.pi
         return Limits(
-            lower=None if limit is None else self.math.asarray(limit.lower),
-            upper=None if limit is None else self.math.asarray(limit.upper),
-            effort=None if limit is None else self.math.asarray(limit.effort),
-            velocity=None if limit is None else self.math.asarray(limit.velocity),
+            lower=-joint_lim if limit is None else limit.lower,
+            upper=joint_lim if limit is None else limit.upper,
+            effort=math.inf if limit is None else limit.effort,
+            velocity=math.inf if limit is None else limit.velocity,
         )
 
     def modify(self, parent_joint_offset: npt.ArrayLike):
