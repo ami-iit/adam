@@ -8,6 +8,7 @@ import idyntree.bindings as idyntree
 import numpy as np
 import pytest
 import requests
+import torch
 
 from adam import Representations
 from scipy.spatial.transform import Rotation
@@ -299,3 +300,16 @@ def compute_idyntree_values(
         coriolis_term=idyn_coriolis_term,
         gravity_term=idyn_gravity_term,
     )
+
+
+@pytest.fixture(scope="session")
+def device():
+    """Pick CUDA if available, otherwise CPU."""
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def to_numpy(x):
+    """Convert a torch tensor to a numpy array, handling gradients if present."""
+    if x.device.type == "cuda":
+        x = x.cpu()
+    return x.detach().numpy()

@@ -2,23 +2,14 @@ import numpy as np
 import pytest
 import torch
 from scipy.spatial.transform import Rotation as R
-from conftest import RobotCfg, State, compute_idyntree_values
-from jax import config
+from conftest import RobotCfg, State, compute_idyntree_values, to_numpy
 
 from adam.pytorch import KinDynComputationsBatch
 
 
-def to_numpy(x):
-    """Convert a torch tensor to a numpy array, handling gradients if present."""
-    if x.device.type == "cuda":
-        x = x.cpu()
-    return x.detach().numpy()
-
-
 @pytest.fixture(scope="module")
-def setup_test(tests_setup) -> KinDynComputationsBatch | RobotCfg | State:
+def setup_test(tests_setup, device) -> KinDynComputationsBatch | RobotCfg | State:
     robot_cfg, state = tests_setup
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
     adam_kin_dyn = KinDynComputationsBatch(
         robot_cfg.model_path, robot_cfg.joints_name_list, device=device

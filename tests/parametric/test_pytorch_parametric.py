@@ -1,28 +1,20 @@
 import numpy as np
 import pytest
 import torch
-from conftest import RobotCfg, State
+from conftest import RobotCfg, State, to_numpy
 
 from adam.parametric.pytorch import KinDynComputationsParametric
 
 torch.set_default_dtype(torch.float64)
 
 
-def to_numpy(x):
-    """Convert a torch tensor to a numpy array, handling gradients if present."""
-    if x.device.type == "cuda":
-        x = x.cpu()
-    return x.detach().numpy()
-
-
 @pytest.fixture(scope="module")
-def setup_test(tests_setup) -> KinDynComputationsParametric | RobotCfg | State:
+def setup_test(tests_setup, device) -> KinDynComputationsParametric | RobotCfg | State:
     robot_cfg, state = tests_setup
     # skip the tests if the model is not the StickBot
     if robot_cfg.robot_name != "StickBot":
         pytest.skip("Skipping the test because the model is not StickBot")
     link_name_list = ["chest"]
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     adam_kin_dyn = KinDynComputationsParametric(
         robot_cfg.model_path, robot_cfg.joints_name_list, link_name_list, device=device
     )

@@ -1,20 +1,14 @@
 import numpy as np
 import pytest
 import torch
-from conftest import RobotCfg, State
+from conftest import RobotCfg, State, to_numpy
 
 from adam.pytorch import KinDynComputations
 
-def to_numpy(x):
-    """Convert a torch tensor to a numpy array, handling gradients if present."""
-    if x.device.type == "cuda":
-        x = x.cpu()
-    return x.detach().numpy()
 
 @pytest.fixture(scope="module")
-def setup_test(tests_setup) -> KinDynComputations | RobotCfg | State:
+def setup_test(tests_setup, device) -> KinDynComputations | RobotCfg | State:
     robot_cfg, state = tests_setup
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     adam_kin_dyn = KinDynComputations(
         robot_cfg.model_path, robot_cfg.joints_name_list, device=device
     )
@@ -54,7 +48,9 @@ def test_CoM_jacobian(setup_test):
     adam_kin_dyn, robot_cfg, state = setup_test
     idyn_com_jacobian = robot_cfg.idyn_function_values.CoM_jacobian
     adam_com_jacobian = adam_kin_dyn.CoM_jacobian(state.H, state.joints_pos)
-    assert to_numpy(adam_com_jacobian) - idyn_com_jacobian == pytest.approx(0.0, abs=1e-5)
+    assert to_numpy(adam_com_jacobian) - idyn_com_jacobian == pytest.approx(
+        0.0, abs=1e-5
+    )
 
 
 def test_total_mass(setup_test):
