@@ -68,10 +68,6 @@ class ArrayAPILike(ArrayLike):
         xp = xp_getter(self.array, other.array)
         return self.__class__(xp.matmul(self.array, other.array))
 
-    def __rmatmul__(self, other):
-        # reuse the same logic by swapping operands
-        return other.__class__(other.array).__matmul__(self)
-
     def __rmatmul__(self, other) -> "ArrayAPILike":
         xp = xp_getter(self.array, other.array)
         return self.__class__(xp.matmul(other.array, self.array))
