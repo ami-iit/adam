@@ -8,7 +8,6 @@ import idyntree.bindings as idyntree
 import numpy as np
 import pytest
 import requests
-import torch
 
 from adam import Representations
 from scipy.spatial.transform import Rotation
@@ -304,6 +303,8 @@ def compute_idyntree_values(
 
 @pytest.fixture(scope="session")
 def device():
+    import torch
+
     """Pick CUDA if available, otherwise CPU."""
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
