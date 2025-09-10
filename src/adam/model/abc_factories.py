@@ -6,7 +6,7 @@ import numpy.typing as npt
 from adam.core.spatial_math import SpatialMath
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True, slots=True)
 class Pose:
     """Pose class"""
 
@@ -30,7 +30,7 @@ class Pose:
         return self.rpy
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True, slots=True)
 class Inertia:
     matrix: npt.ArrayLike
     ixx: npt.DTypeLike
@@ -69,7 +69,7 @@ class Inertia:
         return self.matrix
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True, slots=True)
 class Limits:
     """Limits class"""
 
@@ -125,7 +125,7 @@ class Joint(abc.ABC):
         pass
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True, slots=True)
 class Inertial:
     """Inertial description"""
 
