@@ -418,7 +418,7 @@ class SpatialMath:
             npt.ArrayLike: Homogeneous transform
         """
         R = self.R_from_RPY(rpy)
-        p = self.factory.asarray(xyz) + q * self.factory.asarray(axis)
+        p = xyz + q * axis
         return self.homogeneous(R, p)
 
     def H_from_Pos_RPY(self, xyz: npt.ArrayLike, rpy: npt.ArrayLike) -> npt.ArrayLike:
