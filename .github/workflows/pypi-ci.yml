@@ -55,6 +55,7 @@ jobs:
         path: dist
     - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+      
 
   publish-to-testpypi:
     name: Publish Python 🐍 distribution 📦 to TestPyPI
@@ -62,9 +63,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
 
-    # environment:
-    #   name: testpypi
-    #   url: https://test.pypi.org/p/adam-robotics
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/adam-robotics
 
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
