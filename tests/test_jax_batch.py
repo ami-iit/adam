@@ -1,19 +1,20 @@
 import numpy as np
 import pytest
-import torch
+import jax.numpy as jnp
+from jax import grad, jacfwd, config
 from scipy.spatial.transform import Rotation as R
-from conftest import RobotCfg, State, compute_idyntree_values, to_numpy
+from conftest import RobotCfg, State, compute_idyntree_values
+from adam.jax import KinDynComputations
 
-from adam.pytorch import KinDynComputationsBatch
+# Enable 64-bit precision for better numerical accuracy
+config.update("jax_enable_x64", True)
 
 
 @pytest.fixture(scope="module")
-def setup_test(tests_setup, device) -> KinDynComputationsBatch | RobotCfg | State:
+def setup_test(tests_setup) -> tuple[KinDynComputations, RobotCfg, State, int]:
     robot_cfg, state = tests_setup
 
-    adam_kin_dyn = KinDynComputationsBatch(
-        robot_cfg.model_path, robot_cfg.joints_name_list, device=device
-    )
+    adam_kin_dyn = KinDynComputations(robot_cfg.model_path, robot_cfg.joints_name_list)
     adam_kin_dyn.set_frame_velocity_representation(robot_cfg.velocity_representation)
 
     # Create a smaller batch for validation tests
@@ -34,19 +35,11 @@ def setup_test(tests_setup, device) -> KinDynComputationsBatch | RobotCfg | Stat
     base_vel = np.random.randn(batch_size, 6)
     joints_vel = np.random.randn(batch_size, robot_cfg.n_dof)
 
-    # Convert to torch tensors
-    state.H = torch.as_tensor(H, dtype=torch.float64).to(device).requires_grad_()
-    state.joints_pos = (
-        torch.as_tensor(joint_positions, dtype=torch.float64)
-        .to(device)
-        .requires_grad_()
-    )
-    state.base_vel = (
-        torch.as_tensor(base_vel, dtype=torch.float64).to(device).requires_grad_()
-    )
-    state.joints_vel = (
-        torch.as_tensor(joints_vel, dtype=torch.float64).to(device).requires_grad_()
-    )
+    # Convert to JAX arrays (no requires_grad like PyTorch)
+    state.H = jnp.array(H, dtype=jnp.float64)
+    state.joints_pos = jnp.array(joint_positions, dtype=jnp.float64)
+    state.base_vel = jnp.array(base_vel, dtype=jnp.float64)
+    state.joints_vel = jnp.array(joints_vel, dtype=jnp.float64)
 
     # Store raw numpy arrays for idyntree validation
     state.H_numpy = H
@@ -112,14 +105,19 @@ def test_mass_matrix(setup_test):
     """Test mass matrix computation with full idyntree validation for each batch element"""
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
 
-    # Compute batched mass matrix
+    # Compute batched mass matrix - JAX backend handles batching naturally
     adam_mass_matrix = adam_kin_dyn.mass_matrix(state.H, state.joints_pos)
 
-    # Test gradient computation
+    # Test gradient computation using JAX
+    def mass_matrix_sum(H, joints_pos):
+        return adam_kin_dyn.mass_matrix(H, joints_pos).sum()
+
+    grad_fn = grad(mass_matrix_sum, argnums=(0, 1))
     try:
-        adam_mass_matrix.sum().backward()
-    except:
-        raise ValueError(adam_mass_matrix)
+        grad_H, grad_joints = grad_fn(state.H, state.joints_pos)
+        assert grad_H is not None and grad_joints is not None
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
 
     # Check output shape
     assert adam_mass_matrix.shape == (
@@ -135,25 +133,32 @@ def test_mass_matrix(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_mass_matrix[b])
+        adam_result = np.array(adam_mass_matrix[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
         ), f"Batch element {b} mismatch"
 
     # Verify that different samples in the batch produce different results
-    assert not torch.allclose(adam_mass_matrix[0], adam_mass_matrix[1], atol=1e-6)
+    assert not jnp.allclose(adam_mass_matrix[0], adam_mass_matrix[1], atol=1e-6)
 
 
 def test_CMM(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
+    # Compute batched CMM - JAX backend handles batching naturally
     adam_cmm = adam_kin_dyn.centroidal_momentum_matrix(state.H, state.joints_pos)
 
     # Test gradient computation
+    def cmm_sum(H, joints_pos):
+        return adam_kin_dyn.centroidal_momentum_matrix(H, joints_pos).sum()
+
+    grad_fn = grad(cmm_sum, argnums=(0, 1))
     try:
-        adam_cmm.sum().backward()
-    except:
-        raise ValueError(adam_cmm)
+        grad_H, grad_joints = grad_fn(state.H, state.joints_pos)
+        assert grad_H is not None and grad_joints is not None
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
 
     # Check output shape
     assert adam_cmm.shape == (batch_size, 6, robot_cfg.n_dof + 6)
@@ -165,25 +170,32 @@ def test_CMM(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_cmm[b])
+        adam_result = np.array(adam_cmm[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
         ), f"Batch element {b} mismatch"
 
     # Verify batch variation
-    assert not torch.allclose(adam_cmm[0], adam_cmm[1], atol=1e-6)
+    assert not jnp.allclose(adam_cmm[0], adam_cmm[1], atol=1e-6)
 
 
 def test_CoM_pos(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
+    # Compute batched CoM position - JAX backend handles batching naturally
     adam_com = adam_kin_dyn.CoM_position(state.H, state.joints_pos)
 
     # Test gradient computation
+    def com_sum(H, joints_pos):
+        return adam_kin_dyn.CoM_position(H, joints_pos).sum()
+
+    grad_fn = grad(com_sum, argnums=(0, 1))
     try:
-        adam_com.sum().backward()
-    except:
-        raise ValueError(adam_com)
+        grad_H, grad_joints = grad_fn(state.H, state.joints_pos)
+        assert grad_H is not None and grad_joints is not None
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
 
     # Check output shape
     assert adam_com.shape == (batch_size, 3)
@@ -195,14 +207,14 @@ def test_CoM_pos(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_com[b])
+        adam_result = np.array(adam_com[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
         ), f"Batch element {b} mismatch"
 
     # Verify batch variation
-    assert not torch.allclose(adam_com[0], adam_com[1], atol=1e-6)
+    assert not jnp.allclose(adam_com[0], adam_com[1], atol=1e-6)
 
 
 def test_batch_performance_test(setup_test):
@@ -212,7 +224,7 @@ def test_batch_performance_test(setup_test):
     # Test with the current batch size to ensure performance
     assert batch_size == 8, f"Expected batch size 8, got {batch_size}"
 
-    # Test multiple computations to ensure they work with the full batch
+    # Test multiple computations to ensure they work with the full batch - JAX handles batching naturally
     mass_matrix = adam_kin_dyn.mass_matrix(state.H, state.joints_pos)
     com_pos = adam_kin_dyn.CoM_position(state.H, state.joints_pos)
     cmm = adam_kin_dyn.centroidal_momentum_matrix(state.H, state.joints_pos)
@@ -223,8 +235,16 @@ def test_batch_performance_test(setup_test):
     assert cmm.shape[0] == batch_size
 
     # Verify that gradient computation works with large batches
+    def combined_sum(H, joints_pos):
+        mm = adam_kin_dyn.mass_matrix(H, joints_pos)
+        cp = adam_kin_dyn.CoM_position(H, joints_pos)
+        cm = adam_kin_dyn.centroidal_momentum_matrix(H, joints_pos)
+        return mm.sum() + cp.sum() + cm.sum()
+
+    grad_fn = grad(combined_sum, argnums=(0, 1))
     try:
-        (mass_matrix.sum() + com_pos.sum() + cmm.sum()).backward()
+        grad_H, grad_joints = grad_fn(state.H, state.joints_pos)
+        assert grad_H is not None and grad_joints is not None
     except Exception as e:
         raise ValueError(f"Gradient computation failed: {e}")
 
@@ -232,14 +252,18 @@ def test_batch_performance_test(setup_test):
 def test_CoM_jacobian(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
 
-    # Compute batched CoM jacobian
     adam_com_jacobian = adam_kin_dyn.CoM_jacobian(state.H, state.joints_pos)
 
     # Test gradient computation
+    def com_jac_sum(H, joints_pos):
+        return adam_kin_dyn.CoM_jacobian(H, joints_pos).sum()
+
+    grad_fn = grad(com_jac_sum, argnums=(0, 1))
     try:
-        adam_com_jacobian.sum().backward()
-    except:
-        raise ValueError(adam_com_jacobian)
+        grad_H, grad_joints = grad_fn(state.H, state.joints_pos)
+        assert grad_H is not None and grad_joints is not None
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
 
     # Check output shape
     assert adam_com_jacobian.shape == (batch_size, 3, robot_cfg.n_dof + 6)
@@ -251,7 +275,7 @@ def test_CoM_jacobian(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_com_jacobian[b])
+        adam_result = np.array(adam_com_jacobian[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -261,14 +285,18 @@ def test_CoM_jacobian(setup_test):
 def test_jacobian(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
 
-    # Compute batched jacobian
     adam_jacobian = adam_kin_dyn.jacobian("l_sole", state.H, state.joints_pos)
 
     # Test gradient computation
+    def jacobian_sum(H, joints_pos):
+        return adam_kin_dyn.jacobian("l_sole", H, joints_pos).sum()
+
+    grad_fn = grad(jacobian_sum, argnums=(0, 1))
     try:
-        adam_jacobian.sum().backward()
-    except:
-        raise ValueError(adam_jacobian)
+        grad_H, grad_joints = grad_fn(state.H, state.joints_pos)
+        assert grad_H is not None and grad_joints is not None
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
 
     # Check output shape
     assert adam_jacobian.shape == (batch_size, 6, robot_cfg.n_dof + 6)
@@ -280,7 +308,7 @@ def test_jacobian(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_jacobian[b])
+        adam_result = np.array(adam_jacobian[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -289,11 +317,20 @@ def test_jacobian(setup_test):
 
 def test_jacobian_non_actuated(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
     adam_jacobian = adam_kin_dyn.jacobian("head", state.H, state.joints_pos)
+
+    # Test gradient computation
+    def jacobian_sum(H, joints_pos):
+        return adam_kin_dyn.jacobian("head", H, joints_pos).sum()
+
+    grad_fn = grad(jacobian_sum, argnums=(0, 1))
     try:
-        adam_jacobian.sum().backward()
-    except:
-        raise ValueError(adam_jacobian)
+        grad_H, grad_joints = grad_fn(state.H, state.joints_pos)
+        assert grad_H is not None and grad_joints is not None
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
+
     assert adam_jacobian.shape == (batch_size, 6, robot_cfg.n_dof + 6)
 
     # Compute idyntree reference for each batch element
@@ -303,34 +340,47 @@ def test_jacobian_non_actuated(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_jacobian[b])
+        adam_result = np.array(adam_jacobian[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
         ), f"Batch element {b} mismatch"
 
-    # Verify batch variation (random inputs should produce different outputs)
-    assert not torch.allclose(adam_jacobian[0], adam_jacobian[1], atol=1e-6)
+    # Verify batch variation
+    assert not jnp.allclose(adam_jacobian[0], adam_jacobian[1], atol=1e-6)
 
 
 def test_jacobian_dot(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
 
-    # Compute jacobian_dot_nu using matrix multiplication like in numpy tests
+    # Compute jacobian_dot_nu using matrix multiplication like in PyTorch tests
     adam_jacobian_dot = adam_kin_dyn.jacobian_dot(
         "l_sole", state.H, state.joints_pos, state.base_vel, state.joints_vel
     )
 
     # Compute jacobian_dot_nu by multiplying with velocities
-    adam_jacobian_dot_nu = adam_jacobian_dot @ torch.cat(
-        (state.base_vel, state.joints_vel), dim=1
-    ).unsqueeze(-1)
+    adam_jacobian_dot_nu = (
+        adam_jacobian_dot
+        @ jnp.concatenate((state.base_vel, state.joints_vel), axis=1)[..., jnp.newaxis]
+    )
     adam_jacobian_dot_nu = adam_jacobian_dot_nu.squeeze(-1)  # Remove last dimension
 
+    # Test gradient computation
+    def jacobian_dot_nu_sum(H, joints_pos, base_vel, joints_vel):
+        jac_dot = adam_kin_dyn.jacobian_dot(
+            "l_sole", H, joints_pos, base_vel, joints_vel
+        )
+        vels = jnp.concatenate([base_vel, joints_vel], axis=1)
+        return (jac_dot @ vels[..., jnp.newaxis]).squeeze(-1).sum()
+
+    grad_fn = grad(jacobian_dot_nu_sum, argnums=(0, 1, 2, 3))
     try:
-        adam_jacobian_dot_nu.sum().backward()
-    except:
-        raise ValueError(adam_jacobian_dot_nu)
+        grad_results = grad_fn(
+            state.H, state.joints_pos, state.base_vel, state.joints_vel
+        )
+        assert all(g is not None for g in grad_results)
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
 
     assert adam_jacobian_dot.shape == (batch_size, 6, robot_cfg.n_dof + 6)
     assert adam_jacobian_dot_nu.shape == (batch_size, 6)
@@ -342,25 +392,32 @@ def test_jacobian_dot(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_jacobian_dot_nu[b])
+        adam_result = np.array(adam_jacobian_dot_nu[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
         ), f"Batch element {b} mismatch"
 
-    # Verify batch variation (random inputs should produce different outputs)
-    assert not torch.allclose(
-        adam_jacobian_dot_nu[0], adam_jacobian_dot_nu[1], atol=1e-6
-    )
+    # Verify batch variation
+    assert not jnp.allclose(adam_jacobian_dot_nu[0], adam_jacobian_dot_nu[1], atol=1e-6)
 
 
 def test_relative_jacobian(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
     adam_jacobian = adam_kin_dyn.relative_jacobian("l_sole", state.joints_pos)
+
+    # Test gradient computation
+    def rel_jac_sum(joints_pos):
+        return adam_kin_dyn.relative_jacobian("l_sole", joints_pos).sum()
+
+    grad_fn = grad(rel_jac_sum)
     try:
-        adam_jacobian.sum().backward()
-    except:
-        raise ValueError(adam_jacobian)
+        grad_joints = grad_fn(state.joints_pos)
+        assert grad_joints is not None
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
+
     assert adam_jacobian.shape == (batch_size, 6, robot_cfg.n_dof)
 
     # Compute idyntree reference for each batch element
@@ -370,23 +427,32 @@ def test_relative_jacobian(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_jacobian[b])
+        adam_result = np.array(adam_jacobian[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
         ), f"Batch element {b} mismatch"
 
-    # Verify batch variation (random inputs should produce different outputs)
-    assert not torch.allclose(adam_jacobian[0], adam_jacobian[1], atol=1e-6)
+    # Verify batch variation
+    assert not jnp.allclose(adam_jacobian[0], adam_jacobian[1], atol=1e-6)
 
 
 def test_fk(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
     adam_H = adam_kin_dyn.forward_kinematics("l_sole", state.H, state.joints_pos)
+
+    # Test gradient computation
+    def fk_sum(H, joints_pos):
+        return adam_kin_dyn.forward_kinematics("l_sole", H, joints_pos).sum()
+
+    grad_fn = grad(fk_sum, argnums=(0, 1))
     try:
-        adam_H.sum().backward()
-    except:
-        raise ValueError(adam_H)
+        grad_H, grad_joints = grad_fn(state.H, state.joints_pos)
+        assert grad_H is not None and grad_joints is not None
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
+
     assert adam_H.shape == (batch_size, 4, 4)
 
     # Compute idyntree reference for each batch element
@@ -396,23 +462,32 @@ def test_fk(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_H[b])
+        adam_result = np.array(adam_H[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
         ), f"Batch element {b} mismatch"
 
-    # Verify batch variation (random inputs should produce different outputs)
-    assert not torch.allclose(adam_H[0], adam_H[1], atol=1e-6)
+    # Verify batch variation
+    assert not jnp.allclose(adam_H[0], adam_H[1], atol=1e-6)
 
 
 def test_fk_non_actuated(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
     adam_H = adam_kin_dyn.forward_kinematics("head", state.H, state.joints_pos)
+
+    # Test gradient computation
+    def fk_sum(H, joints_pos):
+        return adam_kin_dyn.forward_kinematics("head", H, joints_pos).sum()
+
+    grad_fn = grad(fk_sum, argnums=(0, 1))
     try:
-        adam_H.sum().backward()
-    except:
-        raise ValueError(adam_H)
+        grad_H, grad_joints = grad_fn(state.H, state.joints_pos)
+        assert grad_H is not None and grad_joints is not None
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
+
     assert adam_H.shape == (batch_size, 4, 4)
 
     # Compute idyntree reference for each batch element
@@ -422,29 +497,35 @@ def test_fk_non_actuated(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_H[b])
+        adam_result = np.array(adam_H[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
         ), f"Batch element {b} mismatch"
 
-    # Verify batch variation (random inputs should produce different outputs)
-    assert not torch.allclose(adam_H[0], adam_H[1], atol=1e-6)
+    # Verify batch variation
+    assert not jnp.allclose(adam_H[0], adam_H[1], atol=1e-6)
 
 
 def test_bias_force(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
 
-    # Compute batched bias force
     adam_h = adam_kin_dyn.bias_force(
         state.H, state.joints_pos, state.base_vel, state.joints_vel
     )
 
     # Test gradient computation
+    def bias_force_sum(H, joints_pos, base_vel, joints_vel):
+        return adam_kin_dyn.bias_force(H, joints_pos, base_vel, joints_vel).sum()
+
+    grad_fn = grad(bias_force_sum, argnums=(0, 1, 2, 3))
     try:
-        adam_h.sum().backward()
-    except:
-        raise ValueError(adam_h)
+        grad_results = grad_fn(
+            state.H, state.joints_pos, state.base_vel, state.joints_vel
+        )
+        assert all(g is not None for g in grad_results)
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
 
     # Check output shape
     assert adam_h.shape == (batch_size, robot_cfg.n_dof + 6)
@@ -456,7 +537,7 @@ def test_bias_force(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_h[b])
+        adam_result = np.array(adam_h[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
@@ -465,13 +546,24 @@ def test_bias_force(setup_test):
 
 def test_coriolis_matrix(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
     adam_coriolis = adam_kin_dyn.coriolis_term(
         state.H, state.joints_pos, state.base_vel, state.joints_vel
     )
+
+    # Test gradient computation
+    def coriolis_sum(H, joints_pos, base_vel, joints_vel):
+        return adam_kin_dyn.coriolis_term(H, joints_pos, base_vel, joints_vel).sum()
+
+    grad_fn = grad(coriolis_sum, argnums=(0, 1, 2, 3))
     try:
-        adam_coriolis.sum().backward()
-    except:
-        raise ValueError(adam_coriolis)
+        grad_results = grad_fn(
+            state.H, state.joints_pos, state.base_vel, state.joints_vel
+        )
+        assert all(g is not None for g in grad_results)
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
+
     assert adam_coriolis.shape == (batch_size, robot_cfg.n_dof + 6)
 
     # Compute idyntree reference for each batch element
@@ -481,23 +573,32 @@ def test_coriolis_matrix(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_coriolis[b])
+        adam_result = np.array(adam_coriolis[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
         ), f"Batch element {b} mismatch"
 
-    # Verify batch variation (random inputs should produce different outputs)
-    assert not torch.allclose(adam_coriolis[0], adam_coriolis[1], atol=1e-6)
+    # Verify batch variation
+    assert not jnp.allclose(adam_coriolis[0], adam_coriolis[1], atol=1e-6)
 
 
 def test_gravity_term(setup_test):
     adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+
     adam_gravity = adam_kin_dyn.gravity_term(state.H, state.joints_pos)
+
+    # Test gradient computation
+    def gravity_sum(H, joints_pos):
+        return adam_kin_dyn.gravity_term(H, joints_pos).sum()
+
+    grad_fn = grad(gravity_sum, argnums=(0, 1))
     try:
-        adam_gravity.sum().backward()
-    except:
-        raise ValueError(adam_gravity)
+        grad_H, grad_joints = grad_fn(state.H, state.joints_pos)
+        assert grad_H is not None and grad_joints is not None
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
+
     assert adam_gravity.shape == (batch_size, robot_cfg.n_dof + 6)
 
     # Compute idyntree reference for each batch element
@@ -507,11 +608,11 @@ def test_gravity_term(setup_test):
 
     # Validate each batch element against idyntree
     for b in range(batch_size):
-        adam_result = to_numpy(adam_gravity[b])
+        adam_result = np.array(adam_gravity[b])
         idyn_result = idyn_references[b]
         assert np.allclose(
             adam_result, idyn_result, atol=1e-4
         ), f"Batch element {b} mismatch"
 
-    # Verify batch variation (random inputs should produce different outputs)
-    assert not torch.allclose(adam_gravity[0], adam_gravity[1], atol=1e-6)
+    # Verify batch variation
+    assert not jnp.allclose(adam_gravity[0], adam_gravity[1], atol=1e-6)

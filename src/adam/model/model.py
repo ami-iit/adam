@@ -4,7 +4,7 @@ from adam.model.abc_factories import Joint, Link, ModelFactory
 from adam.model.tree import Tree
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True, slots=True)
 class Model:
     """
     Model class. It describes the robot using links and frames and their connectivity"""
@@ -121,7 +121,7 @@ class Model:
         mass = 0.0
         for item in self.links:
             link = self.links[item]
-            mass += link.inertial.mass
+            mass += link.inertial.mass.array
         return mass
 
     def print_table(self):

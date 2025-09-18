@@ -18,19 +18,22 @@
 
 ### Table of contents
 
-- [🐍 Dependencies](#-dependencies)
-- [💾 Installation](#-installation)
-  - [🐍 Installation with pip](#-installation-with-pip)
-  - [📦 Installation with conda](#-installation-with-conda)
-    - [Installation from conda-forge package](#installation-from-conda-forge-package)
-  - [🔨 Installation from repo](#-installation-from-repo)
-- [🚀 Usage](#-usage)
-  - [Jax interface](#jax-interface)
-  - [CasADi interface](#casadi-interface)
-  - [PyTorch interface](#pytorch-interface)
-  - [PyTorch Batched interface](#pytorch-batched-interface)
-- [🦸‍♂️ Contributing](#️-contributing)
-- [Todo](#todo)
+- [adam](#adam)
+    - [Table of contents](#table-of-contents)
+  - [🐍 Dependencies](#-dependencies)
+  - [💾 Installation](#-installation)
+    - [🐍 Installation with pip](#-installation-with-pip)
+    - [📦 Installation with conda](#-installation-with-conda)
+      - [Installation from conda-forge package](#installation-from-conda-forge-package)
+    - [🔨 Installation from repo](#-installation-from-repo)
+  - [🚀 Usage](#-usage)
+    - [Jax interface](#jax-interface)
+    - [CasADi interface](#casadi-interface)
+    - [PyTorch interface](#pytorch-interface)
+    - [PyTorch Batched interface](#pytorch-batched-interface)
+    - [Inverse Kinematics](#inverse-kinematics)
+  - [🦸‍♂️ Contributing](#️-contributing)
+  - [Todo](#todo)
 
 ## 🐍 Dependencies
 
@@ -43,7 +46,7 @@ Other requisites are:
 - `casadi`
 - `pytorch`
 - `numpy`
-- `jax2torch`
+- `array-api-compat`
 
 They will be installed in the installation step!
 
@@ -145,25 +148,25 @@ Install in a conda environment the required dependencies:
 - **Jax** interface dependencies:
 
   ```bash
-  conda create -n adamenv -c conda-forge jax numpy lxml prettytable matplotlib urdfdom-py
+  conda create -n adamenv -c conda-forge jax numpy lxml prettytable matplotlib urdfdom-py array-api-compat
   ```
 
 - **CasADi** interface dependencies:
 
   ```bash
-  conda create -n adamenv -c conda-forge casadi numpy lxml prettytable matplotlib urdfdom-py
+  conda create -n adamenv -c conda-forge casadi numpy lxml prettytable matplotlib urdfdom-py array-api-compat
   ```
 
 - **PyTorch** interface dependencies:
 
   ```bash
-  conda create -n adamenv -c conda-forge pytorch numpy lxml prettytable matplotlib urdfdom-py jax2torch
+  conda create -n adamenv -c conda-forge pytorch numpy lxml prettytable matplotlib urdfdom-py array-api-compat
   ```
 
 - **ALL** interfaces dependencies:
 
   ```bash
-  conda create -n adamenv -c conda-forge jax casadi pytorch numpy lxml prettytable matplotlib urdfdom-py jax2torch
+  conda create -n adamenv -c conda-forge jax casadi pytorch numpy lxml prettytable matplotlib urdfdom-py array-api-compat
   ```
 
 Activate the environment, clone the repo and install the library:
@@ -316,8 +319,6 @@ print(M)
 
 ### PyTorch Batched interface
 
-> [!NOTE]
-> When using this interface, note that the first call of the jitted function can be slow, since JAX needs to compile the function. Then it will be faster!
 
 ```python
 import adam

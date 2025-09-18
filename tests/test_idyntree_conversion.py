@@ -59,7 +59,7 @@ def test_CoM_jacobian(setup_test):
 def test_total_mass(setup_test):
     adam_kin_dyn, robot_cfg, state = setup_test
     idyn_total_mass = robot_cfg.idyn_function_values.total_mass
-    assert adam_kin_dyn.get_total_mass() - idyn_total_mass == pytest.approx(
+    assert cs.DM(adam_kin_dyn.get_total_mass()) - idyn_total_mass == pytest.approx(
         0.0, abs=1e-5
     )
 

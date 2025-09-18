@@ -10,7 +10,7 @@ import pytest
 import requests
 
 from adam import Representations
-from adam.numpy.numpy_like import SpatialMath
+from scipy.spatial.transform import Rotation
 
 
 @dataclasses.dataclass
@@ -140,7 +140,11 @@ def tests_setup(request) -> RobotCfg | State:
     joints_dot_val = (np.random.rand(n_dof) - 0.5) * 5
 
     g = np.array([0, 0, -9.80665])
-    H_b = SpatialMath().H_from_Pos_RPY(xyz, rpy).array
+    # H_b = SpatialMath().H_from_Pos_RPY(xyz, rpy).array
+    R_b = Rotation.from_euler("xyz", rpy).as_matrix()
+    H_b = np.eye(4)
+    H_b[:3, :3] = R_b
+    H_b[:3, 3] = xyz
 
     state = State(
         H=H_b,
@@ -295,3 +299,18 @@ def compute_idyntree_values(
         coriolis_term=idyn_coriolis_term,
         gravity_term=idyn_gravity_term,
     )
+
+
+@pytest.fixture(scope="session")
+def device():
+    import torch
+
+    """Pick CUDA if available, otherwise CPU."""
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def to_numpy(x):
+    """Convert a torch tensor to a numpy array, handling gradients if present."""
+    if x.device.type == "cuda":
+        x = x.cpu()
+    return x.detach().numpy()

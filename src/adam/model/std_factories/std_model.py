@@ -17,10 +17,7 @@ def urdf_remove_sensors_tags(xml_string):
     for sensors_tag in root.findall("sensor"):
         root.remove(sensors_tag)
 
-    # Convert the modified XML back to a string
-    modified_xml_string = ET.tostring(root)
-
-    return modified_xml_string
+    return ET.tostring(root)
 
 
 def get_xml_string(path: str | pathlib.Path):

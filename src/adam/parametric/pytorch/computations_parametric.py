@@ -10,6 +10,7 @@ from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.model import Model
 from adam.parametric.model import ParametricLink, URDFParametricModelFactory
 from adam.pytorch.torch_like import SpatialMath
+from adam.core.array_api_math import spec_from_reference
 
 
 class KinDynComputationsParametric:
@@ -22,6 +23,10 @@ class KinDynComputationsParametric:
         urdfstring: str,
         joints_name_list: list,
         links_name_list: list,
+        device: torch.device = (
+            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        ),
+        dtypes: torch.dtype = torch.float64,
         root_link: str = None,
         gravity: np.array = torch.tensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
@@ -32,8 +37,9 @@ class KinDynComputationsParametric:
             links_name_list (list): list of parametric links
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
-        self.math = SpatialMath()
-        self.g = gravity.to(torch.get_default_dtype())
+        ref = torch.tensor(0.0, dtype=dtypes, device=device)
+        self.math = SpatialMath(spec=spec_from_reference(ref))
+        self.g = gravity.to(dtype=dtypes, device=device)
         self.links_name_list = links_name_list
         self.joints_name_list = joints_name_list
         self.urdfstring = urdfstring
@@ -338,7 +344,7 @@ class KinDynComputationsParametric:
         return self.rbdalgos.rnea(
             base_transform,
             s,
-            base_velocity.reshape(6, 1),
+            base_velocity,
             joint_velocities,
             self.g,
         ).array.squeeze()
@@ -382,7 +388,7 @@ class KinDynComputationsParametric:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            base_velocity.reshape(6, 1),
+            base_velocity,
             joint_velocities,
             torch.zeros(6),
         ).array.squeeze()
@@ -420,7 +426,7 @@ class KinDynComputationsParametric:
         return self.rbdalgos.rnea(
             base_transform,
             base_positions,
-            torch.zeros(6).reshape(6, 1),
+            torch.zeros(6),
             torch.zeros(self.NDoF),
             self.g,
         ).array.squeeze()

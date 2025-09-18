@@ -1,9 +1,45 @@
 import idyntree.bindings
 import numpy as np
 import urdf_parser_py.urdf
+import casadi as cs
 
 from adam.model.abc_factories import Joint, Link
 from adam.model.model import Model
+from adam.core.spatial_math import ArrayLike
+
+
+def _to_sequence(x) -> list[float]:
+    """Coerce array-like objects to a plain Python list of floats.
+
+    Supports:
+    - CasADi DM, SX, MX (uses .full() when available)
+    - Objects exposing an `array` attribute (e.g., CasadiLike wrapper)
+    - numpy arrays, lists, tuples and other iterables
+    - scalars
+    """
+    # Unwrap wrapper that stores the underlying array in `.array`
+    val = x.array if isinstance(x, ArrayLike) else x
+    if isinstance(val, (cs.DM, cs.SX, cs.MX)):
+        val = [float(v) for v in cs.DM(val).full()]
+        return val
+
+    for i, v in enumerate(val):
+        if isinstance(v, ArrayLike):
+            val[i] = (
+                cs.DM(v).full() if isinstance(v, (cs.DM, cs.SX, cs.MX)) else v.array
+            )
+    # Handle CasADi types if available. It should be already a casadi type, but let's be safe
+    val = cs.DM(val).full() if isinstance(val, (cs.DM)) else val
+    return [float(v) for v in val]
+
+
+def _to_scalar(x) -> float:
+    """Coerce a scalar-like object to float (supports CasADi and wrappers)."""
+    # Unwrap wrapper that stores the underlying array in `.array`
+    val = x.array if isinstance(x, ArrayLike) else x
+    # Handle CasADi types if available. It should be already a casadi type, but let's be safe
+    val = cs.DM(val).full() if isinstance(val, (cs.DM, cs.SX, cs.MX)) else val
+    return float(val)
 
 
 def to_idyntree_solid_shape(
@@ -16,8 +52,10 @@ def to_idyntree_solid_shape(
     Returns:
         iDynTree.SolidShape: the iDynTree solid shape
     """
-    visual_position = idyntree.bindings.Position.FromPython(visual.origin.xyz)
-    visual_rotation = idyntree.bindings.Rotation.RPY(*visual.origin.rpy)
+    visual_position = idyntree.bindings.Position.FromPython(
+        _to_sequence(visual.origin.xyz)
+    )
+    visual_rotation = idyntree.bindings.Rotation.RPY(*_to_sequence(visual.origin.rpy))
     visual_transform = idyntree.bindings.Transform()
     visual_transform.setRotation(visual_rotation)
     visual_transform.setPosition(visual_position)
@@ -78,16 +116,20 @@ def to_idyntree_link(
             [input_inertia.ixz, input_inertia.iyz, input_inertia.izz],
         ]
     )
-    inertia_rotation = idyntree.bindings.Rotation.RPY(*link.inertial.origin.rpy)
+    inertia_rotation = idyntree.bindings.Rotation.RPY(
+        *_to_sequence(link.inertial.origin.rpy)
+    )
     idyn_spatial_rotational_inertia = idyntree.bindings.RotationalInertia()
     for i in range(3):
         for j in range(3):
             idyn_spatial_rotational_inertia.setVal(i, j, inertia_matrix[i, j])
     rotated_inertia = inertia_rotation * idyn_spatial_rotational_inertia
     idyn_spatial_inertia = idyntree.bindings.SpatialInertia()
-    com_position = idyntree.bindings.Position.FromPython(link.inertial.origin.xyz)
+    com_position = idyntree.bindings.Position.FromPython(
+        _to_sequence(link.inertial.origin.xyz)
+    )
     idyn_spatial_inertia.fromRotationalInertiaWrtCenterOfMass(
-        link.inertial.mass,
+        _to_scalar(link.inertial.mass),
         com_position,
         rotated_inertia,
     )
@@ -108,8 +150,10 @@ def to_idyntree_joint(
         iDynTree.bindings.IJoint: the iDynTree joint
     """
 
-    rest_position = idyntree.bindings.Position.FromPython(joint.origin.xyz)
-    rest_rotation = idyntree.bindings.Rotation.RPY(*joint.origin.rpy)
+    rest_position = idyntree.bindings.Position.FromPython(
+        _to_sequence(joint.origin.xyz)
+    )
+    rest_rotation = idyntree.bindings.Rotation.RPY(*_to_sequence(joint.origin.rpy))
     rest_transform = idyntree.bindings.Transform()
     rest_transform.setRotation(rest_rotation)
     rest_transform.setPosition(rest_position)
@@ -117,7 +161,7 @@ def to_idyntree_joint(
     if joint.type == "fixed":
         return idyntree.bindings.FixedJoint(parent_index, child_index, rest_transform)
 
-    direction = idyntree.bindings.Direction(*joint.axis)
+    direction = idyntree.bindings.Direction(*_to_sequence(joint.axis))
     origin = idyntree.bindings.Position.Zero()
     axis = idyntree.bindings.Axis()
     axis.setDirection(direction)
@@ -129,7 +173,9 @@ def to_idyntree_joint(
         output.setRestTransform(rest_transform)
         output.setAxis(axis, child_index, parent_index)
         if joint.limit is not None and joint.type == "revolute":
-            output.setPosLimits(0, joint.limit.lower, joint.limit.upper)
+            output.setPosLimits(
+                0, _to_scalar(joint.limit.lower), _to_scalar(joint.limit.upper)
+            )
         return output
     if joint.type in ["prismatic"]:
         output = idyntree.bindings.PrismaticJoint()
@@ -137,7 +183,9 @@ def to_idyntree_joint(
         output.setRestTransform(rest_transform)
         output.setAxis(axis, child_index, parent_index)
         if joint.limit is not None:
-            output.setPosLimits(0, joint.limit.lower, joint.limit.upper)
+            output.setPosLimits(
+                0, _to_scalar(joint.limit.lower), _to_scalar(joint.limit.upper)
+            )
         return output
 
     NotImplementedError(f"The joint type {joint.type} is not supported")
@@ -180,10 +228,12 @@ def to_idyntree_model(model: Model) -> idyntree.bindings.Model:
     for name in model.joints:
         if name in frames_list:
             joint = model.joints[name]
-            frame_position = idyntree.bindings.Position.FromPython(joint.origin.xyz)
+            frame_position = idyntree.bindings.Position.FromPython(
+                _to_sequence(joint.origin.xyz)
+            )
             frame_transform = idyntree.bindings.Transform()
             frame_transform.setRotation(
-                idyntree.bindings.Rotation.RPY(*joint.origin.rpy)
+                idyntree.bindings.Rotation.RPY(*_to_sequence(joint.origin.rpy))
             )
             frame_transform.setPosition(frame_position)
             frame_name = joint.name.replace("_fixed_joint", "")

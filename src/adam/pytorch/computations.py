@@ -10,6 +10,7 @@ from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.model import Model, URDFModelFactory
 from adam.pytorch.torch_like import SpatialMath
+from adam.core.array_api_math import spec_from_reference
 
 
 class KinDynComputations:
@@ -19,6 +20,10 @@ class KinDynComputations:
         self,
         urdfstring: str,
         joints_name_list: list = None,
+        device: torch.device = (
+            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        ),
+        dtypes: torch.dtype = torch.float64,
         root_link: str = None,
         gravity: np.array = torch.tensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
@@ -28,12 +33,14 @@ class KinDynComputations:
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
-        math = SpatialMath()
+        ref = torch.tensor(0.0, dtype=dtypes, device=device)
+        spec = spec_from_reference(ref)
+        math = SpatialMath(spec=spec)
         factory = URDFModelFactory(path=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
-        self.g = gravity.to(torch.get_default_dtype())
+        self.g = gravity.to(dtype=dtypes, device=device)
         if root_link is not None:
             warnings.warn(
                 "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF",
@@ -208,7 +215,7 @@ class KinDynComputations:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            base_velocity.reshape(6, 1),
+            base_velocity,
             joint_velocities,
             self.g,
         ).array.squeeze()
@@ -236,9 +243,9 @@ class KinDynComputations:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            base_velocity.reshape(6, 1),
+            base_velocity,
             joint_velocities,
-            torch.zeros(6),
+            torch.zeros(6, dtype=base_transform.dtype, device=base_transform.device),
         ).array.squeeze()
 
     def gravity_term(
@@ -257,8 +264,10 @@ class KinDynComputations:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            torch.zeros(6).reshape(6, 1),
-            torch.zeros(self.NDoF),
+            torch.zeros(6, dtype=base_transform.dtype, device=base_transform.device),
+            torch.zeros(
+                self.NDoF, dtype=base_transform.dtype, device=base_transform.device
+            ),
             self.g,
         ).array.squeeze()
 

@@ -20,7 +20,6 @@ adam
 
 
 **adam** employs the automatic differentiation capabilities of these frameworks to compute, if needed, gradients, Jacobian, Hessians of rigid-body dynamics quantities. This approach enables the design of optimal control and reinforcement learning strategies in robotics.
-Thanks to the `jax.vmap`-ing and `jax.jit`-ing capabilities, the algorithms can be run on batches of inputs, which are possibly converted to PyTorch using the `jax2torch` conversion functions.
 
 
 **adam** is based on **Roy Featherstone's Rigid Body Dynamics Algorithms**.

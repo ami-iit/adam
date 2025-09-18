@@ -2,7 +2,7 @@ import numpy.typing as npt
 import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
-from adam.model import Inertial, Link, Pose
+from adam.model import Inertia, Inertial, Link, Pose
 
 
 class StdLink(Link):
@@ -12,18 +12,38 @@ class StdLink(Link):
         self.math = math
         self.name = link.name
         self.visuals = link.visuals
-        self.inertial = link.inertial
+        self.inertial = self._set_inertia(link)
         self.collisions = link.collisions
 
-        # if the link has no inertial properties (a connecting frame), let's add them
-        if link.inertial is None:
-            link.inertial = Inertial.zero()
+    def _set_inertia(self, link: urdf_parser_py.urdf.Link) -> npt.ArrayLike:
+        """
+        Args:
+            inertia (npt.ArrayLike): inertia
 
-        # if the link has inertial properties, but the origin is None, let's add it
-        if link.inertial is not None and link.inertial.origin is None:
-            link.inertial.origin = Pose(xyz=[0, 0, 0], rpy=[0, 0, 0])
+        Returns:
+            npt.ArrayLike: set the inertia
+        """
 
-        self.inertial = link.inertial
+        inertial = link.inertial
+        if inertial is None:
+            return Inertial(
+                mass=self.math.asarray(0),
+                inertia=Inertia.zero(self.math),
+                origin=Pose.zero(self.math),
+            )
+
+        inertia = Inertia.build(
+            ixx=inertial.inertia.ixx,
+            ixy=inertial.inertia.ixy,
+            ixz=inertial.inertia.ixz,
+            iyy=inertial.inertia.iyy,
+            iyz=inertial.inertia.iyz,
+            izz=inertial.inertia.izz,
+            math=self.math,
+        )
+        mass = self.math.asarray(inertial.mass)
+        pose = Pose.build(inertial.origin.xyz, inertial.origin.rpy, self.math)
+        return Inertial(mass=mass, inertia=inertia, origin=pose)
 
     def spatial_inertia(self) -> npt.ArrayLike:
         """
@@ -31,11 +51,11 @@ class StdLink(Link):
             npt.ArrayLike: the 6x6 inertia matrix expressed at
                            the origin of the link (with rotation)
         """
-        I = self.inertial.inertia
+        inertia_matrix = self.inertial.inertia.get_matrix()
         mass = self.inertial.mass
         o = self.inertial.origin.xyz
         rpy = self.inertial.origin.rpy
-        return self.math.spatial_inertia(I, mass, o, rpy)
+        return self.math.spatial_inertia(inertia_matrix, mass, o, rpy)
 
     def homogeneous(self) -> npt.ArrayLike:
         """

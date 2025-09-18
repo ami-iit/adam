@@ -1,212 +1,335 @@
 # Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Sequence
 
 import casadi as cs
 import numpy.typing as npt
 
-from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
-from adam.numpy import NumpyLike
+from adam.core.spatial_math import (
+    ArrayLike,
+    ArrayLikeFactory,
+    SpatialMath as _SpatialMath,
+)
 
 
 @dataclass
 class CasadiLike(ArrayLike):
-    """Wrapper class for Casadi types"""
+    """Wrapper class for CasADi SX/DM with ArrayLike ops."""
 
     array: Union[cs.SX, cs.DM]
 
-    def __matmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
-        """Overrides @ operator"""
-        if type(other) in [CasadiLike, NumpyLike]:
-            return CasadiLike(cs.mtimes(self.array, other.array))
-        else:
-            return CasadiLike(cs.mtimes(self.array, other))
+    def __matmul__(self, other: "CasadiLike") -> "CasadiLike":
+        return CasadiLike(cs.mtimes(self.array, other.array))
 
-    def __rmatmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
-        """Overrides @ operator"""
-        if type(other) in [CasadiLike, NumpyLike]:
-            return CasadiLike(other.array @ self.array)
-        else:
-            return CasadiLike(other @ self.array)
+    def __rmatmul__(self, other: "CasadiLike") -> "CasadiLike":
+        return CasadiLike(cs.mtimes(other.array, self.array))
 
-    def __mul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
-        """Overrides * operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array * other.array)
-        else:
-            return CasadiLike(self.array * other)
+    def __mul__(self, other: "CasadiLike") -> "CasadiLike":
+        return CasadiLike(self.array * other.array)
 
-    def __rmul__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
-        """Overrides * operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array * other.array)
-        else:
-            return CasadiLike(self.array * other)
+    def __rmul__(self, other: "CasadiLike") -> "CasadiLike":
+        return CasadiLike(other.array * self.array)
 
-    def __add__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
-        """Overrides + operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array + other.array)
-        else:
-            return CasadiLike(self.array + other)
+    def __truediv__(self, other: "CasadiLike") -> "CasadiLike":
+        return CasadiLike(self.array / other.array)
 
-    def __radd__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
-        """Overrides + operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array + other.array)
-        else:
-            return CasadiLike(self.array + other)
+    def __add__(self, other: "CasadiLike") -> "CasadiLike":
+        a, b = self.array, other.array
+        sa, sb = a.shape, b.shape
 
-    def __sub__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
-        """Overrides - operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array - other.array)
-        else:
-            return CasadiLike(self.array - other)
+        # Scalars always broadcast in CasADi
+        if sa == sb or (sa == (1, 1)) or (sb == (1, 1)):
+            return CasadiLike(a + b)
 
-    def __rsub__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
-        """Overrides - operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array - other.array)
-        else:
-            return CasadiLike(self.array - other)
+        # If one is a vector and the other is the same vector transposed, align to self
+        # column (n,1) + row (1,n) is undefined for elementwise add; we only allow when shapes match after T
+        if sa == (sb[1], sb[0]) and (1 in sb):
+            return CasadiLike(a + b.T)
+
+        # If both are vectors with same length but different orientation, align to self
+        if sa[1] == 1 and sb[0] == 1 and sa[0] == sb[1]:  # self col, other row
+            return CasadiLike(a + b.T)
+        if sa[0] == 1 and sb[1] == 1 and sa[1] == sb[0]:  # self row, other col
+            return CasadiLike(a + b.T)
+
+        raise ValueError(f"Shape mismatch for add: {sa} + {sb}")
+
+    def __radd__(self, other: "CasadiLike") -> "CasadiLike":
+        return CasadiLike(other.array).__add__(self)
+
+    def __sub__(self, other: "CasadiLike") -> "CasadiLike":
+        return CasadiLike(self.array - other.array)
+
+    def __rsub__(self, other: "CasadiLike") -> "CasadiLike":
+        return CasadiLike(other.array - self.array)
 
     def __neg__(self) -> "CasadiLike":
-        """Overrides - operator"""
         return CasadiLike(-self.array)
 
-    def __truediv__(self, other: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
-        """Overrides / operator"""
-        if type(self) is type(other):
-            return CasadiLike(self.array / other.array)
-        else:
-            return CasadiLike(self.array / other)
-
-    def __setitem__(self, idx, value: Union["CasadiLike", npt.ArrayLike]):
-        """Overrides set item operator"""
-        self.array[idx] = value.array if type(self) is type(value) else value
-
+    # --- indexing / shape / transpose ---
     def __getitem__(self, idx) -> "CasadiLike":
-        """Overrides get item operator"""
+        # CasADi is 2-D; strip ellipsis/None and keep the remaining 2 indices max.
+        if idx is Ellipsis:
+            return self
+
+        if isinstance(idx, tuple):
+            # remove Ellipsis
+            idx = tuple(i for i in idx if i is not Ellipsis)
+            # remove None (newaxis); CasADi doesn't support >2D, so just ignore
+            idx = tuple(i for i in idx if i is not None)
+            if not idx:
+                return self
+            if len(idx) == 1:
+                idx = idx[0]
+            elif len(idx) > 2:
+                # Keep only last two indices (row, col)
+                idx = idx[-2:]
+
         return CasadiLike(self.array[idx])
 
     @property
+    def shape(self) -> tuple[int, ...]:
+        return self.array.shape
+
+    @property
+    def ndim(self) -> int:
+        return len(self.array.shape)
+
+    @property
     def T(self) -> "CasadiLike":
-        """
-        Returns:
-            CasadiLike: Transpose of the array
-        """
         return CasadiLike(self.array.T)
 
 
 class CasadiLikeFactory(ArrayLikeFactory):
+    """ArrayLikeFactory for CasADi. Drops batch dims (>2) since CasADi is 2-D only."""
 
-    @staticmethod
-    def zeros(*x: int) -> "CasadiLike":
-        """
-        Returns:
-            CasadiLike: Matrix of zeros of dim *x
-        """
-        return CasadiLike(cs.SX.zeros(*x))
+    def __init__(self, xp: Union[cs.SX, cs.DM, None] = None):
 
-    @staticmethod
-    def eye(x: int) -> "CasadiLike":
-        """
-        Args:
-            x (int): matrix dimension
+        self._xp = cs.SX if xp is None else xp
 
-        Returns:
-            CasadiLike: Identity matrix
-        """
-        return CasadiLike(cs.SX.eye(x))
+        # else:
+        #     super().__init__(CasadiLike, xp)
 
-    @staticmethod
-    def array(*x) -> "CasadiLike":
-        """
-        Returns:
-            CasadiLike: Vector wrapping *x
-        """
-        return CasadiLike(cs.SX(*x))
-
-
-class SpatialMath(SpatialMath):
-
-    def __init__(self):
-        super().__init__(CasadiLikeFactory)
-
-    @staticmethod
-    def skew(x: Union["CasadiLike", npt.ArrayLike]) -> "CasadiLike":
-        """
-        Args:
-            x (Union[CasadiLike, npt.ArrayLike]): 3D vector
-
-        Returns:
-            CasadiLike: the skew symmetric matrix from x
-        """
-        if isinstance(x, CasadiLike):
-            return CasadiLike(cs.skew(x.array))
+    def zeros(self, *x: npt.ArrayLike) -> CasadiLike:
+        # Accept zeros((..batch.., r, c)) or zeros(r, c)
+        if len(x) == 1 and isinstance(x[0], (tuple, list)):
+            shp = tuple(x[0])
         else:
-            return CasadiLike(cs.skew(x))
+            shp = tuple(x)
+        if len(shp) > 2:
+            shp = shp[-2:]
+        if len(shp) == 0:
+            shp = (1,)
+        return CasadiLike(self._xp.zeros(*shp))
 
-    @staticmethod
-    def sin(x: npt.ArrayLike) -> "CasadiLike":
+    def eye(self, x: npt.ArrayLike) -> CasadiLike:
+        # Accept eye(n) or eye((..batch.., n))
+        n = x[-1] if isinstance(x, (tuple, list)) else x
+        return CasadiLike(self._xp.eye(int(n)))
+
+    def asarray(self, x) -> CasadiLike:
         """
+        Convert input to a CasadiLike array.
+
+        This method handles various input types and converts them to CasadiLike objects
+        using appropriate CasADi operations for concatenation and array construction.
+
         Args:
-            x (npt.ArrayLike): angle value
+            x: Input to convert. Can be:
+            - Empty list: Returns empty CasadiLike array
+            - List of CasADi objects (cs.SX, cs.DM): Horizontally concatenated
+            - List of lists/tuples: Creates 2D array with vertical and horizontal concatenation
+            - Numbers or lists of numbers: Direct conversion to CasadiLike
 
         Returns:
-            CasadiLike: the sin value of x
+            CasadiLike: A CasadiLike object wrapping the converted input.
+
+        Examples:
+            - Empty list [] -> CasadiLike with empty array
+            - [sx1, sx2] -> CasadiLike with horizontally concatenated SX objects
+            - [[1, 2], [3, 4]] -> CasadiLike with 2x2 matrix
+            - 5 or [1, 2, 3] -> CasadiLike with direct conversion
         """
-        return CasadiLike(cs.sin(x))
+        # Handle empty list case
+        if isinstance(x, list):
+            if not x:
+                return CasadiLike(self._xp([]))
+            # List contains CasADi objects - concatenate horizontally
+            if any(isinstance(it, (cs.SX, cs.DM)) for it in x):
+                return CasadiLike(self._xp(cs.vertcat(*x)))
+            # List of lists/tuples - create 2D array with vertical and horizontal concatenation
+            if all(isinstance(it, (list, tuple)) for it in x):
+                return CasadiLike(
+                    self._xp(
+                        cs.vertcat(
+                            *[cs.horzcat(*[self._xp(e) for e in it]) for it in x]
+                        )
+                    )
+                )
+        # Direct conversion for numbers or lists of numbers
+        return CasadiLike(self._xp(x))
+
+    def zeros_like(self, x: CasadiLike) -> CasadiLike:
+        r, c = x.array.shape if len(x.array.shape) == 2 else (x.array.numel(), 1)
+        return CasadiLike(self._xp.zeros(r, c))
+
+    def ones_like(self, x: CasadiLike) -> CasadiLike:
+        r, c = x.array.shape if len(x.array.shape) == 2 else (x.array.numel(), 1)
+        return CasadiLike(self._xp.ones(r, c))
+
+    def tile(self, x: CasadiLike, reps: tuple) -> CasadiLike:
+        # No batching in CasADi: return input unchanged.
+        return x
+
+
+class SpatialMath(_SpatialMath):
+    """CasADi backend for SpatialMath. Keeps the same high-level API."""
+
+    def __init__(self, spec=None):
+        super().__init__(CasadiLikeFactory(spec))
 
     @staticmethod
-    def cos(x: npt.ArrayLike) -> "CasadiLike":
+    def sin(x: CasadiLike) -> CasadiLike:
+        return CasadiLike(cs.sin(x.array))
+
+    @staticmethod
+    def cos(x: CasadiLike) -> CasadiLike:
+        return CasadiLike(cs.cos(x.array))
+
+    @staticmethod
+    def skew(x: Union[CasadiLike, npt.ArrayLike]) -> CasadiLike:
+        a = x.array if isinstance(x, CasadiLike) else x
+        # Expect 3-vector; if it's a row, transpose; if scalar/empty, raise.
+        if isinstance(a, (cs.SX, cs.DM)) and a.is_empty():
+            raise ValueError("skew received empty array")
+        return CasadiLike(cs.skew(a))
+
+    @staticmethod
+    def outer(x: CasadiLike, y: CasadiLike) -> CasadiLike:
+        return CasadiLike(cs.np.outer(x.array, y.array))
+
+    @staticmethod
+    def vertcat(*x: CasadiLike) -> CasadiLike:
+        return CasadiLike(cs.vertcat(*[xi.array for xi in x]))
+
+    @staticmethod
+    def horzcat(*x: CasadiLike) -> CasadiLike:
+        return CasadiLike(cs.horzcat(*[xi.array for xi in x]))
+
+    @staticmethod
+    def stack(x: Sequence[CasadiLike], axis: int = 0) -> CasadiLike:
+        arrs = [xi.array for xi in x]
+        if axis in {-2, 0}:
+            return CasadiLike(cs.vertcat(*arrs))
+        if axis in {-1, 1}:
+            return CasadiLike(cs.horzcat(*arrs))
+        raise NotImplementedError(f"CasADi stack not implemented for axis={axis}")
+
+    @staticmethod
+    def concatenate(x: Sequence[CasadiLike], axis: int = 0) -> CasadiLike:
         """
+        Concatenate a sequence of CasadiLike objects along a specified axis.
+
+        This function provides flexible concatenation behavior with special handling
+        for common use cases in CasADi operations.
+
         Args:
-            x (npt.ArrayLike): angle value
+            x (Sequence[CasadiLike]): Sequence of CasadiLike objects to concatenate
+            axis (int, optional): Axis along which to concatenate. Defaults to 0.
+                - 0 or -2: Vertical concatenation (stack rows)
+                - 1 or -1: Horizontal concatenation (stack columns)
 
         Returns:
-            CasadiLike: the cos value of x
+            CasadiLike: The concatenated result
+
+        Raises:
+            NotImplementedError: If axis is not in {-2, -1, 0, 1}
+
+        Special Cases:
+            - When axis=-1 and exactly 2 column vectors are provided, they are
+            vertically stacked to create a longer column vector
+            - For horizontal concatenation (axis=1 or -1), if arrays don't have
+            matching row dimensions, the function attempts to reshape them:
+            * 1D arrays are reshaped to column vectors
+            * Row vectors (1xn) are transposed to column vectors
+            * Other shapes are kept as-is and stacked vertically
+
+        Note:
+            The function uses CasADi's vertcat and horzcat functions internally
+            for the actual concatenation operations.
         """
-        return CasadiLike(cs.cos(x))
+        arrs = [xi.array for xi in x]
+
+        # Friendly special-case: if axis == -1 and we have two column vectors, build a longer column
+        if axis == -1 and len(arrs) == 2:
+            a, b = arrs
+            if (
+                len(a.shape) == 2
+                and a.shape[1] == 1
+                and len(b.shape) == 2
+                and b.shape[1] == 1
+            ):
+                return CasadiLike(cs.vertcat(a, b))
+
+        if axis in {-2, 0}:  # vertical stack
+            return CasadiLike(cs.vertcat(*arrs))
+        if axis in {-1, 1}:
+            if all(arr.shape[0] == arrs[0].shape[0] for arr in arrs):
+                return CasadiLike(cs.horzcat(*arrs))
+            # Reshape to columns and stack vertically
+            cols = []
+            for A in arrs:
+                if len(A.shape) == 1:
+                    cols.append(A.reshape((-1, 1)))
+                elif len(A.shape) == 2 and A.shape[1] != 1 and A.shape[0] == 1:
+                    cols.append(A.T)
+                else:
+                    cols.append(A)
+            return CasadiLike(cs.vertcat(*cols))
+        raise NotImplementedError(f"CasADi concatenate not implemented for axis={axis}")
 
     @staticmethod
-    def outer(x: npt.ArrayLike, y: npt.ArrayLike) -> "CasadiLike":
-        """
+    def swapaxes(x: CasadiLike, axis1: int, axis2: int) -> CasadiLike:
+        # Only last-two or (0,1) swaps are meaningful in 2-D CasADi -> transpose.
+        if (axis1, axis2) in {(-1, -2), (-2, -1), (0, 1), (1, 0)}:
+            return CasadiLike(x.array.T)
+        raise NotImplementedError(
+            f"CasADi swapaxes not implemented for {axis1=}, {axis2=}"
+        )
+
+    def tile(self, x: CasadiLike, reps: tuple) -> CasadiLike:
+        # matching ArrayLike API (no-op for CasADi)
+        return x
+
+    def transpose(self, x: CasadiLike, dims: tuple) -> CasadiLike:
+        # Only 2-D supported; any request means "swap last two"
+        return CasadiLike(x.array.T)
+
+    # --- algebra shortcuts used by algorithms ---
+    @staticmethod
+    def mxv(m: CasadiLike, v: CasadiLike) -> CasadiLike:
+        """Matrix-vector multiplication for CasADi.
+
         Args:
-            x (npt.ArrayLike): vector
-            y (npt.ArrayLike): vector
+            m: Matrix (CasadiLike)
+            v: Vector (CasadiLike)
 
         Returns:
-            CasadiLike: outer product between x and y
+            CasadiLike: Returns a *column* vector (n,1).
         """
-        return CasadiLike(cs.np.outer(x, y))
+        return CasadiLike(cs.mtimes(m.array, v.array))
 
     @staticmethod
-    def vertcat(*x) -> "CasadiLike":
+    def vxs(v: CasadiLike, c: CasadiLike) -> CasadiLike:
         """
+        Vector times scalar multiplication for CasADi.
+
+        Args:
+            v: Vector (CasadiLike)
+            c: Scalar (CasadiLike)
+
         Returns:
-            CasadiLike:  vertical concatenation of elements
+            CasadiLike: Result of vector times scalar
         """
-        # here the logic is a bit convoluted: x is a tuple containing CasadiLike
-        # cs.vertcat accepts *args. A list of cs types is created extracting the value
-        # from the CasadiLike stored in the tuple x.
-        # Then the list is unpacked with the * operator.
-        y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
-        return CasadiLike(cs.vertcat(*y))
-
-    @staticmethod
-    def horzcat(*x) -> "CasadiLike":
-        """
-        Returns:
-            CasadiLike:  horizontal concatenation of elements
-        """
-
-        y = [xi.array if isinstance(xi, CasadiLike) else xi for xi in x]
-        return CasadiLike(cs.horzcat(*y))
-
-
-if __name__ == "__main__":
-    math = SpatialMath()
-    print(math.eye(3))
+        return CasadiLike(v.array * c.array)

@@ -18,3 +18,4 @@ dependencies:
   - idyntree >=11.0.0
   - requests
   - liecasadi
+  - array-api-compat

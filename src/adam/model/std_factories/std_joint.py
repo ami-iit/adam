@@ -4,7 +4,8 @@ import numpy.typing as npt
 import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
-from adam.model import Joint
+from adam.model import Joint, Limits, Pose
+import math
 
 
 class StdJoint(Joint):
@@ -21,10 +22,46 @@ class StdJoint(Joint):
         self.parent = joint.parent
         self.child = joint.child
         self.type = joint.joint_type
-        self.axis = joint.axis
-        self.origin = joint.origin
-        self.limit = joint.limit
+        self.axis = self._set_axis(joint.axis)
+        self.origin = self._set_origin(joint.origin)
+        self.limit = self._set_limits(joint.limit)
         self.idx = idx
+
+    def _set_axis(self, axis: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            axis (npt.ArrayLike): axis
+
+        Returns:
+            npt.ArrayLike: set the axis
+        """
+        return None if axis is None else self.math.asarray(axis)
+
+    def _set_origin(self, origin: Pose) -> Pose:
+        """
+        Args:
+            origin (Pose): origin
+
+        Returns:
+            Pose: set the origin
+        """
+        return Pose.build(xyz=origin.xyz, rpy=origin.rpy, math=self.math)
+
+    def _set_limits(self, limit: Limits) -> Limits:
+        """
+        Args:
+            limit (Limits): limit
+
+        Returns:
+            Limits: set the limits
+        """
+        joint_lim = math.inf if self.type == "prismatic" else 2 * math.pi
+        return Limits(
+            lower=-joint_lim if limit is None else limit.lower,
+            upper=joint_lim if limit is None else limit.upper,
+            effort=math.inf if limit is None else limit.effort,
+            velocity=math.inf if limit is None else limit.velocity,
+        )
 
     def homogeneous(self, q: npt.ArrayLike) -> npt.ArrayLike:
         """
@@ -85,22 +122,14 @@ class StdJoint(Joint):
             npt.ArrayLike: motion subspace of the joint
         """
         if self.type == "fixed":
-            return self.math.vertcat(0, 0, 0, 0, 0, 0)
+            return self.math.zeros(6, 1)
         elif self.type in ["revolute", "continuous"]:
-            return self.math.vertcat(
-                0,
-                0,
-                0,
-                self.axis[0],
-                self.axis[1],
-                self.axis[2],
-            )
+            axis = self.axis
+            z = self.math.zeros(1)
+            return self.math.vertcat(z, z, z, axis[0], axis[1], axis[2])
         elif self.type in ["prismatic"]:
-            return self.math.vertcat(
-                self.axis[0],
-                self.axis[1],
-                self.axis[2],
-                0,
-                0,
-                0,
+            axis = self.axis
+            zero = self.math.zeros(
+                3,
             )
+            return self.math.vertcat(axis[0], axis[1], axis[2], zero, zero, zero)

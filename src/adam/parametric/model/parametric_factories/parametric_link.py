@@ -7,7 +7,7 @@ import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
 from adam.model import Link
-from adam.model.abc_factories import Inertia, Inertial
+from adam.model.abc_factories import Inertia, Inertial, Pose
 
 
 class Geometry(Enum):
@@ -50,6 +50,8 @@ class ParametricLink(Link):
             length_multiplier=self.length_multiplier
         )
         self.mass = self.compute_mass()
+        # Ensure mass is an ArrayLike for backend math operations
+        self.mass = self.math.factory.asarray(self.mass)
         inertia_parametric = self.compute_inertia_parametric()
         origin = self.modify_origin()
         self.inertial = Inertial(
@@ -59,8 +61,11 @@ class ParametricLink(Link):
 
     def get_principal_length(self):
         """Method computing the principal link length, i.e. the dimension in which the kinematic chain grows"""
-        xyz_rpy = [*self.original_visual.origin.xyz, *self.original_visual.origin.rpy]
         if self.geometry_type == Geometry.CYLINDER:
+            xyz_rpy = [
+                *self.original_visual.origin.xyz,
+                *self.original_visual.origin.rpy,
+            ]
             if xyz_rpy[3] < 0.0 or xyz_rpy[4] > 0.0:
                 v_l = (
                     2 * self.visual_data.radius
@@ -74,13 +79,16 @@ class ParametricLink(Link):
         elif self.geometry_type == Geometry.BOX:
             v_l = self.visual_data.size[2]
         else:
-            raise Exception(f"THE GEOMETRY IS NOT SPECIFIED")
+            raise ValueError("THE GEOMETRY IS NOT SPECIFIED")
         return v_l
 
     def get_principal_length_parametric(self):
         """Method computing the principal link length parametric, i.e. the dimension in which the kinematic chain grows"""
-        xyz_rpy = [*self.original_visual.origin.xyz, *self.original_visual.origin.rpy]
         if self.geometry_type == Geometry.CYLINDER:
+            xyz_rpy = [
+                *self.original_visual.origin.xyz,
+                *self.original_visual.origin.rpy,
+            ]
             if xyz_rpy[3] < 0.0 or xyz_rpy[4] > 0.0:
                 v_l = (
                     2 * self.visual_data_new[1]
@@ -94,7 +102,7 @@ class ParametricLink(Link):
         elif self.geometry_type == Geometry.BOX:
             v_l = self.visual_data_new[2]
         else:
-            raise Exception(f"THE GEOMETRY IS NOT SPECIFIED")
+            raise ValueError("THE GEOMETRY IS NOT SPECIFIED")
         return v_l
 
     def compute_offset(self):
@@ -172,8 +180,7 @@ class ParametricLink(Link):
         Returns:
             (npt.ArrayLike): the link mass
         """
-        mass = self.volume * self.densities
-        return mass
+        return self.volume * self.densities
 
     def modify_origin(self):
         """
@@ -183,7 +190,8 @@ class ParametricLink(Link):
         origin = self.original_visual.origin
         if self.geometry_type == Geometry.SPHERE:
             "in case of a sphere the origin of the link does not change"
-            return origin
+            # convert to Pose to ensure ArrayLike semantics for math operations
+            return Pose.build(origin.xyz, origin.rpy, self.math)
 
         v_o = self.original_visual.origin.xyz[2]
         length = self.get_principal_length_parametric()
@@ -191,8 +199,8 @@ class ParametricLink(Link):
             origin.xyz[2] = self.link_offset - length / 2
         else:
             origin.xyz[2] = length / 2 + self.link_offset
-
-        return origin
+        # convert to Pose to ensure ArrayLike semantics for math operations
+        return Pose.build(origin.xyz, origin.rpy, self.math)
 
     def compute_inertia_parametric(self):
         """
@@ -200,46 +208,48 @@ class ParametricLink(Link):
             Inertia Parametric: inertia (ixx, iyy and izz) with the formula that corresponds to the geometry
         Formulas retrieved from https://en.wikipedia.org/wiki/List_of_moments_of_inertia
         """
-        I = Inertia(ixx=0.0, iyy=0.0, izz=0.0, ixy=0.0, ixz=0.0, iyz=0.0)
         xyz_rpy = [*self.original_visual.origin.xyz, *self.original_visual.origin.rpy]
+        # mass = self.mass.array if hasattr(self.mass, "array") else self.mass
+        mass = self.mass.array
         if self.geometry_type == Geometry.BOX:
-            I.ixx = (
-                self.mass
-                * (self.visual_data_new[1] ** 2 + self.visual_data_new[2] ** 2)
-                / 12
-            )
-            I.iyy = (
-                self.mass
-                * (self.visual_data_new[0] ** 2 + self.visual_data_new[2] ** 2)
-                / 12
-            )
-            I.izz = (
-                self.mass
-                * (self.visual_data_new[0] ** 2 + self.visual_data_new[1] ** 2)
-                / 12
-            )
+            coeff_x = (self.visual_data_new[1] ** 2 + self.visual_data_new[2] ** 2) / 12
+            coeff_y = (self.visual_data_new[0] ** 2 + self.visual_data_new[2] ** 2) / 12
+            coeff_z = (self.visual_data_new[0] ** 2 + self.visual_data_new[1] ** 2) / 12
+            ixx = mass * coeff_x
+            iyy = mass * coeff_y
+            izz = mass * coeff_z
         elif self.geometry_type == Geometry.CYLINDER:
-            i_xy_incomplete = (
+            coeff_xy = (
                 3 * (self.visual_data_new[1] ** 2) + self.visual_data_new[0] ** 2
             ) / 12
-            I.ixx = self.mass * i_xy_incomplete
-            I.iyy = self.mass * i_xy_incomplete
-            I.izz = self.mass * self.visual_data_new[1] ** 2 / 2
-
+            coeff_zz = self.visual_data_new[1] ** 2 / 2
+            ixx = mass * coeff_xy
+            iyy = mass * coeff_xy
+            izz = mass * coeff_zz
+            # Handle orientation swaps without item assignment
             if xyz_rpy[3] > 0 and xyz_rpy[4] == 0.0 and xyz_rpy[5] == 0.0:
-                itemp = I.izz
-                I.iyy = itemp
-                I.izz = I.ixx
+                iyy, izz = izz, ixx
             elif xyz_rpy[4] > 0.0:
-                itemp = I.izz
-                I.ixx = itemp
-                I.izz = I.iyy
-            return I
+                ixx, izz = izz, iyy
         elif self.geometry_type == Geometry.SPHERE:
-            I.ixx = 2 * self.mass * self.visual_data_new**2 / 5
-            I.iyy = I.ixx
-            I.izz = I.ixx
-        return I
+            coeff_s = 2 * self.visual_data_new**2 / 5
+            ixx = mass * coeff_s
+            iyy, izz = ixx, ixx
+        else:
+            # Default to zeros if geometry is unknown
+            ixx, iyy, izz = 0.0, 0.0, 0.0
+        iyz, ixz, ixy = 0.0, 0.0, 0.0
+        # make the components ArrayLike
+        ixx = self.math.asarray(ixx).array
+        iyy = self.math.asarray(iyy).array
+        izz = self.math.asarray(izz).array
+        ixy = self.math.asarray(ixy).array
+        ixz = self.math.asarray(ixz).array
+        iyz = self.math.asarray(iyz).array
+
+        return Inertia.build(
+            ixx=ixx, ixy=ixy, ixz=ixz, iyy=iyy, iyz=iyz, izz=izz, math=self.math
+        )
 
     def spatial_inertia(self) -> npt.ArrayLike:
         """
@@ -247,28 +257,21 @@ class ParametricLink(Link):
             npt.ArrayLike: the 6x6 inertia matrix expressed at the
                            origin of the link (with rotation)
         """
-        I = self.inertial.inertia
+        inertia_matrix = self.inertial.inertia.get_matrix()
         mass = self.mass
-        o = self.math.factory.zeros(3)  # To specify that the components are not floats
-        o[0] = self.inertial.origin.xyz[0]
-        o[1] = self.inertial.origin.xyz[1]
-        o[2] = self.inertial.origin.xyz[2]
+        xyz = self.inertial.origin.xyz
         rpy = self.inertial.origin.rpy
-        return self.math.spatial_inertial_with_parameters(I, mass, o, rpy)
+        return self.math.spatial_inertia_with_parameters(inertia_matrix, mass, xyz, rpy)
 
     def homogeneous(self) -> npt.ArrayLike:
         """
         Returns:
             npt.ArrayLike: the homogeneous transform of the link
         """
-
-        o = self.math.factory.zeros(3)  # To specify that the components are not floats
-        o[0] = self.inertial.origin.xyz[0]
-        o[1] = self.inertial.origin.xyz[1]
-        o[2] = self.inertial.origin.xyz[2]
+        xyz = self.inertial.origin.xyz
         rpy = self.inertial.origin.rpy
         return self.math.H_from_Pos_RPY(
-            o,
+            xyz,
             rpy,
         )
 

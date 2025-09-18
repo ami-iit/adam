@@ -9,6 +9,7 @@ from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.jax.jax_like import SpatialMath
 from adam.model import Model, URDFModelFactory
+from adam.core.array_api_math import spec_from_reference
 
 
 class KinDynComputations:
@@ -18,6 +19,7 @@ class KinDynComputations:
         self,
         urdfstring: str,
         joints_name_list: list = None,
+        dtype: jnp.dtype = jnp.float64,
         root_link: str = None,
         gravity: np.array = jnp.array([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
@@ -27,12 +29,13 @@ class KinDynComputations:
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
-        math = SpatialMath()
+        ref = jnp.array(0.0, dtype=dtype)
+        math = SpatialMath(spec_from_reference(ref))
         factory = URDFModelFactory(path=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
-        self.g = gravity
+        self.g = jnp.asarray(gravity, dtype=dtype)
         if root_link is not None:
             warnings.warn(
                 "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF",
@@ -191,7 +194,7 @@ class KinDynComputations:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            base_velocity.reshape(6, 1),
+            base_velocity,
             joint_velocities,
             np.zeros(6),
         ).array.squeeze()
@@ -212,7 +215,7 @@ class KinDynComputations:
         return self.rbdalgos.rnea(
             base_transform,
             joint_positions,
-            np.zeros(6).reshape(6, 1),
+            np.zeros(6),
             np.zeros(self.NDoF),
             self.g,
         ).array.squeeze()
