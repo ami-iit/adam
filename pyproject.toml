@@ -1,6 +1,6 @@
 [build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
-requires = ["wheel", "setuptools>=45", "setuptools_scm[toml]>=6.0"]
 
 [project]
 name = "adam-robotics"
@@ -56,6 +56,9 @@ all = ["jax", "jaxlib", "casadi>=3.6", "torch", "jax2torch"]
 [project.urls]
 "Documentation" = "https://adam-robotics.readthedocs.io/en/latest/"
 "Source" = "https://github.com/ami-iit/adam"
+
+[tool.setuptools_scm]
+local_scheme = "dirty-tag"
 
 [tool.setuptools]
 package-dir = { "" = "src" } # keeps the src/ layout
