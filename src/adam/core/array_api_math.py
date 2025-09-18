@@ -43,7 +43,6 @@ class ArrayAPILike(ArrayLike):
 
     array: Any
 
-    # -------- basics
     def __getitem__(self, idx) -> "ArrayAPILike":
         return self.__class__(self.array[idx])
 
@@ -130,7 +129,6 @@ class ArrayAPIFactory(ArrayLikeFactory):
         x = self._xp.zeros(final_shape, dtype=self._dtype, device=self._device)
         return self._like(x)
 
-    # def eye(self, x: int, batch: int = None) -> ArrayAPILike:
     def eye(self, *shape) -> ArrayAPILike:
         if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
             x = shape[0][-1]

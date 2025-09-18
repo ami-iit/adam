@@ -50,7 +50,6 @@ class RBDAlgorithms:
         n = model.NDoF
         root_name = self.root_link
 
-        # ---------- forward pass: per-node primitives ----------
         Ic = [None] * Nnodes  # (...,6,6)
         X_p = [None] * Nnodes  # (...,6,6)
         Phi = [None] * Nnodes  # (...,6,ri)
@@ -83,7 +82,6 @@ class RBDAlgorithms:
                 Si = joint_i.motion_subspace()
                 Phi[i] = self.math.tile(Si, batch + (1, 1)) if batch else Si
 
-        # ---------- backward pass: composite inertias ----------
         T = lambda x: self.math.swapaxes(x, -2, -1)  # transpose last two dims
         X_p_T = [T(X_p[k]) for k in range(Nnodes)]
 
@@ -93,7 +91,7 @@ class RBDAlgorithms:
                 pi = model.tree.get_idx_from_name(link_pi.name)
                 Ic[pi] = Ic[pi] + X_p_T[i] @ Ic[i] @ X_p[i]
 
-        # ---------- map nodes to (row/col) block indices in M ----------
+        # Map nodes to (row/col) block indices in M
         # base is block 0 (size 6), actuated joints follow (size 1 each)
         def block_index(node):
             link_i, joint_i, _ = node.get_elements()
@@ -106,7 +104,7 @@ class RBDAlgorithms:
         # Prepare a (n+1) x (n+1) grid of blocks (filled later, zeros where missing)
         blocks = [[None for _ in range(n + 1)] for _ in range(n + 1)]
 
-        # ---------- assemble M exactly like the reference ----------
+        # Assemble M
         for i, node in reversed(list(enumerate(model.tree))):
             link_i, joint_i, link_pi = node.get_elements()
             ri = block_index(node)
@@ -182,7 +180,7 @@ class RBDAlgorithms:
             row_tensors.append(self.math.concatenate(row_blocks, axis=-1))
         M = self.math.concatenate(row_tensors, axis=-2)  # (..., 6+n, 6+n)
 
-        # ---------- Orin’s O_X_G (centroidal transform) ----------
+        # Orin’s O_X_G (centroidal transform)
         A = T(M[..., :3, 3:6]) / M[..., 0, 0][..., None, None]  # (...,3,3)
         I3 = self.math.factory.eye(batch + (3,))
         Z3 = self.math.factory.zeros(batch + (3, 3))
@@ -190,7 +188,7 @@ class RBDAlgorithms:
         bot = self.math.concatenate([Z3, I3], axis=-1)  # (...,3,6)
         O_X_G = self.math.concatenate([top, bot], axis=-2)  # (...,6,6)
 
-        # ---------- propagate centroidal transform and build Jcm ----------
+        # Propagate centroidal transform and build Jcm
         X_G = [None] * Nnodes
         for i, node in enumerate(model.tree):
             link_i, joint_i, link_pi = node.get_elements()
@@ -221,7 +219,6 @@ class RBDAlgorithms:
 
         Jcm = self.math.concatenate([J_base] + joint_cols, axis=-1)  # (...,6,6+n)
 
-        # ---------- representation handling ----------
         if (
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
@@ -478,7 +475,6 @@ class RBDAlgorithms:
         LI_X_L_dot = self.math.adjoint_mixed_derivative(I_H_L, LI_v_L)
 
         adj_mixed_inv = self.math.adjoint_mixed_inverse(base_transform)
-        bshape = adj_mixed_inv.shape[:-2]
 
         Z_6xN = self.math.factory.zeros(batch_size + (6, self.NDoF))
         Z_Nx6 = self.math.factory.zeros(batch_size + (self.NDoF, 6))
@@ -595,10 +591,8 @@ class RBDAlgorithms:
         T = lambda X: self.math.swapaxes(X, -2, -1)  # transpose last two dims
         batch_size = base_transform.shape[:-2] if len(base_transform.shape) > 2 else ()
 
-        # gravity map (mixed inverse as in reference)
         gravity_X = self.math.adjoint_mixed_inverse(base_transform)  # (...,6,6)
 
-        # representation-specific base map and extra term
         if (
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
@@ -624,7 +618,6 @@ class RBDAlgorithms:
         # base spatial acceleration (bias + gravity)
         a0 = -(self.math.mxv(gravity_X, g)) + transformed_acc  # (...,6)
 
-        # ----- forward pass -----
         Ic, X_p, Phi = [None] * Nnodes, [None] * Nnodes, [None] * Nnodes
         v, a, f = [None] * Nnodes, [None] * Nnodes, [None] * Nnodes
 
@@ -652,12 +645,9 @@ class RBDAlgorithms:
                     if batch_size
                     else phi_root
                 )
-                # v[i] = B_X_BI @ base_velocity  # (...,6)
                 v[i] = self.math.mxv(B_X_BI, base_velocity)  # (...,6)
-                # a[i] = X_p[i] @ a0  # (...,6)
                 a[i] = self.math.mxv(X_p[i], a0)  # (...,6)
             else:
-                # joint state
                 q = (
                     joint_positions[..., joint_i.idx]
                     if (joint_i is not None) and (joint_i.idx is not None)
@@ -683,14 +673,10 @@ class RBDAlgorithms:
                     self.math.spatial_skew(v[i]), phi_qd
                 )  # (...,6)
 
-            # f[i] = Ic[i] @ a[i] + self.math.spatial_skew_star(v[i]) @ (
-            #     Ic[i] @ v[i]
-            # )  # (...,6)
             f[i] = self.math.mxv(Ic[i], a[i]) + self.math.mxv(
                 self.math.spatial_skew_star(v[i]), self.math.mxv(Ic[i], v[i])
             )  # (...,6)
 
-        # ----- backward pass -----
         tau_base = None
         tau_joint_by_idx = {}
 
@@ -709,10 +695,8 @@ class RBDAlgorithms:
                 pi = model.tree.get_idx_from_name(link_pi.name)
                 f[pi] = f[pi] + self.math.mxv(T(X_p[i]), f[i])  # (...,6)
 
-        # base mapping back
         tau_base = self.math.mxv(T(B_X_BI), tau_base)  # (...,6)
 
-        # ----- stack tau = [tau_base; tau_joints] -----
         tau_joints = []
         for ii in range(n):
             col = (
