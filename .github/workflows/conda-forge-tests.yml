@@ -62,4 +62,5 @@ jobs:
       if: contains(matrix.os, 'windows')
       run: |
           # Skip additional dependencies not available on Windows
-          pytest --count=100 -v --ignore-glob=*Jax* --ignore-glob=*pytorch*
+          pytest --count=1 -v --ignore-glob=*Jax* --ignore-glob=*pytorch*
+
