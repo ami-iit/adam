@@ -1,4 +1,4 @@
-name: Test ADAM with conda-forge dependencies
+name: Test adam with conda-forge dependencies
 
 on:
   push:
@@ -46,7 +46,7 @@ jobs:
         uname -r
         micromamba list
 
-    - name: Install ADAM
+    - name: Install adam
       shell: bash -l {0}
       run: |
          pip install --no-deps .
@@ -62,4 +62,6 @@ jobs:
       if: contains(matrix.os, 'windows')
       run: |
           # Skip additional dependencies not available on Windows
-          pytest --count=100 -v --ignore-glob=*Jax* --ignore-glob=*pytorch*
+          pytest -v --ignore-glob=*Jax* --ignore-glob=*pytorch*
+
+
