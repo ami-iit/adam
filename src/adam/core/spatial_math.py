@@ -225,6 +225,17 @@ class SpatialMath:
             npt.ArrayLike: transposed array
         """
         pass
+    
+    @abc.abstractmethod
+    def inv(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        """
+        Args:
+            x (npt.ArrayLike): input array
+
+        Returns:
+            npt.ArrayLike: inverse of the array
+        """
+        pass
 
     @abc.abstractmethod
     def mtimes(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
@@ -665,7 +676,7 @@ class SpatialMath:
         res = m @ v[..., None]
         return res[..., 0]  # Remove the extra dimension
 
-    def vxs(self, v: npt.ArrayLike, c: npt.ArrayLike) -> npt.ArrayLike:
+    def vxs(self, v: npt.ArrayLike, s: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             v (npt.ArrayLike): Vector
@@ -675,8 +686,8 @@ class SpatialMath:
         """
         if v.shape[-1] == 1:
             v = v[..., 0]
-        c = c[..., None]  # Add extra dimension
-        return v * c
+        s = s[..., None]  # Add extra dimension
+        return v * s
 
     def adjoint_inverse(self, H: npt.ArrayLike) -> npt.ArrayLike:
         """

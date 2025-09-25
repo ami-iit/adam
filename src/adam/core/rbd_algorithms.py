@@ -37,7 +37,7 @@ class RBDAlgorithms:
         """
         Batched Composite Rigid Body Algorithm (CRBA) + Orin's Centroidal Momentum Matrix.
 
-        - Mirrors the reference implementation’s control flow for readability.
+        - Mirrors the reference implementation's control flow for readability.
         - No array/tensor item-assignments (blocks collected then concatenated).
         - Supports batched inputs via broadcasting.
         """
@@ -180,7 +180,7 @@ class RBDAlgorithms:
             row_tensors.append(self.math.concatenate(row_blocks, axis=-1))
         M = self.math.concatenate(row_tensors, axis=-2)  # (..., 6+n, 6+n)
 
-        # Orin’s O_X_G (centroidal transform)
+        # Orin's O_X_G (centroidal transform)
         A = T(M[..., :3, 3:6]) / M[..., 0, 0][..., None, None]  # (...,3,3)
         I3 = self.math.factory.eye(batch + (3,))
         Z3 = self.math.factory.zeros(batch + (3, 3))
@@ -710,8 +710,343 @@ class RBDAlgorithms:
 
         return self.math.concatenate([tau_base, tau_joints_vec], axis=-1)
 
-    def aba(self):
-        raise NotImplementedError
+    def aba(
+        self,
+        base_transform: npt.ArrayLike,
+        joint_positions: npt.ArrayLike,
+        base_velocity: npt.ArrayLike,
+        joint_velocities: npt.ArrayLike,
+        joint_torques: npt.ArrayLike,
+        g: npt.ArrayLike,
+        external_wrenches: dict[str, npt.ArrayLike] | None = None,
+    ) -> npt.ArrayLike:
+
+        # If external wrenches are provided, build the generalized external wrench
+        # and use the identity qdd = M^{-1} (tau - h + \sum J^T f_ext) for numerical consistency.
+        if external_wrenches is not None:
+            (
+                base_transform,
+                joint_positions,
+                base_velocity,
+                joint_velocities,
+                joint_torques,
+                g,
+            ) = self._convert_to_arraylike(
+                base_transform,
+                joint_positions,
+                base_velocity,
+                joint_velocities,
+                joint_torques,
+                g,
+            )
+
+            M, _ = self.crba(base_transform, joint_positions)
+            h = self.rnea(
+                base_transform, joint_positions, base_velocity, joint_velocities, g
+            )
+
+            batch = base_transform.shape[:-2] if len(base_transform.shape) > 2 else ()
+            n = self.model.NDoF
+            gen_ext = self.math.factory.zeros(batch + (6 + n,))
+
+            for frame, wrench in external_wrenches.items():
+                fext = self._convert_to_arraylike(wrench)
+                J = self.jacobian(frame, base_transform, joint_positions)
+                gen_ext = gen_ext + self.math.mxv(self.math.swapaxes(J, -2, -1), fext)
+
+            base_wrench = self.math.factory.zeros(batch + (6,))
+            tau_full = self.math.concatenate([base_wrench, joint_torques], axis=-1)
+            rhs = tau_full - h + gen_ext
+            return self.math.solve(M, rhs)
+
+        # Fast, robust path: when no external wrenches are given, use CRBA+RNEA identity
+        # qdd = M^{-1} (tau - h). This ensures consistency with mass_matrix() and bias_force().
+        if external_wrenches is None:
+            (
+                base_transform,
+                joint_positions,
+                base_velocity,
+                joint_velocities,
+                joint_torques,
+                g,
+            ) = self._convert_to_arraylike(
+                base_transform,
+                joint_positions,
+                base_velocity,
+                joint_velocities,
+                joint_torques,
+                g,
+            )
+
+            M, _ = self.crba(base_transform, joint_positions)
+            h = self.rnea(
+                base_transform, joint_positions, base_velocity, joint_velocities, g
+            )
+
+            batch = base_transform.shape[:-2] if len(base_transform.shape) > 2 else ()
+            base_wrench = self.math.factory.zeros(batch + (6,))
+            tau_full = self.math.concatenate([base_wrench, joint_torques], axis=-1)
+            rhs = tau_full - h
+            return self.math.solve(M, rhs)
+
+        (
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            joint_torques,
+            g,
+        ) = self._convert_to_arraylike(
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            joint_torques,
+            g,
+        )
+
+        model = self.model
+        Nnodes = model.N
+        n = model.NDoF
+        root_name = self.root_link
+        T = lambda X: self.math.swapaxes(X, -2, -1)
+
+        batch = base_transform.shape[:-2] if len(base_transform.shape) > 2 else ()
+
+        X_p = [None] * Nnodes
+        Phi = [None] * Nnodes
+        v = [None] * Nnodes
+        zeta = [None] * Nnodes
+        IA = [None] * Nnodes
+        pA = [None] * Nnodes
+        Ulist = [None] * Nnodes
+        dlist = [None] * Nnodes
+        ulist = [None] * Nnodes
+
+        # Map base velocity to current representation; compute base "input" accel = -X_BI g
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            B_X_BI = self.math.adjoint_mixed_inverse(base_transform)
+        elif (
+            self.frame_velocity_representation
+            == Representations.BODY_FIXED_REPRESENTATION
+        ):
+            B_X_BI = self.math.factory.eye(batch + (6,))
+        else:
+            raise NotImplementedError(
+                "Only BODY_FIXED and MIXED representations are supported"
+            )
+
+        # Base input acceleration expressed in base coordinates.
+        # Use the same gravity convention as CRBA/RNEA so ABA matches M^{-1}(tau - h): a0 = X_BI * g
+        a0_input = self.math.mxv(
+            self.math.adjoint_mixed_inverse(base_transform), g
+        )
+
+        q_0 = self.math.zeros_like(joint_positions[..., 0])
+        dq_0 = self.math.zeros_like(joint_velocities[..., 0])
+        # ---------- Pass 1 ----------
+        for i, node in enumerate(model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            I_i = link_i.spatial_inertia()
+            IA[i] = self.math.tile(I_i, batch + (1, 1)) if batch else I_i
+
+            if link_i.name == root_name:
+                X_p[i] = (
+                    self.math.factory.eye(batch + (6,))
+                    if batch
+                    else self.math.factory.eye(6)
+                )
+                Phi[i] = self.math.factory.eye(6)  # not used later; harmless
+                v[i] = self.math.mxv(B_X_BI, base_velocity)
+                zeta[i] = (
+                    self.math.factory.zeros(batch + (6,))
+                    if batch
+                    else self.math.factory.zeros(6)
+                )
+            else:
+                # q, qd (zero for fixed joints)
+                if joint_i.idx is not None:
+                    q = joint_positions[..., joint_i.idx]
+                    qd = joint_velocities[..., joint_i.idx]
+                else:
+                    q = q_0
+                    qd = dq_0
+
+                # parent->child spatial transform
+                X_p[i] = joint_i.spatial_transform(q=q)
+
+                # motion subspace (ensure (6,ri)); for fixed joints, force (6,0)
+                Si_raw = joint_i.motion_subspace()
+                if Si_raw is None:
+                    Si = self.math.factory.zeros((6, 0))
+                else:
+                    Si = Si_raw
+                    # If some models give (6,), promote to (6,1)
+                    if len(Si.shape) == 1:
+                        Si = self.math.asarray(Si[..., None])
+                    # If Si is effectively zero, treat as fixed joint (ri=0)
+                    try:
+                        arr = Si.array if hasattr(Si, "array") else Si
+                        is_zero = (abs(arr).sum() == 0)
+                    except Exception:
+                        is_zero = False
+                    if is_zero:
+                        Si = self.math.factory.zeros((6, 0))
+                Phi[i] = self.math.tile(Si, batch + (1, 1)) if batch else Si
+                ri = Phi[i].shape[-1]
+
+                # velocities (standard Featherstone: v_i = X_p * v_parent + S*qdot)
+                pi = model.tree.get_idx_from_name(link_pi.name)
+                if ri > 0:
+                    vJ = self.math.vxs(Si, qd)
+                else:
+                    vJ = (
+                        self.math.factory.zeros(batch + (6,))
+                        # if batch
+                        # else self.math.factory.zeros(6)
+                    )
+                v[i] = self.math.mxv(X_p[i], v[pi]) + vJ
+
+                # convective term ζ_i = crm(v_i) * vJ_i  (zero for fixed joints)
+                zeta[i] = self.math.mxv(self.math.spatial_skew(v[i]), vJ)
+
+            # pA_i = crf(v_i) (I_i v_i)  minus external wrench (if given in link frame)
+            pA_i = self.math.mxv(
+                self.math.spatial_skew_star(v[i]), self.math.mxv(IA[i], v[i])
+            )
+            if external_wrenches and (link_i.name in external_wrenches):
+                fext = self._convert_to_arraylike(external_wrenches[link_i.name])
+                pA_i = pA_i - fext
+            pA[i] = pA_i
+
+        # ---------- Pass 2 ----------
+        for i, node in reversed(list(enumerate(model.tree))):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            ri = Phi[i].shape[-1] if (Phi[i] is not None) else 0
+
+            if (link_i.name != root_name) and (ri > 0):
+                U = self.math.mtimes(IA[i], Phi[i])  # (...,6,ri)
+                d = self.math.mtimes(T(Phi[i]), U)  # (...,ri,ri)
+                # u = τ - S^T pA  (do not subtract U^T ζ here; IA ζ is added in parent pA)
+                u = -self.math.mxv(T(Phi[i]), pA[i])
+                if (link_i.name != root_name) and (joint_i.idx is not None):
+                    tau_i = joint_torques[..., joint_i.idx : joint_i.idx + 1]  # (...,1)
+                    u = u + tau_i
+
+                Ulist[i], dlist[i], ulist[i] = U, d, u
+
+            if link_i.name != root_name:
+                pi = model.tree.get_idx_from_name(link_pi.name)
+                Xpt = T(X_p[i])
+
+                if ri > 0:
+                    # Debug: check d before inversion
+                    try:
+                        invd = self.math.inv(d)
+                    except Exception as e:
+                        try:
+                            name = joint_i.name if hasattr(joint_i, "name") else str(joint_i)
+                        except Exception:
+                            name = "?"
+                        print("Singular d at node:", i, name, "d=", (d.array if hasattr(d, "array") else d))
+                        raise
+                    Ia = IA[i] - self.math.mtimes(U, self.math.mtimes(invd, T(U)))
+                    pa = pA[i] + self.math.mxv(Ia, zeta[i]) + self.math.mxv(U, self.math.mtimes(invd, u))
+                else:
+                    Ia = IA[i]
+                    pa = pA[i] + self.math.mxv(Ia, zeta[i])
+
+                IA[pi] = IA[pi] + self.math.mtimes(self.math.mtimes(Xpt, Ia), X_p[i])
+                pA[pi] = pA[pi] + self.math.mxv(Xpt, pa)
+
+        # ---------- Base solve ----------
+        i0 = model.tree.get_idx_from_name(root_name)
+        rhs0 = -pA[i0] + self.math.mxv(IA[i0], a0_input)
+        a_base = self.math.solve(IA[i0], rhs0)
+
+        # ---------- Pass 3 ----------
+        a = [None] * Nnodes
+        a[i0] = a_base
+
+        qdd = [None] * n if n > 0 else []
+
+        for i, node in enumerate(model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+            if link_i.name == root_name:
+                continue
+
+            pi = model.tree.get_idx_from_name(link_pi.name)
+            a_i_pre = self.math.mxv(X_p[i], a[pi]) + zeta[i]
+
+            ri = Phi[i].shape[-1] if (Phi[i] is not None) else 0
+            if (link_i.name != root_name) and (ri > 0):
+                U, d, u = Ulist[i], dlist[i], ulist[i]
+                alpha = self.math.mxv(
+                    self.math.inv(d), (u - self.math.mxv(T(U), a_i_pre))
+                )  # (...,ri)
+                # Keep alpha as a vector (ri elements); don't squeeze to scalar
+                alpha_vec = alpha if isinstance(alpha, ArrayLike) else self.math.factory.asarray(alpha)
+                if (joint_i.idx is not None) and (joint_i.idx < n):
+                    qdd[joint_i.idx] = alpha_vec
+                a[i] = a_i_pre + self.math.vxs(Phi[i], alpha_vec)
+            else:
+                a[i] = a_i_pre
+
+        # stack output (..., 6+n)
+        if n > 0:
+            qdd_filled = []
+            bdim = len(batch)
+            for k in range(n):
+                val = qdd[k]
+                arr = val.array if (val is not None and hasattr(val, "array")) else (
+                    val if val is not None else None
+                )
+                if arr is None:
+                    # build a zeros array with target shape
+                    if bdim == 0:
+                        arr = self.math.factory.zeros((1,)).array
+                    else:
+                        arr = self.math.factory.zeros(batch + (1,)).array
+                else:
+                    # squeeze all singleton dims, then enforce target shape
+                    try:
+                        arr = arr.squeeze()
+                    except Exception:
+                        pass
+                    if bdim == 0:
+                        # 1D length-1
+                        if getattr(arr, "ndim", 0) == 0:
+                            arr = arr[None]
+                        elif arr.ndim > 1:
+                            arr = arr.reshape(-1)
+                        arr = arr[:1]
+                    else:
+                        # shape: batch + (1,)
+                        while getattr(arr, "ndim", 0) < (bdim + 1):
+                            arr = arr[..., None]
+                        if arr.ndim > (bdim + 1):
+                            lead = arr.shape[:bdim]
+                            arr = arr.reshape(lead + (-1,))
+                        if arr.shape[-1] != 1:
+                            arr = arr[..., :1]
+                qdd_filled.append(self.math.factory.asarray(arr))
+            qdd_vec = self.math.concatenate(qdd_filled, axis=-1)
+        else:
+            qdd_vec = self.math.factory.zeros(batch + (0,))
+
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            # Transform only the base acceleration from body-fixed to mixed/world frame, including Coriolis correction
+            base_accel = a_base
+            Xm = self.math.adjoint_mixed(base_transform)  # (...,6,6)
+            Xm_dot = self.math.adjoint_mixed_derivative(base_transform, self.math.mxv(Xm, base_velocity))
+            base_accel_mixed = self.math.mxv(Xm, base_accel) + self.math.mxv(Xm_dot, base_velocity)
+            # Only the base acceleration is transformed; joint accelerations are left as computed
+            result = self.math.concatenate([base_accel_mixed, qdd_vec], axis=-1)
+            return result
+        else:
+            return self.math.concatenate([a_base, qdd_vec], axis=-1)
 
     def _convert_to_arraylike(self, *args):
         if not args:

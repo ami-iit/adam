@@ -116,3 +116,50 @@ def test_gravity_term(setup_test):
     idyn_gravity = robot_cfg.idyn_function_values.gravity_term
     adam_gravity = adam_kin_dyn.gravity_term(state.H, state.joints_pos)
     assert idyn_gravity - adam_gravity == pytest.approx(0.0, abs=1e-4)
+
+
+def test_aba(setup_test):
+    adam_kin_dyn, robot_cfg, state = setup_test
+    torques = state.joints_pos.copy() 
+
+    H = np.eye(4)
+    H = state.H.copy()
+    joints_pos = state.joints_pos.copy() 
+
+    base_vel = state.base_vel 
+    joints_vel = state.joints_vel 
+
+    # apply random wrenches on l_sole, torso_1 and head
+    wrenches = {
+        "l_sole": np.random.randn(6) * 10,
+        "torso_1": np.random.randn(6) * 10,
+        "head": np.random.randn(6) * 10,
+    }
+
+    adam_qdd = adam_kin_dyn.aba(
+        base_transform=H,
+        joint_positions=joints_pos,
+        base_velocity=base_vel,
+        joint_velocities=joints_vel,
+        joint_torques=torques,
+        external_wrenches=wrenches,
+    )
+
+    # Reference using M^{-1}(tau - h) with matching velocities
+    M = adam_kin_dyn.mass_matrix(H, joints_pos)
+    h = adam_kin_dyn.bias_force(H, joints_pos, base_vel, joints_vel)
+    
+    generalized_external_wrenches = np.zeros(6 + len(joints_pos))
+    for frame, wrench in wrenches.items():
+        J = adam_kin_dyn.jacobian(frame, H, joints_pos)
+        generalized_external_wrenches += J.T @ wrench
+    
+    base_wrench = np.zeros(6)
+    full_tau = np.concatenate([base_wrench, torques])
+    residual = M @ adam_qdd + h - full_tau - generalized_external_wrenches
+
+    qdd = np.linalg.solve(M, full_tau - h + generalized_external_wrenches)
+    print("qdd from ABA", adam_qdd)
+    print("qdd from M^{-1}(tau - h)", qdd)
+
+    assert residual == pytest.approx(0.0, abs=1e-4)
