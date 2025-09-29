@@ -330,7 +330,7 @@ class RBDAlgorithms:
             == Representations.BODY_FIXED_REPRESENTATION
         ):
             return J_tot
-        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
             w_H_L = w_H_B @ B_H_L
             LI_X_L = self.math.adjoint_mixed(w_H_L)
 
@@ -444,7 +444,6 @@ class RBDAlgorithms:
             H_j = joint.homogeneous(q=q)
             B_H_j = B_H_j @ H_j
             L_H_j = L_H_B @ B_H_j
-
             S = joint.motion_subspace()
             J_j = self.math.adjoint(L_H_j) @ S
 
@@ -720,75 +719,7 @@ class RBDAlgorithms:
         g: npt.ArrayLike,
         external_wrenches: dict[str, npt.ArrayLike] | None = None,
     ) -> npt.ArrayLike:
-
-        # If external wrenches are provided, build the generalized external wrench
-        # and use the identity qdd = M^{-1} (tau - h + \sum J^T f_ext) for numerical consistency.
-        if external_wrenches is not None:
-            (
-                base_transform,
-                joint_positions,
-                base_velocity,
-                joint_velocities,
-                joint_torques,
-                g,
-            ) = self._convert_to_arraylike(
-                base_transform,
-                joint_positions,
-                base_velocity,
-                joint_velocities,
-                joint_torques,
-                g,
-            )
-
-            M, _ = self.crba(base_transform, joint_positions)
-            h = self.rnea(
-                base_transform, joint_positions, base_velocity, joint_velocities, g
-            )
-
-            batch = base_transform.shape[:-2] if len(base_transform.shape) > 2 else ()
-            n = self.model.NDoF
-            gen_ext = self.math.factory.zeros(batch + (6 + n,))
-
-            for frame, wrench in external_wrenches.items():
-                fext = self._convert_to_arraylike(wrench)
-                J = self.jacobian(frame, base_transform, joint_positions)
-                gen_ext = gen_ext + self.math.mxv(self.math.swapaxes(J, -2, -1), fext)
-
-            base_wrench = self.math.factory.zeros(batch + (6,))
-            tau_full = self.math.concatenate([base_wrench, joint_torques], axis=-1)
-            rhs = tau_full - h + gen_ext
-            return self.math.solve(M, rhs)
-
-        # Fast, robust path: when no external wrenches are given, use CRBA+RNEA identity
-        # qdd = M^{-1} (tau - h). This ensures consistency with mass_matrix() and bias_force().
-        if external_wrenches is None:
-            (
-                base_transform,
-                joint_positions,
-                base_velocity,
-                joint_velocities,
-                joint_torques,
-                g,
-            ) = self._convert_to_arraylike(
-                base_transform,
-                joint_positions,
-                base_velocity,
-                joint_velocities,
-                joint_torques,
-                g,
-            )
-
-            M, _ = self.crba(base_transform, joint_positions)
-            h = self.rnea(
-                base_transform, joint_positions, base_velocity, joint_velocities, g
-            )
-
-            batch = base_transform.shape[:-2] if len(base_transform.shape) > 2 else ()
-            base_wrench = self.math.factory.zeros(batch + (6,))
-            tau_full = self.math.concatenate([base_wrench, joint_torques], axis=-1)
-            rhs = tau_full - h
-            return self.math.solve(M, rhs)
-
+        # Convert inputs once; ABA handles external wrenches internally
         (
             base_transform,
             joint_positions,
@@ -810,10 +741,10 @@ class RBDAlgorithms:
         n = model.NDoF
         root_name = self.root_link
         T = lambda X: self.math.swapaxes(X, -2, -1)
-
         batch = base_transform.shape[:-2] if len(base_transform.shape) > 2 else ()
 
         X_p = [None] * Nnodes
+        X_to_base = [None] * Nnodes
         Phi = [None] * Nnodes
         v = [None] * Nnodes
         zeta = [None] * Nnodes
@@ -823,7 +754,9 @@ class RBDAlgorithms:
         dlist = [None] * Nnodes
         ulist = [None] * Nnodes
 
-        # Map base velocity to current representation; compute base "input" accel = -X_BI g
+
+
+        # Representations: map base velocity to body frame used internally
         if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
             B_X_BI = self.math.adjoint_mixed_inverse(base_transform)
         elif (
@@ -836,15 +769,14 @@ class RBDAlgorithms:
                 "Only BODY_FIXED and MIXED representations are supported"
             )
 
-        # Base input acceleration expressed in base coordinates.
-        # Use the same gravity convention as CRBA/RNEA so ABA matches M^{-1}(tau - h): a0 = X_BI * g
-        a0_input = self.math.mxv(
-            self.math.adjoint_mixed_inverse(base_transform), g
-        )
+        # Gravity spatial acceleration mapped in base frame (free-fall acceleration)
+        # Choose sign so that with zero torques the ABA solution matches
+        # qdd = solve(M, tau - h). With tau=0 this yields base linear accel = g.
+        a0_input = self.math.mxv(self.math.adjoint_mixed_inverse(base_transform), g)
 
+        # Pass 1: forward kinematics and bias forces
         q_0 = self.math.zeros_like(joint_positions[..., 0])
         dq_0 = self.math.zeros_like(joint_velocities[..., 0])
-        # ---------- Pass 1 ----------
         for i, node in enumerate(model.tree):
             link_i, joint_i, link_pi = node.get_elements()
 
@@ -857,7 +789,8 @@ class RBDAlgorithms:
                     if batch
                     else self.math.factory.eye(6)
                 )
-                Phi[i] = self.math.factory.eye(6)  # not used later; harmless
+                X_to_base[i] = X_p[i]
+                Phi[i] = self.math.factory.eye(6)  # not used later
                 v[i] = self.math.mxv(B_X_BI, base_velocity)
                 zeta[i] = (
                     self.math.factory.zeros(batch + (6,))
@@ -865,7 +798,7 @@ class RBDAlgorithms:
                     else self.math.factory.zeros(6)
                 )
             else:
-                # q, qd (zero for fixed joints)
+                # states
                 if joint_i.idx is not None:
                     q = joint_positions[..., joint_i.idx]
                     qd = joint_velocities[..., joint_i.idx]
@@ -873,22 +806,22 @@ class RBDAlgorithms:
                     q = q_0
                     qd = dq_0
 
-                # parent->child spatial transform
+                # transforms
                 X_p[i] = joint_i.spatial_transform(q=q)
+                pi = model.tree.get_idx_from_name(link_pi.name)
+                X_to_base[i] = self.math.mtimes(X_p[i], X_to_base[pi])
 
-                # motion subspace (ensure (6,ri)); for fixed joints, force (6,0)
+                # motion subspace
                 Si_raw = joint_i.motion_subspace()
                 if Si_raw is None:
                     Si = self.math.factory.zeros((6, 0))
                 else:
                     Si = Si_raw
-                    # If some models give (6,), promote to (6,1)
                     if len(Si.shape) == 1:
                         Si = self.math.asarray(Si[..., None])
-                    # If Si is effectively zero, treat as fixed joint (ri=0)
                     try:
                         arr = Si.array if hasattr(Si, "array") else Si
-                        is_zero = (abs(arr).sum() == 0)
+                        is_zero = abs(arr).sum() == 0
                     except Exception:
                         is_zero = False
                     if is_zero:
@@ -896,22 +829,19 @@ class RBDAlgorithms:
                 Phi[i] = self.math.tile(Si, batch + (1, 1)) if batch else Si
                 ri = Phi[i].shape[-1]
 
-                # velocities (standard Featherstone: v_i = X_p * v_parent + S*qdot)
-                pi = model.tree.get_idx_from_name(link_pi.name)
-                if ri > 0:
-                    vJ = self.math.vxs(Si, qd)
-                else:
-                    vJ = (
+                vJ = (
+                    self.math.vxs(Si, qd)
+                    if ri > 0
+                    else (
                         self.math.factory.zeros(batch + (6,))
-                        # if batch
-                        # else self.math.factory.zeros(6)
+                        if batch
+                        else self.math.factory.zeros(6)
                     )
+                )
                 v[i] = self.math.mxv(X_p[i], v[pi]) + vJ
-
-                # convective term ζ_i = crm(v_i) * vJ_i  (zero for fixed joints)
                 zeta[i] = self.math.mxv(self.math.spatial_skew(v[i]), vJ)
 
-            # pA_i = crf(v_i) (I_i v_i)  minus external wrench (if given in link frame)
+            # bias force (exclude base acceleration/gravity here)
             pA_i = self.math.mxv(
                 self.math.spatial_skew_star(v[i]), self.math.mxv(IA[i], v[i])
             )
@@ -920,111 +850,94 @@ class RBDAlgorithms:
                 pA_i = pA_i - fext
             pA[i] = pA_i
 
-        # ---------- Pass 2 ----------
+        # Pass 2: backward recursion
         for i, node in reversed(list(enumerate(model.tree))):
             link_i, joint_i, link_pi = node.get_elements()
-
             ri = Phi[i].shape[-1] if (Phi[i] is not None) else 0
 
             if (link_i.name != root_name) and (ri > 0):
-                U = self.math.mtimes(IA[i], Phi[i])  # (...,6,ri)
-                d = self.math.mtimes(T(Phi[i]), U)  # (...,ri,ri)
-                # u = τ - S^T pA  (do not subtract U^T ζ here; IA ζ is added in parent pA)
-                u = -self.math.mxv(T(Phi[i]), pA[i])
-                if (link_i.name != root_name) and (joint_i.idx is not None):
-                    tau_i = joint_torques[..., joint_i.idx : joint_i.idx + 1]  # (...,1)
+                U = self.math.mtimes(IA[i], Phi[i])
+                d = self.math.mtimes(T(Phi[i]), U)
+                u = -self.math.mxv(T(Phi[i]), pA[i]) - self.math.mxv(T(U), zeta[i])
+                if joint_i.idx is not None:
+                    tau_i = joint_torques[..., joint_i.idx : joint_i.idx + 1]
                     u = u + tau_i
-
                 Ulist[i], dlist[i], ulist[i] = U, d, u
 
             if link_i.name != root_name:
                 pi = model.tree.get_idx_from_name(link_pi.name)
                 Xpt = T(X_p[i])
-
                 if ri > 0:
-                    # Debug: check d before inversion
-                    try:
-                        invd = self.math.inv(d)
-                    except Exception as e:
-                        try:
-                            name = joint_i.name if hasattr(joint_i, "name") else str(joint_i)
-                        except Exception:
-                            name = "?"
-                        print("Singular d at node:", i, name, "d=", (d.array if hasattr(d, "array") else d))
-                        raise
-                    Ia = IA[i] - self.math.mtimes(U, self.math.mtimes(invd, T(U)))
-                    pa = pA[i] + self.math.mxv(Ia, zeta[i]) + self.math.mxv(U, self.math.mtimes(invd, u))
+                    invd = self.math.inv(dlist[i])
+                    Ia = IA[i] - self.math.mtimes(
+                        Ulist[i], self.math.mtimes(invd, T(Ulist[i]))
+                    )
+                    pa = (
+                        pA[i]
+                        + self.math.mxv(Ia, zeta[i])
+                        + self.math.mxv(Ulist[i], self.math.mtimes(invd, ulist[i]))
+                    )
                 else:
                     Ia = IA[i]
                     pa = pA[i] + self.math.mxv(Ia, zeta[i])
-
                 IA[pi] = IA[pi] + self.math.mtimes(self.math.mtimes(Xpt, Ia), X_p[i])
                 pA[pi] = pA[pi] + self.math.mxv(Xpt, pa)
 
-        # ---------- Base solve ----------
+        # Base solve (gravity-relative): solve delta a such that IA * (a_base - a0_input)+pA=0
         i0 = model.tree.get_idx_from_name(root_name)
-        rhs0 = -pA[i0] + self.math.mxv(IA[i0], a0_input)
-        a_base = self.math.solve(IA[i0], rhs0)
+        rhs = -pA[i0]
+        delta_a0 = self.math.solve(IA[i0], rhs)
+        a_base = a0_input + delta_a0
 
-        # ---------- Pass 3 ----------
+        # Pass 3: forward accelerations and joint accelerations
         a = [None] * Nnodes
         a[i0] = a_base
-
         qdd = [None] * n if n > 0 else []
+
+        # Pre-compute propagated free-fall acceleration for each link
+        g_acc = [None] * Nnodes
+        g_acc[i0] = a0_input
 
         for i, node in enumerate(model.tree):
             link_i, joint_i, link_pi = node.get_elements()
             if link_i.name == root_name:
                 continue
-
             pi = model.tree.get_idx_from_name(link_pi.name)
             a_i_pre = self.math.mxv(X_p[i], a[pi]) + zeta[i]
-
+            # propagate free-fall acceleration through the kinematic tree
+            g_acc[i] = self.math.mxv(X_p[i], g_acc[pi])
             ri = Phi[i].shape[-1] if (Phi[i] is not None) else 0
-            if (link_i.name != root_name) and (ri > 0):
-                U, d, u = Ulist[i], dlist[i], ulist[i]
-                alpha = self.math.mxv(
-                    self.math.inv(d), (u - self.math.mxv(T(U), a_i_pre))
-                )  # (...,ri)
-                # Keep alpha as a vector (ri elements); don't squeeze to scalar
-                alpha_vec = alpha if isinstance(alpha, ArrayLike) else self.math.factory.asarray(alpha)
+            if ri > 0:
+                invd = self.math.inv(dlist[i])
+                a_rel = a_i_pre - g_acc[i]
+                alpha = self.math.mtimes(
+                    invd, (ulist[i] - self.math.mxv(T(Ulist[i]), a_rel))
+                )
+                a[i] = a_i_pre + self.math.vxs(Phi[i], alpha)
                 if (joint_i.idx is not None) and (joint_i.idx < n):
-                    qdd[joint_i.idx] = alpha_vec
-                a[i] = a_i_pre + self.math.vxs(Phi[i], alpha_vec)
+                    qdd[joint_i.idx] = alpha
             else:
                 a[i] = a_i_pre
 
-        # stack output (..., 6+n)
+        # Assemble output
         if n > 0:
             qdd_filled = []
             bdim = len(batch)
             for k in range(n):
                 val = qdd[k]
-                arr = val.array if (val is not None and hasattr(val, "array")) else (
-                    val if val is not None else None
-                )
-                if arr is None:
-                    # build a zeros array with target shape
-                    if bdim == 0:
-                        arr = self.math.factory.zeros((1,)).array
-                    else:
-                        arr = self.math.factory.zeros(batch + (1,)).array
+                if val is None:
+                    arr = (
+                        self.math.factory.zeros(batch + (1,)).array
+                        if bdim > 0
+                        else self.math.factory.zeros((1,)).array
+                    )
                 else:
-                    # squeeze all singleton dims, then enforce target shape
-                    try:
-                        arr = arr.squeeze()
-                    except Exception:
-                        pass
+                    base_arr = val.array if hasattr(val, "array") else val
+                    arr = self.math.factory.asarray(base_arr).array
                     if bdim == 0:
-                        # 1D length-1
-                        if getattr(arr, "ndim", 0) == 0:
-                            arr = arr[None]
-                        elif arr.ndim > 1:
-                            arr = arr.reshape(-1)
-                        arr = arr[:1]
+                        arr = arr.reshape(-1)[:1]
                     else:
-                        # shape: batch + (1,)
-                        while getattr(arr, "ndim", 0) < (bdim + 1):
+                        while arr.ndim < (bdim + 1):
                             arr = arr[..., None]
                         if arr.ndim > (bdim + 1):
                             lead = arr.shape[:bdim]
@@ -1037,14 +950,9 @@ class RBDAlgorithms:
             qdd_vec = self.math.factory.zeros(batch + (0,))
 
         if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            # Transform only the base acceleration from body-fixed to mixed/world frame, including Coriolis correction
-            base_accel = a_base
-            Xm = self.math.adjoint_mixed(base_transform)  # (...,6,6)
-            Xm_dot = self.math.adjoint_mixed_derivative(base_transform, self.math.mxv(Xm, base_velocity))
-            base_accel_mixed = self.math.mxv(Xm, base_accel) + self.math.mxv(Xm_dot, base_velocity)
-            # Only the base acceleration is transformed; joint accelerations are left as computed
-            result = self.math.concatenate([base_accel_mixed, qdd_vec], axis=-1)
-            return result
+            Xm = self.math.adjoint_mixed(base_transform)
+            base_accel_mixed = self.math.mxv(Xm, a_base)
+            return self.math.concatenate([base_accel_mixed, qdd_vec], axis=-1)
         else:
             return self.math.concatenate([a_base, qdd_vec], axis=-1)
 
@@ -1058,5 +966,4 @@ class RBDAlgorithms:
                 converted.append(arg)
             else:
                 converted.append(self.math.asarray(arg))
-
         return converted[0] if len(converted) == 1 else converted
