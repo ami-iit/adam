@@ -36,7 +36,7 @@ dependencies = [
 
 [project.optional-dependencies]
 jax = ["jax<=0.6.0", "jaxlib"]
-casadi = ["casadi"]
+casadi = ["casadi", "liecasadi"]
 pytorch = ["torch", "jax", "jaxlib"]
 test = [
   "jax<=0.6.0",
