@@ -834,11 +834,16 @@ class RBDAlgorithms:
 
                 if (joint_i is not None) and (joint_i.idx is not None):
                     Si = joint_i.motion_subspace()
-                    if not isinstance(Si, ArrayLike):
-                        Si = math.asarray(Si)
-                    base_arr = Si.array if hasattr(Si, "array") else Si
-                    if getattr(base_arr, "ndim", 0) == 1:
-                        Si = math.asarray(base_arr[..., None])
+                    Si = math.tile(Si, batch + (1, 1)) if batch else Si
+                    # base_arr = Si.array if hasattr(Si, "array") else Si
+                    # if hasattr(base_arr, "ndim"):
+                    #     ndim = base_arr.ndim
+                    # elif hasattr(base_arr, "shape"):
+                    #     ndim = len(base_arr.shape)
+                    # else:
+                    #     ndim = 0
+                    # if ndim == 1:
+                    #     Si = math.expand_dims(Si, axis=-1)
                     Scols[idx] = Si
                     qd_i = joint_velocities[..., joint_i.idx]
                     vJ = math.vxs(Si, qd_i)
@@ -872,13 +877,12 @@ class RBDAlgorithms:
                 U_i = math.mtimes(IA[idx], S_i)
                 d_i = math.mtimes(T(S_i), U_i)
                 tau_i = joint_torques_eff[..., joint_i.idx]
-                tau_vec = tau_i if isinstance(tau_i, ArrayLike) else math.asarray(tau_i)
-                Si_T_pA = math.mxv(T(S_i), pA[idx])
+                tau_vec = tau_i #if isinstance(tau_i, ArrayLike) else math.asarray(tau_i)
+                Si_T_pA = math.mxv(T(S_i), pA[idx])[..., 0]
                 # Squeeze extra dimension for batched operations to avoid broadcasting issues
-                arr = Si_T_pA.array if hasattr(Si_T_pA, "array") else Si_T_pA
-                if len(arr.shape) > 1 and arr.shape[-1] == 1:
-                    # Use explicit slicing instead of ellipsis for CasADi compatibility
-                    Si_T_pA = Si_T_pA[:, 0] if batch else Si_T_pA[:, 0]
+                # arr = Si_T_pA.array if hasattr(Si_T_pA, "array") else Si_T_pA
+                # if len(arr.shape) > 1 and arr.shape[-1] == 1:
+                # Si_T_pA = Si_T_pA[..., 0]
                 u_i = tau_vec - Si_T_pA
 
                 d_list[idx] = d_i
@@ -890,11 +894,12 @@ class RBDAlgorithms:
 
                 # Expand u_i to match dimensions for batched matrix multiplication
                 u_i_expanded = math.expand_dims(u_i, axis=-1)
-                if u_i_expanded.shape != inv_d.shape:
-                    u_i_expanded = math.expand_dims(u_i_expanded, axis=-1)
+                # if u_i_expanded.shape != inv_d.shape:
+                u_i_expanded = math.expand_dims(u_i_expanded, axis=-1)
                 gain = math.mtimes(inv_d, u_i_expanded)
                 # Extract column vector, use explicit slicing for CasADi
-                gain_vec = gain[:, 0] if not batch else gain[..., 0]
+                # gain_vec = gain[:, 0] if not batch else gain[..., 0]
+                gain_vec = gain[..., 0]
                 pa = pA[idx] + math.mxv(Ia, c[idx]) + math.mxv(U_i, gain_vec)
             else:
                 Ia = IA[idx]
