@@ -252,6 +252,39 @@ class KinDynComputations:
             base_transform, joint_positions
         ).array.squeeze()
 
+    def aba(
+        self,
+        base_transform: jnp.array,
+        joint_positions: jnp.array,
+        base_velocity: jnp.array,
+        joint_velocities: jnp.array,
+        joint_torques: jnp.array,
+        external_wrenches: dict[str, jnp.array] | None = None,
+    ) -> jnp.array:
+        """Featherstone Articulated-Body Algorithm (floating base, O(n)).
+
+        Args:
+            base_transform (jnp.array): The homogenous transform from base to world frame
+            joint_positions (jnp.array): The joints position
+            base_velocity (jnp.array): The base velocity
+            joint_velocities (jnp.array): The joint velocities
+            joint_torques (jnp.array): The joint torques
+            external_wrenches (dict[str, jnp.array], optional): External wrenches applied to the robot. Defaults to None.
+
+        Returns:
+            jnp.array: The joint accelerations and the base acceleration
+        """
+
+        return self.rbdalgos.aba(
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            joint_torques,
+            self.g,
+            external_wrenches,
+        ).array.squeeze()
+
     def get_total_mass(self) -> float:
         """Returns the total mass of the robot
 
