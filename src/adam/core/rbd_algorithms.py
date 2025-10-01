@@ -66,6 +66,8 @@ class RBDAlgorithms:
                 "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
             )
 
+        base_velocity_body = math.mxv(B_X_BI, base_velocity)
+
         a0_input = math.mxv(math.adjoint_mixed_inverse(base_transform), g)
 
         def zeros6():
@@ -97,7 +99,7 @@ class RBDAlgorithms:
 
             if link_i.name == root_name:
                 Xup[idx] = eye6()
-                v[idx] = math.mxv(B_X_BI, base_velocity)
+                v[idx] = base_velocity_body
                 c[idx] = zeros6()
                 g_acc[idx] = a0_input
             else:
@@ -238,9 +240,9 @@ class RBDAlgorithms:
 
         if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
             Xm = math.adjoint_mixed(base_transform)
-            base_vel_mixed = math.mxv(Xm, base_velocity)
+            base_vel_mixed = math.mxv(Xm, base_velocity_body)
             Xm_dot = math.adjoint_mixed_derivative(base_transform, base_vel_mixed)
-            base_acc = math.mxv(Xm, a_base) + math.mxv(Xm_dot, base_velocity)
+            base_acc = math.mxv(Xm, a_base) + math.mxv(Xm_dot, base_velocity_body)
         else:
             base_acc = a_base
 
