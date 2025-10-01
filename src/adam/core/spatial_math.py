@@ -225,7 +225,7 @@ class SpatialMath:
             npt.ArrayLike: transposed array
         """
         pass
-    
+
     @abc.abstractmethod
     def inv(self, x: npt.ArrayLike) -> npt.ArrayLike:
         """
