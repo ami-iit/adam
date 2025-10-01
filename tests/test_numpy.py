@@ -141,7 +141,6 @@ def test_aba(setup_test):
         external_wrenches=wrenches,
     )
 
-    # Reference using M^{-1}(tau - h) with matching velocities
     M = adam_kin_dyn.mass_matrix(H, joints_pos)
     h = adam_kin_dyn.bias_force(H, joints_pos, base_vel, joints_vel)
 

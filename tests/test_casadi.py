@@ -173,3 +173,66 @@ def test_gravity_term(setup_test):
     assert idyn_gravity - adam_gravity == pytest.approx(0.0, abs=1e-4)
     adam_gravity = cs.DM(adam_kin_dyn.gravity_term_fun()(state.H, state.joints_pos))
     assert idyn_gravity - adam_gravity == pytest.approx(0.0, abs=1e-4)
+
+
+def test_aba(setup_test):
+    adam_kin_dyn, robot_cfg, state = setup_test
+    torques = np.random.randn(len(state.joints_pos)) * 10
+    H = state.H
+    joints_pos = state.joints_pos
+    base_vel = state.base_vel
+    joints_vel = state.joints_vel
+
+    wrenches = {
+        "l_sole": np.random.randn(6) * 10,
+        "torso_1": np.random.randn(6) * 10,
+        "head": np.random.randn(6) * 10,
+    }
+
+    # Test direct method (SX) - first without external wrenches
+    adam_qdd_no_wrench = cs.DM(
+        adam_kin_dyn.aba(
+            base_transform=H,
+            joint_positions=joints_pos,
+            base_velocity=base_vel,
+            joint_velocities=joints_vel,
+            joint_torques=torques,
+            external_wrenches=None,
+        )
+    )
+
+    # Test direct method (SX) - with external wrenches
+    adam_qdd = cs.DM(
+        adam_kin_dyn.aba(
+            base_transform=H,
+            joint_positions=joints_pos,
+            base_velocity=base_vel,
+            joint_velocities=joints_vel,
+            joint_torques=torques,
+            external_wrenches=wrenches,
+        )
+    )
+    # Verify using the equations of motion: M @ qdd + h = tau + J^T @ wrench
+    M = cs.DM(adam_kin_dyn.mass_matrix(H, joints_pos))
+    h = cs.DM(adam_kin_dyn.bias_force(H, joints_pos, base_vel, joints_vel))
+
+    generalized_external_wrenches = np.zeros(6 + len(joints_pos))
+    for frame, wrench in wrenches.items():
+        J = cs.DM(adam_kin_dyn.jacobian(frame, H, joints_pos))
+        generalized_external_wrenches += (J.T @ wrench).full().flatten()
+
+    base_wrench = np.zeros(6)
+    full_tau = np.concatenate([base_wrench, torques])
+    residual = (
+        M @ adam_qdd + h - full_tau
+    ).full().flatten() - generalized_external_wrenches
+
+    assert residual == pytest.approx(0.0, abs=1e-4)
+    # Test function method
+    adam_qdd_fun = cs.DM(
+        adam_kin_dyn.aba_fun()(H, joints_pos, base_vel, joints_vel, torques)
+    )
+    residual_fun = (
+        M @ adam_qdd_fun + h - full_tau
+    ).full().flatten()
+    assert residual_fun == pytest.approx(0.0, abs=1e-4)
