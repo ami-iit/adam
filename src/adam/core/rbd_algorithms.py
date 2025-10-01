@@ -54,6 +54,28 @@ class RBDAlgorithms:
 
         batch = base_transform.shape[:-2] if base_transform.ndim > 2 else ()
 
+        if external_wrenches is not None:
+            generalized_ext = self.math.factory.zeros(batch + (6 + n,))
+            for frame, wrench in external_wrenches.items():
+                wrench_arr = self._convert_to_arraylike(wrench)
+                J = self.jacobian(frame, base_transform, joint_positions)
+                generalized_ext = generalized_ext + self.math.mxv(T(J), wrench_arr)
+
+            gen_np = (
+                generalized_ext.array if hasattr(generalized_ext, "array") else generalized_ext
+            )
+            base_ext = self.math.asarray(gen_np[..., :6])
+            joint_ext = (
+                self.math.asarray(gen_np[..., 6:])
+                if n > 0
+                else self.math.zeros_like(joint_torques)
+            )
+        else:
+            base_ext = self.math.factory.zeros(batch + (6,))
+            joint_ext = self.math.zeros_like(joint_torques)
+
+        joint_torques_eff = joint_torques + joint_ext
+
         if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
             B_X_BI = math.adjoint_mixed_inverse(base_transform)
         elif (
@@ -67,6 +89,7 @@ class RBDAlgorithms:
             )
 
         base_velocity_body = math.mxv(B_X_BI, base_velocity)
+        base_ext_body = math.mxv(B_X_BI, base_ext)
 
         a0_input = math.mxv(math.adjoint_mixed_inverse(base_transform), g)
 
@@ -85,11 +108,6 @@ class RBDAlgorithms:
         IA = [None] * Nnodes
         pA = [None] * Nnodes
         g_acc = [None] * Nnodes
-
-        ext_wrenches_converted = {}
-        if external_wrenches is not None:
-            for frame, wrench in external_wrenches.items():
-                ext_wrenches_converted[frame] = self._convert_to_arraylike(wrench)
 
         for idx, node in enumerate(model.tree):
             link_i, joint_i, link_pi = node.get_elements()
@@ -138,9 +156,6 @@ class RBDAlgorithms:
                 math.spatial_skew_star(v[idx]), math.mxv(IA[idx], v[idx])
             )
 
-            if link_i.name in ext_wrenches_converted:
-                pA[idx] = pA[idx] - ext_wrenches_converted[link_i.name]
-
         d_list: list[ArrayLike | None] = [None] * Nnodes
         u_list: list[ArrayLike | None] = [None] * Nnodes
         U_list: list[ArrayLike | None] = [None] * Nnodes
@@ -157,7 +172,7 @@ class RBDAlgorithms:
                 S_i = Scols[idx]
                 U_i = math.mtimes(IA[idx], S_i)
                 d_i = math.mtimes(T(S_i), U_i)
-                tau_i = joint_torques[..., joint_i.idx]
+                tau_i = joint_torques_eff[..., joint_i.idx]
                 tau_vec = tau_i if isinstance(tau_i, ArrayLike) else math.asarray(tau_i)
                 u_i = tau_vec - math.mxv(T(S_i), pA[idx])
 
@@ -179,7 +194,7 @@ class RBDAlgorithms:
             pA[pi] = pA[pi] + math.mxv(Xpt, pa)
 
         root_idx = model.tree.get_idx_from_name(root_name)
-        rhs_root = -pA[root_idx] + math.mxv(IA[root_idx], a0_input)
+        rhs_root = base_ext_body - pA[root_idx] + math.mxv(IA[root_idx], a0_input)
         a_base = math.solve(IA[root_idx], rhs_root)
 
         a = [None] * Nnodes
