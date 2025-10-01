@@ -8,262 +8,6 @@ from adam.model import Model, Node
 
 
 class RBDAlgorithms:
-    def aba(
-        self,
-        base_transform: npt.ArrayLike,
-        joint_positions: npt.ArrayLike,
-        base_velocity: npt.ArrayLike,
-        joint_velocities: npt.ArrayLike,
-        joint_torques: npt.ArrayLike,
-        g: npt.ArrayLike | None = None,
-        external_wrenches: dict[str, npt.ArrayLike] | None = None,
-    ) -> npt.ArrayLike:
-        """Featherstone Articulated Body Algorithm for floating-base forward dynamics."""
-
-        import numpy as np
-
-        model = self.model
-        math = self.math
-
-        Nnodes = model.N
-        n = model.NDoF
-        root_name = self.root_link
-
-        if g is None:
-            g_vec = np.zeros(6)
-            g_vec[2] = -9.80665016
-            g = g_vec
-
-        (
-            base_transform,
-            joint_positions,
-            base_velocity,
-            joint_velocities,
-            joint_torques,
-            g,
-        ) = self._convert_to_arraylike(
-            base_transform,
-            joint_positions,
-            base_velocity,
-            joint_velocities,
-            joint_torques,
-            g,
-        )
-
-        T = lambda X: math.swapaxes(X, -2, -1)
-
-        batch = base_transform.shape[:-2] if base_transform.ndim > 2 else ()
-
-        if external_wrenches is not None:
-            generalized_ext = self.math.factory.zeros(batch + (6 + n,))
-            for frame, wrench in external_wrenches.items():
-                wrench_arr = self._convert_to_arraylike(wrench)
-                J = self.jacobian(frame, base_transform, joint_positions)
-                generalized_ext = generalized_ext + self.math.mxv(T(J), wrench_arr)
-
-            gen_np = (
-                generalized_ext.array if hasattr(generalized_ext, "array") else generalized_ext
-            )
-            base_ext = self.math.asarray(gen_np[..., :6])
-            joint_ext = (
-                self.math.asarray(gen_np[..., 6:])
-                if n > 0
-                else self.math.zeros_like(joint_torques)
-            )
-        else:
-            base_ext = self.math.factory.zeros(batch + (6,))
-            joint_ext = self.math.zeros_like(joint_torques)
-
-        joint_torques_eff = joint_torques + joint_ext
-
-        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            B_X_BI = math.adjoint_mixed_inverse(base_transform)
-        elif (
-            self.frame_velocity_representation
-            == Representations.BODY_FIXED_REPRESENTATION
-        ):
-            B_X_BI = math.factory.eye(batch + (6,)) if batch else math.factory.eye(6)
-        else:
-            raise NotImplementedError(
-                "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
-            )
-
-        base_velocity_body = math.mxv(B_X_BI, base_velocity)
-        base_ext_body = math.mxv(B_X_BI, base_ext)
-
-        a0_input = math.mxv(math.adjoint_mixed_inverse(base_transform), g)
-
-        def zeros6():
-            return (
-                math.factory.zeros(batch + (6,)) if batch else math.factory.zeros(6)
-            )
-
-        def eye6():
-            return math.factory.eye(batch + (6,)) if batch else math.factory.eye(6)
-
-        Xup = [None] * Nnodes
-        Scols: list[ArrayLike | None] = [None] * Nnodes
-        v = [None] * Nnodes
-        c = [None] * Nnodes
-        IA = [None] * Nnodes
-        pA = [None] * Nnodes
-        g_acc = [None] * Nnodes
-
-        for idx, node in enumerate(model.tree):
-            link_i, joint_i, link_pi = node.get_elements()
-
-            inertia = link_i.spatial_inertia()
-            IA[idx] = math.tile(inertia, batch + (1, 1)) if batch else inertia
-
-            if link_i.name == root_name:
-                Xup[idx] = eye6()
-                v[idx] = base_velocity_body
-                c[idx] = zeros6()
-                g_acc[idx] = a0_input
-            else:
-                pi = model.tree.get_idx_from_name(link_pi.name)
-
-                if joint_i is not None:
-                    q_i = (
-                        joint_positions[..., joint_i.idx]
-                        if joint_i.idx is not None
-                        else math.zeros_like(joint_positions[..., 0])
-                    )
-                    Xup[idx] = joint_i.spatial_transform(q=q_i)
-                else:
-                    Xup[idx] = eye6()
-
-                g_acc[idx] = math.mxv(Xup[idx], g_acc[pi])
-
-                if (joint_i is not None) and (joint_i.idx is not None):
-                    Si = joint_i.motion_subspace()
-                    if not isinstance(Si, ArrayLike):
-                        Si = math.asarray(Si)
-                    base_arr = Si.array if hasattr(Si, "array") else Si
-                    if getattr(base_arr, "ndim", 0) == 1:
-                        Si = math.asarray(base_arr[..., None])
-                    Scols[idx] = Si
-                    qd_i = joint_velocities[..., joint_i.idx]
-                    vJ = math.vxs(Si, qd_i)
-                else:
-                    Scols[idx] = None
-                    vJ = zeros6()
-
-                v[idx] = math.mxv(Xup[idx], v[pi]) + vJ
-                c[idx] = math.mxv(math.spatial_skew(v[idx]), vJ)
-
-            pA[idx] = math.mxv(
-                math.spatial_skew_star(v[idx]), math.mxv(IA[idx], v[idx])
-            )
-
-        d_list: list[ArrayLike | None] = [None] * Nnodes
-        u_list: list[ArrayLike | None] = [None] * Nnodes
-        U_list: list[ArrayLike | None] = [None] * Nnodes
-
-        for idx, node in reversed(list(enumerate(model.tree))):
-            link_i, joint_i, link_pi = node.get_elements()
-
-            if link_i.name == root_name:
-                continue
-
-            pi = model.tree.get_idx_from_name(link_pi.name)
-
-            if Scols[idx] is not None:
-                S_i = Scols[idx]
-                U_i = math.mtimes(IA[idx], S_i)
-                d_i = math.mtimes(T(S_i), U_i)
-                tau_i = joint_torques_eff[..., joint_i.idx]
-                tau_vec = tau_i if isinstance(tau_i, ArrayLike) else math.asarray(tau_i)
-                u_i = tau_vec - math.mxv(T(S_i), pA[idx])
-
-                d_list[idx] = d_i
-                u_list[idx] = u_i
-                U_list[idx] = U_i
-
-                inv_d = math.inv(d_i)
-                Ia = IA[idx] - math.mtimes(U_i, math.mtimes(inv_d, T(U_i)))
-
-                gain = math.mtimes(inv_d, math.expand_dims(u_i, axis=-1))
-                pa = pA[idx] + math.mxv(Ia, c[idx]) + math.mxv(U_i, gain[..., 0])
-            else:
-                Ia = IA[idx]
-                pa = pA[idx] + math.mxv(Ia, c[idx])
-
-            Xpt = T(Xup[idx])
-            IA[pi] = IA[pi] + math.mtimes(math.mtimes(Xpt, Ia), Xup[idx])
-            pA[pi] = pA[pi] + math.mxv(Xpt, pa)
-
-        root_idx = model.tree.get_idx_from_name(root_name)
-        rhs_root = base_ext_body - pA[root_idx] + math.mxv(IA[root_idx], a0_input)
-        a_base = math.solve(IA[root_idx], rhs_root)
-
-        a = [None] * Nnodes
-        a[root_idx] = a_base
-
-        qdd_entries: list[ArrayLike | None] = [None] * n if n > 0 else []
-
-        for idx, node in enumerate(model.tree):
-            link_i, joint_i, link_pi = node.get_elements()
-
-            if link_i.name == root_name:
-                continue
-
-            pi = model.tree.get_idx_from_name(link_pi.name)
-            a_pre = math.mxv(Xup[idx], a[pi]) + c[idx]
-            free_acc = g_acc[idx]
-            rel_acc = (
-                a_pre - free_acc if free_acc is not None else a_pre
-            )
-
-            if (
-                Scols[idx] is not None
-                and (joint_i is not None)
-                and (joint_i.idx is not None)
-            ):
-                S_i = Scols[idx]
-                U_i = U_list[idx]
-                num = u_list[idx] - math.mxv(T(U_i), rel_acc)
-                qdd_col = math.mtimes(
-                    math.inv(d_list[idx]), math.expand_dims(num, axis=-1)
-                )[..., 0]
-                if joint_i.idx < n:
-                    qdd_entries[joint_i.idx] = qdd_col
-                a[idx] = a_pre + math.mtimes(S_i, math.expand_dims(qdd_col, axis=-1))[
-                    ..., 0
-                ]
-            else:
-                a[idx] = a_pre
-
-        if n > 0:
-            qdd_cols = []
-            for entry in qdd_entries:
-                if entry is None:
-                    qdd_cols.append(
-                        math.factory.zeros(batch + (1,))
-                        if batch
-                        else math.factory.zeros((1,))
-                    )
-                else:
-                    qdd_cols.append(entry)
-            joint_qdd = math.concatenate(qdd_cols, axis=-1)
-        else:
-            joint_qdd = (
-                math.factory.zeros(batch + (0,))
-                if batch
-                else math.factory.zeros((0,))
-            )
-
-        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            Xm = math.adjoint_mixed(base_transform)
-            base_vel_mixed = math.mxv(Xm, base_velocity_body)
-            Xm_dot = math.adjoint_mixed_derivative(base_transform, base_vel_mixed)
-            base_acc = math.mxv(Xm, a_base) + math.mxv(Xm_dot, base_velocity_body)
-        else:
-            base_acc = a_base
-
-        return math.concatenate([base_acc, joint_qdd], axis=-1)
-
-
     """This is a small class that implements Rigid body algorithms retrieving robot quantities, for Floating Base systems - as humanoid robots."""
 
     def __init__(self, model: Model, math: SpatialMath) -> None:
@@ -964,6 +708,257 @@ class RBDAlgorithms:
         tau_joints_vec = self.math.concatenate(tau_joints, axis=-1)
 
         return self.math.concatenate([tau_base, tau_joints_vec], axis=-1)
+
+    def aba(
+        self,
+        base_transform: npt.ArrayLike,
+        joint_positions: npt.ArrayLike,
+        base_velocity: npt.ArrayLike,
+        joint_velocities: npt.ArrayLike,
+        joint_torques: npt.ArrayLike,
+        g: npt.ArrayLike | None = None,
+        external_wrenches: dict[str, npt.ArrayLike] | None = None,
+    ) -> npt.ArrayLike:
+        """Featherstone Articulated Body Algorithm for floating-base forward dynamics."""
+
+        import numpy as np
+
+        model = self.model
+        math = self.math
+
+        Nnodes = model.N
+        n = model.NDoF
+        root_name = self.root_link
+
+        if g is None:
+            g_vec = np.zeros(6)
+            g_vec[2] = -9.80665016
+            g = g_vec
+
+        (
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            joint_torques,
+            g,
+        ) = self._convert_to_arraylike(
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            joint_torques,
+            g,
+        )
+
+        T = lambda X: math.swapaxes(X, -2, -1)
+
+        batch = base_transform.shape[:-2] if base_transform.ndim > 2 else ()
+
+        if external_wrenches is not None:
+            generalized_ext = self.math.factory.zeros(batch + (6 + n,))
+            for frame, wrench in external_wrenches.items():
+                wrench_arr = self._convert_to_arraylike(wrench)
+                J = self.jacobian(frame, base_transform, joint_positions)
+                generalized_ext = generalized_ext + self.math.mxv(T(J), wrench_arr)
+
+            gen_np = (
+                generalized_ext.array
+                if hasattr(generalized_ext, "array")
+                else generalized_ext
+            )
+            base_ext = self.math.asarray(gen_np[..., :6])
+            joint_ext = (
+                self.math.asarray(gen_np[..., 6:])
+                if n > 0
+                else self.math.zeros_like(joint_torques)
+            )
+        else:
+            base_ext = self.math.factory.zeros(batch + (6,))
+            joint_ext = self.math.zeros_like(joint_torques)
+
+        joint_torques_eff = joint_torques + joint_ext
+
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            B_X_BI = math.adjoint_mixed_inverse(base_transform)
+        elif (
+            self.frame_velocity_representation
+            == Representations.BODY_FIXED_REPRESENTATION
+        ):
+            B_X_BI = math.factory.eye(batch + (6,)) if batch else math.factory.eye(6)
+        else:
+            raise NotImplementedError(
+                "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
+            )
+
+        base_velocity_body = math.mxv(B_X_BI, base_velocity)
+        base_ext_body = math.mxv(B_X_BI, base_ext)
+
+        a0_input = math.mxv(math.adjoint_mixed_inverse(base_transform), g)
+
+        def zeros6():
+            return math.factory.zeros(batch + (6,)) if batch else math.factory.zeros(6)
+
+        def eye6():
+            return math.factory.eye(batch + (6,)) if batch else math.factory.eye(6)
+
+        Xup = [None] * Nnodes
+        Scols: list[ArrayLike | None] = [None] * Nnodes
+        v = [None] * Nnodes
+        c = [None] * Nnodes
+        IA = [None] * Nnodes
+        pA = [None] * Nnodes
+        g_acc = [None] * Nnodes
+
+        for idx, node in enumerate(model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            inertia = link_i.spatial_inertia()
+            IA[idx] = math.tile(inertia, batch + (1, 1)) if batch else inertia
+
+            if link_i.name == root_name:
+                Xup[idx] = eye6()
+                v[idx] = base_velocity_body
+                c[idx] = zeros6()
+                g_acc[idx] = a0_input
+            else:
+                pi = model.tree.get_idx_from_name(link_pi.name)
+
+                if joint_i is not None:
+                    q_i = (
+                        joint_positions[..., joint_i.idx]
+                        if joint_i.idx is not None
+                        else math.zeros_like(joint_positions[..., 0])
+                    )
+                    Xup[idx] = joint_i.spatial_transform(q=q_i)
+                else:
+                    Xup[idx] = eye6()
+
+                g_acc[idx] = math.mxv(Xup[idx], g_acc[pi])
+
+                if (joint_i is not None) and (joint_i.idx is not None):
+                    Si = joint_i.motion_subspace()
+                    if not isinstance(Si, ArrayLike):
+                        Si = math.asarray(Si)
+                    base_arr = Si.array if hasattr(Si, "array") else Si
+                    if getattr(base_arr, "ndim", 0) == 1:
+                        Si = math.asarray(base_arr[..., None])
+                    Scols[idx] = Si
+                    qd_i = joint_velocities[..., joint_i.idx]
+                    vJ = math.vxs(Si, qd_i)
+                else:
+                    Scols[idx] = None
+                    vJ = zeros6()
+
+                v[idx] = math.mxv(Xup[idx], v[pi]) + vJ
+                c[idx] = math.mxv(math.spatial_skew(v[idx]), vJ)
+
+            pA[idx] = math.mxv(
+                math.spatial_skew_star(v[idx]), math.mxv(IA[idx], v[idx])
+            )
+
+        d_list: list[ArrayLike | None] = [None] * Nnodes
+        u_list: list[ArrayLike | None] = [None] * Nnodes
+        U_list: list[ArrayLike | None] = [None] * Nnodes
+
+        for idx, node in reversed(list(enumerate(model.tree))):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            if link_i.name == root_name:
+                continue
+
+            pi = model.tree.get_idx_from_name(link_pi.name)
+
+            if Scols[idx] is not None:
+                S_i = Scols[idx]
+                U_i = math.mtimes(IA[idx], S_i)
+                d_i = math.mtimes(T(S_i), U_i)
+                tau_i = joint_torques_eff[..., joint_i.idx]
+                tau_vec = tau_i if isinstance(tau_i, ArrayLike) else math.asarray(tau_i)
+                u_i = tau_vec - math.mxv(T(S_i), pA[idx])
+
+                d_list[idx] = d_i
+                u_list[idx] = u_i
+                U_list[idx] = U_i
+
+                inv_d = math.inv(d_i)
+                Ia = IA[idx] - math.mtimes(U_i, math.mtimes(inv_d, T(U_i)))
+
+                gain = math.mtimes(inv_d, math.expand_dims(u_i, axis=-1))
+                pa = pA[idx] + math.mxv(Ia, c[idx]) + math.mxv(U_i, gain[..., 0])
+            else:
+                Ia = IA[idx]
+                pa = pA[idx] + math.mxv(Ia, c[idx])
+
+            Xpt = T(Xup[idx])
+            IA[pi] = IA[pi] + math.mtimes(math.mtimes(Xpt, Ia), Xup[idx])
+            pA[pi] = pA[pi] + math.mxv(Xpt, pa)
+
+        root_idx = model.tree.get_idx_from_name(root_name)
+        rhs_root = base_ext_body - pA[root_idx] + math.mxv(IA[root_idx], a0_input)
+        a_base = math.solve(IA[root_idx], rhs_root)
+
+        a = [None] * Nnodes
+        a[root_idx] = a_base
+
+        qdd_entries: list[ArrayLike | None] = [None] * n if n > 0 else []
+
+        for idx, node in enumerate(model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            if link_i.name == root_name:
+                continue
+
+            pi = model.tree.get_idx_from_name(link_pi.name)
+            a_pre = math.mxv(Xup[idx], a[pi]) + c[idx]
+            free_acc = g_acc[idx]
+            rel_acc = a_pre - free_acc if free_acc is not None else a_pre
+
+            if (
+                Scols[idx] is not None
+                and (joint_i is not None)
+                and (joint_i.idx is not None)
+            ):
+                S_i = Scols[idx]
+                U_i = U_list[idx]
+                num = u_list[idx] - math.mxv(T(U_i), rel_acc)
+                qdd_col = math.mtimes(
+                    math.inv(d_list[idx]), math.expand_dims(num, axis=-1)
+                )[..., 0]
+                if joint_i.idx < n:
+                    qdd_entries[joint_i.idx] = qdd_col
+                a[idx] = (
+                    a_pre + math.mtimes(S_i, math.expand_dims(qdd_col, axis=-1))[..., 0]
+                )
+            else:
+                a[idx] = a_pre
+
+        if n > 0:
+            qdd_cols = []
+            for entry in qdd_entries:
+                if entry is None:
+                    qdd_cols.append(
+                        math.factory.zeros(batch + (1,))
+                        if batch
+                        else math.factory.zeros((1,))
+                    )
+                else:
+                    qdd_cols.append(entry)
+            joint_qdd = math.concatenate(qdd_cols, axis=-1)
+        else:
+            joint_qdd = (
+                math.factory.zeros(batch + (0,)) if batch else math.factory.zeros((0,))
+            )
+
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            Xm = math.adjoint_mixed(base_transform)
+            base_vel_mixed = math.mxv(Xm, base_velocity_body)
+            Xm_dot = math.adjoint_mixed_derivative(base_transform, base_vel_mixed)
+            base_acc = math.mxv(Xm, a_base) + math.mxv(Xm_dot, base_velocity_body)
+        else:
+            base_acc = a_base
+
+        return math.concatenate([base_acc, joint_qdd], axis=-1)
 
     def _convert_to_arraylike(self, *args):
         if not args:
