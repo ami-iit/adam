@@ -189,18 +189,6 @@ def test_aba(setup_test):
         "head": np.random.randn(6) * 10,
     }
 
-    # Test direct method (SX) - first without external wrenches
-    adam_qdd_no_wrench = cs.DM(
-        adam_kin_dyn.aba(
-            base_transform=H,
-            joint_positions=joints_pos,
-            base_velocity=base_vel,
-            joint_velocities=joints_vel,
-            joint_torques=torques,
-            external_wrenches=None,
-        )
-    )
-
     # Test direct method (SX) - with external wrenches
     adam_qdd = cs.DM(
         adam_kin_dyn.aba(
