@@ -42,8 +42,8 @@ class SpatialMath(ArrayAPISpatialMath):
         JAX requires b to have shape (..., N, M) for batched solves, not just (..., N).
         This follows JAX's recommendation: use solve(a, b[..., None]).squeeze(-1) for 1D solves.
         """
-        a_arr = A.array if hasattr(A, "array") else A
-        b_arr = B.array if hasattr(B, "array") else B
+        a_arr = A.array
+        b_arr = B.array
 
         # If b is 1D per batch (shape like (batch, N)), add extra dimension for JAX
         if b_arr.ndim > 1 and a_arr.ndim == b_arr.ndim + 1:
