@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 from conftest import RobotCfg, State
 from jax import config
-import jax.numpy as jnp
 from adam.jax import KinDynComputations
 
 config.update("jax_enable_x64", True)
