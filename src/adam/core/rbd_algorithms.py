@@ -770,9 +770,6 @@ class RBDAlgorithms:
         Returns:
             accelerations (npt.ArrayLike): The spatial acceleration of the base and joints accelerations
         """
-
-        import numpy as np
-
         model = self.model
         math = self.math
 
