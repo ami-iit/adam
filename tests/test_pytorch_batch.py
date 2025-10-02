@@ -545,9 +545,6 @@ def test_aba(setup_test):
         joint_torques=torques,
         external_wrenches=wrenches,
     )
-
-    print("Computed joint accelerations shape:", adam_qdd.shape)
-
     # Check output shape
     assert adam_qdd.shape == (batch_size, 6 + n_joints)
 
