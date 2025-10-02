@@ -37,9 +37,12 @@ class RBDAlgorithms:
         """
         Batched Composite Rigid Body Algorithm (CRBA) + Orin's Centroidal Momentum Matrix.
 
-        - Mirrors the reference implementation's control flow for readability.
-        - No array/tensor item-assignments (blocks collected then concatenated).
-        - Supports batched inputs via broadcasting.
+        Args:
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+
+        Returns:
+            M, Jcm (npt.ArrayLike, npt.ArrayLike): The mass matrix and the centroidal momentum matrix
         """
         base_transform, joint_positions = self._convert_to_arraylike(
             base_transform, joint_positions
@@ -246,12 +249,13 @@ class RBDAlgorithms:
     def forward_kinematics(
         self, frame, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-        """Computes the forward kinematics relative to the specified frame
+        """Computes the forward kinematics relative to the specified `frame`.
 
         Args:
             frame (str): The frame to which the fk will be computed
             base_transform (npt.ArrayLike): The homogenous transform from base to world frame
             joint_positions (npt.ArrayLike): The joints position
+
         Returns:
             I_H_L (npt.ArrayLike): The fk represented as Homogenous transformation matrix
         """
@@ -273,7 +277,7 @@ class RBDAlgorithms:
     def joints_jacobian(
         self, frame: str, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-        """Returns the Jacobian relative to the specified frame
+        """Returns the Jacobian relative to the specified `frame`.
 
         Args:
             frame (str): The frame to which the jacobian will be computed
@@ -315,6 +319,17 @@ class RBDAlgorithms:
     def jacobian(
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
+        """Returns the Jacobian for `frame`.
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+
+        Returns:
+            npt.ArrayLike: The Jacobian for the specified frame
+        """
+
         base_transform, joint_positions = self._convert_to_arraylike(
             base_transform, joint_positions
         )
@@ -358,13 +373,14 @@ class RBDAlgorithms:
     def relative_jacobian(
         self, frame: str, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-        """Returns the Jacobian between the root link and a specified frame
+        """Returns the Jacobian between the root link and a specified `frame`.
+
         Args:
             frame (str): The tip of the chain
             joint_positions (npt.ArrayLike): The joints position
 
         Returns:
-            J (npt.ArrayLike): The 6 x NDoF Jacobian between the root and the frame
+            J (npt.ArrayLike): The 6 x NDoF Jacobian between the root and the `frame`
         """
         joint_positions = self._convert_to_arraylike(joint_positions)
         if (
@@ -390,7 +406,19 @@ class RBDAlgorithms:
         base_velocity: npt.ArrayLike,
         joint_velocities: npt.ArrayLike,
     ) -> npt.ArrayLike:
-        """Returns the Jacobian time derivative for `frame`."""
+        """Returns the Jacobian time derivative for `frame`.
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+            base_velocity (npt.ArrayLike): The spatial velocity of the base
+            joint_velocities (npt.ArrayLike): The joints velocities
+
+        Returns:
+            J_dot (npt.ArrayLike): The Jacobian derivative relative to the frame
+
+        """
 
         base_transform, joint_positions, base_velocity, joint_velocities = (
             self._convert_to_arraylike(
@@ -573,8 +601,17 @@ class RBDAlgorithms:
         g: npt.ArrayLike,
     ) -> npt.ArrayLike:
         """
-        Batched Recursive Newton–Euler (reduced: no joint/base accelerations, no external forces).
-        Returns tau with shape (..., 6+n, 1). No item assignment; no squeeze helper.
+        Batched Recursive Newton-Euler (reduced: no joint/base accelerations, no external forces).
+
+        Args:
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+            base_velocity (npt.ArrayLike): The base spatial velocity
+            joint_velocities (npt.ArrayLike): The joints velocities
+            g (npt.ArrayLike): The gravity vector
+
+        Returns:
+            tau (npt.ArrayLike): The vector of generalized forces
         """
         base_transform, joint_positions, base_velocity, joint_velocities, g = (
             self._convert_to_arraylike(
@@ -716,10 +753,23 @@ class RBDAlgorithms:
         base_velocity: npt.ArrayLike,
         joint_velocities: npt.ArrayLike,
         joint_torques: npt.ArrayLike,
-        g: npt.ArrayLike | None = None,
+        g: npt.ArrayLike,
         external_wrenches: dict[str, npt.ArrayLike] | None = None,
     ) -> npt.ArrayLike:
-        """Featherstone Articulated Body Algorithm for floating-base forward dynamics."""
+        """Featherstone Articulated Body Algorithm for floating-base forward dynamics.
+
+        Args:
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+            base_velocity (npt.ArrayLike): The spatial velocity of the base
+            joint_velocities (npt.ArrayLike): The joints velocities
+            joint_torques (npt.ArrayLike): The joints torques/forces
+            g (npt.ArrayLike | None, optional): The gravity vector
+            external_wrenches (dict[str, npt.ArrayLike] | None, optional): A dictionary of external wrenches applied to specific links. Keys are link names, and values are 6D wrench vectors. Defaults to None.
+
+        Returns:
+            accelerations (npt.ArrayLike): The spatial acceleration of the base and joints accelerations
+        """
 
         import numpy as np
 
@@ -729,11 +779,6 @@ class RBDAlgorithms:
         Nnodes = model.N
         n = model.NDoF
         root_name = self.root_link
-
-        if g is None:
-            g_vec = np.zeros(6)
-            g_vec[2] = -9.80665016
-            g = g_vec
 
         (
             base_transform,
@@ -762,7 +807,6 @@ class RBDAlgorithms:
                 J = self.jacobian(frame, base_transform, joint_positions)
                 generalized_ext = generalized_ext + self.math.mxv(T(J), wrench_arr)
 
-            # Use ArrayLike slicing to support CasADi (CasadiLike.__getitem__ handles ellipsis)
             base_ext = generalized_ext[..., :6]
             joint_ext = (
                 generalized_ext[..., 6:]
@@ -965,6 +1009,12 @@ class RBDAlgorithms:
         return math.concatenate([base_acc, joint_qdd], axis=-1)
 
     def _convert_to_arraylike(self, *args):
+        """Convert inputs to ArrayLike if they are not already.
+        Args:
+            *args: Input arguments to be converted.
+        Returns:
+            Converted arguments as ArrayLike.
+        """
         if not args:
             raise ValueError("At least one argument is required")
 
