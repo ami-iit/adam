@@ -232,7 +232,5 @@ def test_aba(setup_test):
     adam_qdd_fun = cs.DM(
         adam_kin_dyn.aba_fun()(H, joints_pos, base_vel, joints_vel, torques)
     )
-    residual_fun = (
-        M @ adam_qdd_fun + h - full_tau
-    ).full().flatten()
+    residual_fun = (M @ adam_qdd_fun + h - full_tau).full().flatten()
     assert residual_fun == pytest.approx(0.0, abs=1e-4)
