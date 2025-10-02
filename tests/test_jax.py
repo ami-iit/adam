@@ -1,4 +1,5 @@
 import numpy as np
+import jax.numpy as jnp
 import pytest
 from conftest import RobotCfg, State
 from jax import config
