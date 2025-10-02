@@ -176,6 +176,7 @@ def test_gravity_term(setup_test):
     adam_gravity = cs.DM(adam_kin_dyn.gravity_term_fun()(state.H, state.joints_pos))
     assert idyn_gravity - adam_gravity == pytest.approx(0.0, abs=1e-4)
 
+
 def test_aba(setup_test):
     adam_kin_dyn, robot_cfg, state = setup_test
     torques = np.random.randn(len(state.joints_pos)) * 10
