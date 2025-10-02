@@ -798,6 +798,14 @@ class RBDAlgorithms:
         def eye6():
             return math.factory.eye(batch + (6,)) if batch else math.factory.eye(6)
 
+        def expand_to_match(vec, reference):
+            expanded = math.expand_dims(vec, axis=-1)
+            expanded_ndim = expanded.ndim
+            reference_ndim = reference.ndim
+            if expanded_ndim != reference_ndim:
+                expanded = math.expand_dims(expanded, axis=-1)
+            return expanded
+
         Xup = [None] * Nnodes
         Scols: list[ArrayLike | None] = [None] * Nnodes
         v = [None] * Nnodes
@@ -834,16 +842,6 @@ class RBDAlgorithms:
 
                 if (joint_i is not None) and (joint_i.idx is not None):
                     Si = joint_i.motion_subspace()
-                    Si = math.tile(Si, batch + (1, 1)) if batch else Si
-                    # base_arr = Si.array if hasattr(Si, "array") else Si
-                    # if hasattr(base_arr, "ndim"):
-                    #     ndim = base_arr.ndim
-                    # elif hasattr(base_arr, "shape"):
-                    #     ndim = len(base_arr.shape)
-                    # else:
-                    #     ndim = 0
-                    # if ndim == 1:
-                    #     Si = math.expand_dims(Si, axis=-1)
                     Scols[idx] = Si
                     qd_i = joint_velocities[..., joint_i.idx]
                     vJ = math.vxs(Si, qd_i)
@@ -877,12 +875,8 @@ class RBDAlgorithms:
                 U_i = math.mtimes(IA[idx], S_i)
                 d_i = math.mtimes(T(S_i), U_i)
                 tau_i = joint_torques_eff[..., joint_i.idx]
-                tau_vec = tau_i #if isinstance(tau_i, ArrayLike) else math.asarray(tau_i)
+                tau_vec = tau_i
                 Si_T_pA = math.mxv(T(S_i), pA[idx])[..., 0]
-                # Squeeze extra dimension for batched operations to avoid broadcasting issues
-                # arr = Si_T_pA.array if hasattr(Si_T_pA, "array") else Si_T_pA
-                # if len(arr.shape) > 1 and arr.shape[-1] == 1:
-                # Si_T_pA = Si_T_pA[..., 0]
                 u_i = tau_vec - Si_T_pA
 
                 d_list[idx] = d_i
@@ -891,14 +885,9 @@ class RBDAlgorithms:
 
                 inv_d = math.inv(d_i)
                 Ia = IA[idx] - math.mtimes(U_i, math.mtimes(inv_d, T(U_i)))
-
-                # Expand u_i to match dimensions for batched matrix multiplication
-                u_i_expanded = math.expand_dims(u_i, axis=-1)
-                # if u_i_expanded.shape != inv_d.shape:
-                u_i_expanded = math.expand_dims(u_i_expanded, axis=-1)
+                u_i_expanded = expand_to_match(u_i, inv_d)
                 gain = math.mtimes(inv_d, u_i_expanded)
-                # Extract column vector, use explicit slicing for CasADi
-                # gain_vec = gain[:, 0] if not batch else gain[..., 0]
+                # Extract column vector
                 gain_vec = gain[..., 0]
                 pa = pA[idx] + math.mxv(Ia, c[idx]) + math.mxv(U_i, gain_vec)
             else:
@@ -935,33 +924,15 @@ class RBDAlgorithms:
             ):
                 S_i = Scols[idx]
                 U_i = U_list[idx]
-                U_T_rel_acc = math.mxv(T(U_i), rel_acc)
-                # Squeeze extra dimension for batched operations
-                arr = (
-                    U_T_rel_acc.array if hasattr(U_T_rel_acc, "array") else U_T_rel_acc
-                )
-                if len(arr.shape) > 1 and arr.shape[-1] == 1:
-                    # Use explicit slicing instead of ellipsis for CasADi compatibility
-                    U_T_rel_acc = U_T_rel_acc[:, 0] if batch else U_T_rel_acc[:, 0]
+                U_T_rel_acc = math.mxv(T(U_i), rel_acc)[..., 0]
                 num = u_list[idx] - U_T_rel_acc
-                # Expand num to match dimensions for batched matrix multiplication
-                num_expanded = math.expand_dims(num, axis=-1)
                 inv_d = math.inv(d_list[idx])
-                if num_expanded.shape != inv_d.shape:
-                    num_expanded = math.expand_dims(num_expanded, axis=-1)
-                # Extract column, use explicit slicing for CasADi
-                qdd_col = (
-                    math.mtimes(inv_d, num_expanded)[:, 0]
-                    if not batch
-                    else math.mtimes(inv_d, num_expanded)[..., 0]
-                )
+                num_expanded = expand_to_match(num, inv_d)
+                gain_qdd = math.mtimes(inv_d, num_expanded)
+                qdd_col = gain_qdd[..., 0]
                 if joint_i.idx < n:
                     qdd_entries[joint_i.idx] = qdd_col
-                # Extract result, use explicit slicing for CasADi
-                a_correction = math.mtimes(S_i, math.expand_dims(qdd_col, axis=-1))
-                a_correction_vec = (
-                    a_correction[:, 0] if not batch else a_correction[..., 0]
-                )
+                a_correction_vec = math.mxv(S_i, qdd_col)
                 a[idx] = a_pre + a_correction_vec
             else:
                 a[idx] = a_pre
