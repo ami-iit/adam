@@ -285,7 +285,6 @@ class KinDynComputations:
             base_velocity (np.ndarray): The base velocity
             joint_velocities (np.ndarray): The joint velocities
             joint_torques (np.ndarray): The joint torques
-            g (np.ndarray, optional): The gravity vector. If None, the gravity vector set during the class initialization is used. Defaults to None.
             external_wrenches (dict[str, np.ndarray], optional): External wrenches applied to the robot. Defaults to None.
 
         Returns:

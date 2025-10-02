@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from conftest import RobotCfg, State
 from jax import config
-
+import jax.numpy as jnp
 from adam.jax import KinDynComputations
 
 config.update("jax_enable_x64", True)
@@ -71,7 +71,7 @@ def test_jacobian_dot(setup_test):
     idyn_jacobian_dot_nu = robot_cfg.idyn_function_values.jacobian_dot_nu
     adam_jacobian_dot_nu = adam_kin_dyn.jacobian_dot(
         "l_sole", state.H, state.joints_pos, state.base_vel, state.joints_vel
-    ) @ np.concatenate((state.base_vel, state.joints_vel))
+    ) @ jnp.concatenate((state.base_vel, state.joints_vel))
     assert idyn_jacobian_dot_nu - adam_jacobian_dot_nu == pytest.approx(0.0, abs=1e-5)
 
 
@@ -147,13 +147,13 @@ def test_aba(setup_test):
     M = adam_kin_dyn.mass_matrix(H, joints_pos)
     h = adam_kin_dyn.bias_force(H, joints_pos, base_vel, joints_vel)
 
-    generalized_external_wrenches = np.zeros(6 + len(joints_pos))
+    generalized_external_wrenches = jnp.zeros(6 + len(joints_pos))
     for frame, wrench in wrenches.items():
         J = adam_kin_dyn.jacobian(frame, H, joints_pos)
         generalized_external_wrenches += J.T @ wrench
 
     base_wrench = np.zeros(6)
-    full_tau = np.concatenate([base_wrench, torques])
+    full_tau = jnp.concatenate([base_wrench, torques])
     residual = M @ adam_qdd + h - full_tau - generalized_external_wrenches
 
     assert residual == pytest.approx(0.0, abs=1e-4)

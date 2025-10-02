@@ -534,8 +534,6 @@ def test_aba(setup_test):
         "head": torch.randn(batch_size, 6, device=device, dtype=torch.float64) * 10,
     }
 
-    print("Testing ABA with batch size:", batch_size)
-
     # Compute ABA
     adam_qdd = adam_kin_dyn.aba(
         base_transform=state.H,
