@@ -306,7 +306,6 @@ class SpatialMath(_SpatialMath):
         # Only 2-D supported; any request means "swap last two"
         return CasadiLike(x.array.T)
 
-    # --- algebra shortcuts used by algorithms ---
     @staticmethod
     def expand_dims(x: CasadiLike, axis: int) -> CasadiLike:
         """Expand dimensions of a CasADi array.
@@ -318,12 +317,10 @@ class SpatialMath(_SpatialMath):
         Returns:
             CasadiLike: Array with expanded dimensions
         """
-        arr = x.array
-        # For CasADi, we reshape to add a dimension
         # If axis=-1, we're adding a column dimension to make it (n,1)
         if axis == -1:
             # Reshape to column vector
-            return CasadiLike(cs.reshape(arr, (-1, 1)))
+            return CasadiLike(cs.reshape(x.array, (-1, 1)))
         else:
             # For other axes, just return as is (CasADi is 2D only)
             return x
