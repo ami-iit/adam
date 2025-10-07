@@ -35,3 +35,20 @@ class JaxLikeFactory(ArrayAPIFactory):
 class SpatialMath(ArrayAPISpatialMath):
     def __init__(self, spec: ArraySpec | None = None):
         super().__init__(JaxLikeFactory(spec=spec))
+
+    def solve(self, A: ArrayAPILike, B: ArrayAPILike) -> ArrayAPILike:
+        """Override solve to handle JAX's batched solve API correctly
+
+        JAX requires b to have shape (..., N, M) for batched solves, not just (..., N).
+        This follows JAX's recommendation: use solve(a, b[..., None]).squeeze(-1) for 1D solves.
+        """
+        a_arr = A.array
+        b_arr = B.array
+
+        # If b is 1D per batch (shape like (batch, N)), add extra dimension for JAX
+        if b_arr.ndim > 1 and a_arr.ndim == b_arr.ndim + 1:
+            result = jnp.linalg.solve(a_arr, b_arr[..., None]).squeeze(-1)
+        else:
+            result = jnp.linalg.solve(a_arr, b_arr)
+
+        return self.factory.asarray(result)

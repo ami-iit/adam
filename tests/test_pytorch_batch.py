@@ -515,3 +515,77 @@ def test_gravity_term(setup_test):
 
     # Verify batch variation (random inputs should produce different outputs)
     assert not torch.allclose(adam_gravity[0], adam_gravity[1], atol=1e-6)
+
+
+def test_aba(setup_test):
+    """Test Articulated Body Algorithm with batched inputs"""
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+    n_joints = robot_cfg.n_dof
+
+    # Get device from state tensors
+    device = state.H.device
+
+    # Create random torques for the batch
+    torques = torch.randn(batch_size, n_joints, device=device, dtype=torch.float64) * 10
+    # Create random wrenches for multiple frames
+    wrenches = {
+        "l_sole": torch.randn(batch_size, 6, device=device, dtype=torch.float64) * 10,
+        "torso_1": torch.randn(batch_size, 6, device=device, dtype=torch.float64) * 10,
+        "head": torch.randn(batch_size, 6, device=device, dtype=torch.float64) * 10,
+    }
+
+    # Compute ABA
+    adam_qdd = adam_kin_dyn.aba(
+        base_transform=state.H,
+        joint_positions=state.joints_pos,
+        base_velocity=state.base_vel,
+        joint_velocities=state.joints_vel,
+        joint_torques=torques,
+        external_wrenches=wrenches,
+    )
+    # Check output shape
+    assert adam_qdd.shape == (batch_size, 6 + n_joints)
+
+    # Verify using the equations of motion: M @ qdd + h = tau + J^T @ wrench
+    M = adam_kin_dyn.mass_matrix(state.H, state.joints_pos)
+    h = adam_kin_dyn.bias_force(
+        state.H, state.joints_pos, state.base_vel, state.joints_vel
+    )
+
+    # Compute generalized external wrenches
+    generalized_external_wrenches = torch.zeros(
+        batch_size, 6 + n_joints, device=device, dtype=torch.float64
+    )
+    for frame, wrench in wrenches.items():
+        J = adam_kin_dyn.jacobian(frame, state.H, state.joints_pos)
+        # J shape: (batch_size, 6, 6+n_joints), wrench shape: (batch_size, 6)
+        # J^T @ wrench for each batch element
+        generalized_external_wrenches += torch.einsum(
+            "bij,bj->bi", J.transpose(1, 2), wrench
+        )
+
+    # Create full generalized forces (base wrench is zero + joint torques)
+    base_wrench = torch.zeros(batch_size, 6, device=device, dtype=torch.float64)
+    full_tau = torch.cat([base_wrench, torques], dim=1)
+
+    # Compute residual: M @ qdd + h - tau - J^T @ wrench = 0
+    residual = (
+        torch.einsum("bij,bj->bi", M, adam_qdd)
+        + h
+        - full_tau
+        - generalized_external_wrenches
+    )
+
+    # Assert residual is close to zero
+    assert torch.allclose(
+        residual, torch.zeros_like(residual), atol=1e-4
+    ), f"Residual max: {residual.abs().max().item()}"
+
+    # Test gradient computation
+    try:
+        adam_qdd.sum().backward()
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
+
+    # Verify batch variation (random inputs should produce different outputs)
+    assert not torch.allclose(adam_qdd[0], adam_qdd[1], atol=1e-6)

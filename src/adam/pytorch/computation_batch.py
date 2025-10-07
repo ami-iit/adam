@@ -279,3 +279,36 @@ class KinDynComputationsBatch:
             mass: The total mass
         """
         return self.rbdalgos.get_total_mass()
+
+    def aba(
+        self,
+        base_transform: torch.Tensor,
+        joint_positions: torch.Tensor,
+        base_velocity: torch.Tensor,
+        joint_velocities: torch.Tensor,
+        joint_torques: torch.Tensor,
+        external_wrenches: dict[str, torch.Tensor] | None = None,
+    ) -> torch.Tensor:
+        """Featherstone Articulated-Body Algorithm (floating base, O(n)).
+
+        Args:
+            base_transform (torch.Tensor): The batch of homogenous transforms from base to world frame
+            joint_positions (torch.Tensor): The batch of joints position
+            base_velocity (torch.Tensor): The batch of base velocity
+            joint_velocities (torch.Tensor): The batch of joint velocities
+            joint_torques (torch.Tensor): The batch of joint torques
+            external_wrenches (dict[str, torch.Tensor], optional): External wrenches applied to the robot. Defaults to None.
+
+        Returns:
+            torch.Tensor: The batch of base acceleration and the joint accelerations
+        """
+
+        return self.rbdalgos.aba(
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            joint_torques,
+            self.g,
+            external_wrenches,
+        ).array.squeeze()

@@ -467,6 +467,83 @@ class KinDynComputations:
             self.g,
         ).array
 
+    def aba(
+        self,
+        base_transform: cs.SX,
+        joint_positions: cs.SX,
+        base_velocity: cs.SX,
+        joint_velocities: cs.SX,
+        joint_torques: cs.SX,
+        external_wrenches: dict[str, cs.SX] | None = None,
+    ) -> cs.SX:
+        """Featherstone Articulated-Body Algorithm (floating base, O(n)).
+
+        Args:
+            base_transform (cs.SX): The homogenous transform from base to world frame
+            joint_positions (cs.SX): The joints position
+            base_velocity (cs.SX): The base velocity
+            joint_velocities (cs.SX): The joint velocities
+            joint_torques (cs.SX): The joint torques
+            external_wrenches (dict[str, cs.SX], optional): External wrenches applied to the robot. Defaults to None.
+
+        Returns:
+            cs.SX: The base acceleration and the joint accelerations
+        """
+        if (
+            isinstance(base_transform, cs.MX)
+            and isinstance(joint_positions, cs.MX)
+            and isinstance(base_velocity, cs.MX)
+            and isinstance(joint_velocities, cs.MX)
+            and isinstance(joint_torques, cs.MX)
+        ):
+            raise ValueError(
+                "You are using casadi MX. Please use the function KinDynComputations.aba_fun()"
+            )
+
+        return self.rbdalgos.aba(
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            joint_torques,
+            self.g,
+            external_wrenches,
+        ).array
+
+    def aba_fun(self) -> cs.Function:
+        """Returns the Articulated Body Algorithm function for forward dynamics
+
+        Returns:
+            qdd (casADi function): The joint accelerations and base acceleration
+        """
+        base_transform = cs.SX.sym("H", 4, 4)
+        joint_positions = cs.SX.sym("s", self.NDoF)
+        base_velocity = cs.SX.sym("v_b", 6)
+        joint_velocities = cs.SX.sym("s_dot", self.NDoF)
+        joint_torques = cs.SX.sym("tau", self.NDoF)
+
+        qdd = self.rbdalgos.aba(
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            joint_torques,
+            self.g,
+            None,  # external_wrenches not supported in symbolic form
+        )
+        return cs.Function(
+            "qdd",
+            [
+                base_transform,
+                joint_positions,
+                base_velocity,
+                joint_velocities,
+                joint_torques,
+            ],
+            [qdd.array],
+            self.f_opts,
+        )
+
     def CoM_position(self, base_transform: cs.SX, joint_positions: cs.SX) -> cs.SX:
         """Returns the CoM position
 

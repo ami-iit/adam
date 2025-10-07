@@ -37,9 +37,12 @@ class RBDAlgorithms:
         """
         Batched Composite Rigid Body Algorithm (CRBA) + Orin's Centroidal Momentum Matrix.
 
-        - Mirrors the reference implementation’s control flow for readability.
-        - No array/tensor item-assignments (blocks collected then concatenated).
-        - Supports batched inputs via broadcasting.
+        Args:
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+
+        Returns:
+            M, Jcm (npt.ArrayLike, npt.ArrayLike): The mass matrix and the centroidal momentum matrix
         """
         base_transform, joint_positions = self._convert_to_arraylike(
             base_transform, joint_positions
@@ -180,7 +183,7 @@ class RBDAlgorithms:
             row_tensors.append(self.math.concatenate(row_blocks, axis=-1))
         M = self.math.concatenate(row_tensors, axis=-2)  # (..., 6+n, 6+n)
 
-        # Orin’s O_X_G (centroidal transform)
+        # Orin's O_X_G (centroidal transform)
         A = T(M[..., :3, 3:6]) / M[..., 0, 0][..., None, None]  # (...,3,3)
         I3 = self.math.factory.eye(batch + (3,))
         Z3 = self.math.factory.zeros(batch + (3, 3))
@@ -246,12 +249,13 @@ class RBDAlgorithms:
     def forward_kinematics(
         self, frame, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-        """Computes the forward kinematics relative to the specified frame
+        """Computes the forward kinematics relative to the specified `frame`.
 
         Args:
             frame (str): The frame to which the fk will be computed
             base_transform (npt.ArrayLike): The homogenous transform from base to world frame
             joint_positions (npt.ArrayLike): The joints position
+
         Returns:
             I_H_L (npt.ArrayLike): The fk represented as Homogenous transformation matrix
         """
@@ -273,7 +277,7 @@ class RBDAlgorithms:
     def joints_jacobian(
         self, frame: str, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-        """Returns the Jacobian relative to the specified frame
+        """Returns the Jacobian relative to the specified `frame`.
 
         Args:
             frame (str): The frame to which the jacobian will be computed
@@ -315,6 +319,17 @@ class RBDAlgorithms:
     def jacobian(
         self, frame: str, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
+        """Returns the Jacobian for `frame`.
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+
+        Returns:
+            npt.ArrayLike: The Jacobian for the specified frame
+        """
+
         base_transform, joint_positions = self._convert_to_arraylike(
             base_transform, joint_positions
         )
@@ -330,7 +345,7 @@ class RBDAlgorithms:
             == Representations.BODY_FIXED_REPRESENTATION
         ):
             return J_tot
-        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
             w_H_L = w_H_B @ B_H_L
             LI_X_L = self.math.adjoint_mixed(w_H_L)
 
@@ -358,13 +373,14 @@ class RBDAlgorithms:
     def relative_jacobian(
         self, frame: str, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
-        """Returns the Jacobian between the root link and a specified frame
+        """Returns the Jacobian between the root link and a specified `frame`.
+
         Args:
             frame (str): The tip of the chain
             joint_positions (npt.ArrayLike): The joints position
 
         Returns:
-            J (npt.ArrayLike): The 6 x NDoF Jacobian between the root and the frame
+            J (npt.ArrayLike): The 6 x NDoF Jacobian between the root and the `frame`
         """
         joint_positions = self._convert_to_arraylike(joint_positions)
         if (
@@ -390,7 +406,19 @@ class RBDAlgorithms:
         base_velocity: npt.ArrayLike,
         joint_velocities: npt.ArrayLike,
     ) -> npt.ArrayLike:
-        """Returns the Jacobian time derivative for `frame`."""
+        """Returns the Jacobian time derivative for `frame`.
+
+        Args:
+            frame (str): The frame to which the jacobian will be computed
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+            base_velocity (npt.ArrayLike): The spatial velocity of the base
+            joint_velocities (npt.ArrayLike): The joints velocities
+
+        Returns:
+            J_dot (npt.ArrayLike): The Jacobian derivative relative to the frame
+
+        """
 
         base_transform, joint_positions, base_velocity, joint_velocities = (
             self._convert_to_arraylike(
@@ -444,7 +472,6 @@ class RBDAlgorithms:
             H_j = joint.homogeneous(q=q)
             B_H_j = B_H_j @ H_j
             L_H_j = L_H_B @ B_H_j
-
             S = joint.motion_subspace()
             J_j = self.math.adjoint(L_H_j) @ S
 
@@ -574,8 +601,17 @@ class RBDAlgorithms:
         g: npt.ArrayLike,
     ) -> npt.ArrayLike:
         """
-        Batched Recursive Newton–Euler (reduced: no joint/base accelerations, no external forces).
-        Returns tau with shape (..., 6+n, 1). No item assignment; no squeeze helper.
+        Batched Recursive Newton-Euler (reduced: no joint/base accelerations, no external forces).
+
+        Args:
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+            base_velocity (npt.ArrayLike): The base spatial velocity
+            joint_velocities (npt.ArrayLike): The joints velocities
+            g (npt.ArrayLike): The gravity vector
+
+        Returns:
+            tau (npt.ArrayLike): The vector of generalized forces
         """
         base_transform, joint_positions, base_velocity, joint_velocities, g = (
             self._convert_to_arraylike(
@@ -710,10 +746,272 @@ class RBDAlgorithms:
 
         return self.math.concatenate([tau_base, tau_joints_vec], axis=-1)
 
-    def aba(self):
-        raise NotImplementedError
+    def aba(
+        self,
+        base_transform: npt.ArrayLike,
+        joint_positions: npt.ArrayLike,
+        base_velocity: npt.ArrayLike,
+        joint_velocities: npt.ArrayLike,
+        joint_torques: npt.ArrayLike,
+        g: npt.ArrayLike,
+        external_wrenches: dict[str, npt.ArrayLike] | None = None,
+    ) -> npt.ArrayLike:
+        """Featherstone Articulated Body Algorithm for floating-base forward dynamics.
+
+        Args:
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+            base_velocity (npt.ArrayLike): The spatial velocity of the base
+            joint_velocities (npt.ArrayLike): The joints velocities
+            joint_torques (npt.ArrayLike): The joints torques/forces
+            g (npt.ArrayLike | None, optional): The gravity vector
+            external_wrenches (dict[str, npt.ArrayLike] | None, optional): A dictionary of external wrenches applied to specific links. Keys are link names, and values are 6D wrench vectors. Defaults to None.
+
+        Returns:
+            accelerations (npt.ArrayLike): The spatial acceleration of the base and joints accelerations
+        """
+        model = self.model
+        math = self.math
+
+        Nnodes = model.N
+        n = model.NDoF
+        root_name = self.root_link
+
+        (
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            joint_torques,
+            g,
+        ) = self._convert_to_arraylike(
+            base_transform,
+            joint_positions,
+            base_velocity,
+            joint_velocities,
+            joint_torques,
+            g,
+        )
+
+        T = lambda X: math.swapaxes(X, -2, -1)
+
+        batch = base_transform.shape[:-2] if base_transform.ndim > 2 else ()
+
+        if external_wrenches is not None:
+            generalized_ext = self.math.factory.zeros(batch + (6 + n,))
+            for frame, wrench in external_wrenches.items():
+                wrench_arr = self._convert_to_arraylike(wrench)
+                J = self.jacobian(frame, base_transform, joint_positions)
+                generalized_ext = generalized_ext + self.math.mxv(T(J), wrench_arr)
+
+            base_ext = generalized_ext[..., :6]
+            joint_ext = (
+                generalized_ext[..., 6:]
+                if n > 0
+                else self.math.zeros_like(joint_torques)
+            )
+        else:
+            base_ext = self.math.factory.zeros(batch + (6,))
+            joint_ext = self.math.zeros_like(joint_torques)
+
+        joint_torques_eff = joint_torques + joint_ext
+
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            B_X_BI = math.adjoint_mixed_inverse(base_transform)
+        elif (
+            self.frame_velocity_representation
+            == Representations.BODY_FIXED_REPRESENTATION
+        ):
+            B_X_BI = math.factory.eye(batch + (6,)) if batch else math.factory.eye(6)
+        else:
+            raise NotImplementedError(
+                "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
+            )
+
+        base_velocity_body = math.mxv(B_X_BI, base_velocity)
+        base_ext_body = math.mxv(B_X_BI, base_ext)
+
+        a0_input = math.mxv(math.adjoint_mixed_inverse(base_transform), g)
+
+        def zeros6():
+            return math.factory.zeros(batch + (6,)) if batch else math.factory.zeros(6)
+
+        def eye6():
+            return math.factory.eye(batch + (6,)) if batch else math.factory.eye(6)
+
+        def expand_to_match(vec, reference):
+            expanded = math.expand_dims(vec, axis=-1)
+            expanded_ndim = expanded.ndim
+            reference_ndim = reference.ndim
+            if expanded_ndim != reference_ndim:
+                expanded = math.expand_dims(expanded, axis=-1)
+            return expanded
+
+        Xup = [None] * Nnodes
+        Scols: list[ArrayLike | None] = [None] * Nnodes
+        v = [None] * Nnodes
+        c = [None] * Nnodes
+        IA = [None] * Nnodes
+        pA = [None] * Nnodes
+        g_acc = [None] * Nnodes
+
+        for idx, node in enumerate(model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            inertia = link_i.spatial_inertia()
+            IA[idx] = math.tile(inertia, batch + (1, 1)) if batch else inertia
+
+            if link_i.name == root_name:
+                Xup[idx] = eye6()
+                v[idx] = base_velocity_body
+                c[idx] = zeros6()
+                g_acc[idx] = a0_input
+            else:
+                pi = model.tree.get_idx_from_name(link_pi.name)
+
+                if joint_i is not None:
+                    q_i = (
+                        joint_positions[..., joint_i.idx]
+                        if joint_i.idx is not None
+                        else math.zeros_like(joint_positions[..., 0])
+                    )
+                    Xup[idx] = joint_i.spatial_transform(q=q_i)
+                else:
+                    Xup[idx] = eye6()
+
+                g_acc[idx] = math.mxv(Xup[idx], g_acc[pi])
+
+                if (joint_i is not None) and (joint_i.idx is not None):
+                    Si = joint_i.motion_subspace()
+                    Scols[idx] = Si
+                    qd_i = joint_velocities[..., joint_i.idx]
+                    vJ = math.vxs(Si, qd_i)
+                else:
+                    Scols[idx] = None
+                    vJ = zeros6()
+
+                v[idx] = math.mxv(Xup[idx], v[pi]) + vJ
+                c[idx] = math.mxv(math.spatial_skew(v[idx]), vJ)
+
+            pA[idx] = math.mxv(
+                math.spatial_skew_star(v[idx]), math.mxv(IA[idx], v[idx])
+            )
+
+        d_list: list[ArrayLike | None] = [None] * Nnodes
+        u_list: list[ArrayLike | None] = [None] * Nnodes
+        U_list: list[ArrayLike | None] = [None] * Nnodes
+
+        for idx, node in reversed(list(enumerate(model.tree))):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            if link_i.name == root_name:
+                continue
+
+            pi = model.tree.get_idx_from_name(link_pi.name)
+
+            Xpt = T(Xup[idx])
+
+            if Scols[idx] is not None:
+                S_i = Scols[idx]
+                U_i = math.mtimes(IA[idx], S_i)
+                d_i = math.mtimes(T(S_i), U_i)
+                tau_i = joint_torques_eff[..., joint_i.idx]
+                tau_vec = tau_i
+                Si_T_pA = math.mxv(T(S_i), pA[idx])[..., 0]
+                u_i = tau_vec - Si_T_pA
+
+                d_list[idx] = d_i
+                u_list[idx] = u_i
+                U_list[idx] = U_i
+
+                inv_d = math.inv(d_i)
+                Ia = IA[idx] - math.mtimes(U_i, math.mtimes(inv_d, T(U_i)))
+                u_i_expanded = expand_to_match(u_i, inv_d)
+                gain = math.mtimes(inv_d, u_i_expanded)
+                # Extract column vector
+                gain_vec = gain[..., 0]
+                pa = pA[idx] + math.mxv(Ia, c[idx]) + math.mxv(U_i, gain_vec)
+            else:
+                Ia = IA[idx]
+                pa = pA[idx] + math.mxv(Ia, c[idx])
+
+            IA[pi] = IA[pi] + math.mtimes(math.mtimes(Xpt, Ia), Xup[idx])
+            pA[pi] = pA[pi] + math.mxv(Xpt, pa)
+
+        root_idx = model.tree.get_idx_from_name(root_name)
+        rhs_root = base_ext_body - pA[root_idx] + math.mxv(IA[root_idx], a0_input)
+        a_base = math.solve(IA[root_idx], rhs_root)
+
+        a = [None] * Nnodes
+        a[root_idx] = a_base
+
+        qdd_entries: list[ArrayLike | None] = [None] * n if n > 0 else []
+
+        for idx, node in enumerate(model.tree):
+            link_i, joint_i, link_pi = node.get_elements()
+
+            if link_i.name == root_name:
+                continue
+
+            pi = model.tree.get_idx_from_name(link_pi.name)
+            a_pre = math.mxv(Xup[idx], a[pi]) + c[idx]
+            free_acc = g_acc[idx]
+            rel_acc = a_pre - free_acc if free_acc is not None else a_pre
+
+            if (
+                Scols[idx] is not None
+                and (joint_i is not None)
+                and (joint_i.idx is not None)
+            ):
+                S_i = Scols[idx]
+                U_i = U_list[idx]
+                U_T_rel_acc = math.mxv(T(U_i), rel_acc)[..., 0]
+                num = u_list[idx] - U_T_rel_acc
+                inv_d = math.inv(d_list[idx])
+                num_expanded = expand_to_match(num, inv_d)
+                gain_qdd = math.mtimes(inv_d, num_expanded)
+                qdd_col = gain_qdd[..., 0]
+                if joint_i.idx < n:
+                    qdd_entries[joint_i.idx] = qdd_col
+                a_correction_vec = math.mxv(S_i, qdd_col)
+                a[idx] = a_pre + a_correction_vec
+            else:
+                a[idx] = a_pre
+
+        if n > 0:
+            qdd_cols = []
+            for entry in qdd_entries:
+                if entry is None:
+                    qdd_cols.append(
+                        math.factory.zeros(batch + (1,))
+                        if batch
+                        else math.factory.zeros((1,))
+                    )
+                else:
+                    qdd_cols.append(entry)
+            joint_qdd = math.concatenate(qdd_cols, axis=-1)
+        else:
+            joint_qdd = (
+                math.factory.zeros(batch + (0,)) if batch else math.factory.zeros((0,))
+            )
+
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
+            Xm = math.adjoint_mixed(base_transform)
+            base_vel_mixed = math.mxv(Xm, base_velocity_body)
+            Xm_dot = math.adjoint_mixed_derivative(base_transform, base_vel_mixed)
+            base_acc = math.mxv(Xm, a_base) + math.mxv(Xm_dot, base_velocity_body)
+        else:
+            base_acc = a_base
+
+        return math.concatenate([base_acc, joint_qdd], axis=-1)
 
     def _convert_to_arraylike(self, *args):
+        """Convert inputs to ArrayLike if they are not already.
+        Args:
+            *args: Input arguments to be converted.
+        Returns:
+            Converted arguments as ArrayLike.
+        """
         if not args:
             raise ValueError("At least one argument is required")
 
@@ -723,5 +1021,4 @@ class RBDAlgorithms:
                 converted.append(arg)
             else:
                 converted.append(self.math.asarray(arg))
-
         return converted[0] if len(converted) == 1 else converted

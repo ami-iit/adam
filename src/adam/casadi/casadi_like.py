@@ -306,7 +306,63 @@ class SpatialMath(_SpatialMath):
         # Only 2-D supported; any request means "swap last two"
         return CasadiLike(x.array.T)
 
-    # --- algebra shortcuts used by algorithms ---
+    @staticmethod
+    def expand_dims(x: CasadiLike, axis: int) -> CasadiLike:
+        """Expand dimensions of a CasADi array.
+
+        Args:
+            x: Input array (CasadiLike)
+            axis: Position where new axis is to be inserted
+
+        Returns:
+            CasadiLike: Array with expanded dimensions
+        """
+        # If axis=-1, we're adding a column dimension to make it (n,1)
+        if axis == -1:
+            # Reshape to column vector
+            return CasadiLike(cs.reshape(x.array, (-1, 1)))
+        else:
+            # For other axes, just return as is (CasADi is 2D only)
+            return x
+
+    @staticmethod
+    def inv(x: CasadiLike) -> CasadiLike:
+        """Matrix inversion for CasADi.
+
+        Args:
+            x: Matrix to invert (CasadiLike)
+
+        Returns:
+            CasadiLike: Inverse of x
+        """
+        return CasadiLike(cs.inv(x.array))
+
+    @staticmethod
+    def solve(A: CasadiLike, B: CasadiLike) -> CasadiLike:
+        """Solve linear system Ax = B for x using CasADi.
+
+        Args:
+            A: Coefficient matrix (CasadiLike)
+            B: Right-hand side vector or matrix (CasadiLike)
+
+        Returns:
+            CasadiLike: Solution x
+        """
+        return CasadiLike(cs.solve(A.array, B.array))
+
+    @staticmethod
+    def mtimes(A: CasadiLike, B: CasadiLike) -> CasadiLike:
+        """Matrix-matrix multiplication for CasADi.
+
+        Args:
+            A: First matrix (CasadiLike)
+            B: Second matrix (CasadiLike)
+
+        Returns:
+            CasadiLike: Result of A @ B
+        """
+        return CasadiLike(cs.mtimes(A.array, B.array))
+
     @staticmethod
     def mxv(m: CasadiLike, v: CasadiLike) -> CasadiLike:
         """Matrix-vector multiplication for CasADi.

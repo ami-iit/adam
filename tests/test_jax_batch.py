@@ -616,3 +616,83 @@ def test_gravity_term(setup_test):
 
     # Verify batch variation
     assert not jnp.allclose(adam_gravity[0], adam_gravity[1], atol=1e-6)
+
+
+def test_aba(setup_test):
+    """Test Articulated Body Algorithm with batched inputs"""
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+    n_joints = robot_cfg.n_dof
+
+    # Create random torques for the batch
+    torques = jnp.array(np.random.randn(batch_size, n_joints) * 10)
+
+    # Create random wrenches for multiple frames
+    wrenches = {
+        "l_sole": jnp.array(np.random.randn(batch_size, 6) * 10),
+        "torso_1": jnp.array(np.random.randn(batch_size, 6) * 10),
+        "head": jnp.array(np.random.randn(batch_size, 6) * 10),
+    }
+
+    # Compute ABA
+    adam_qdd = adam_kin_dyn.aba(
+        base_transform=state.H,
+        joint_positions=state.joints_pos,
+        base_velocity=state.base_vel,
+        joint_velocities=state.joints_vel,
+        joint_torques=torques,
+        external_wrenches=wrenches,
+    )
+
+    # Check output shape
+    assert adam_qdd.shape == (batch_size, 6 + n_joints)
+
+    # Test gradient computation
+    def aba_sum(H, joints_pos, base_vel, joints_vel, torques):
+        return adam_kin_dyn.aba(
+            H, joints_pos, base_vel, joints_vel, torques, wrenches
+        ).sum()
+
+    grad_fn = grad(aba_sum, argnums=(0, 1, 2, 3, 4))
+    try:
+        grad_results = grad_fn(
+            state.H, state.joints_pos, state.base_vel, state.joints_vel, torques
+        )
+        assert all(g is not None for g in grad_results)
+    except Exception as e:
+        raise ValueError(f"Gradient computation failed: {e}")
+
+    # Verify using the equations of motion: M @ qdd + h = tau + J^T @ wrench
+    M = adam_kin_dyn.mass_matrix(state.H, state.joints_pos)
+    h = adam_kin_dyn.bias_force(
+        state.H, state.joints_pos, state.base_vel, state.joints_vel
+    )
+
+    # Compute generalized external wrenches
+    generalized_external_wrenches = jnp.zeros((batch_size, 6 + n_joints))
+    for frame, wrench in wrenches.items():
+        J = adam_kin_dyn.jacobian(frame, state.H, state.joints_pos)
+        # J shape: (batch_size, 6, 6+n_joints), wrench shape: (batch_size, 6)
+        # J^T @ wrench for each batch element
+        generalized_external_wrenches += jnp.einsum(
+            "bij,bj->bi", J.transpose((0, 2, 1)), wrench
+        )
+
+    # Create full generalized forces (base wrench is zero + joint torques)
+    base_wrench = jnp.zeros((batch_size, 6))
+    full_tau = jnp.concatenate([base_wrench, torques], axis=1)
+
+    # Compute residual: M @ qdd + h - tau - J^T @ wrench = 0
+    residual = (
+        jnp.einsum("bij,bj->bi", M, adam_qdd)
+        + h
+        - full_tau
+        - generalized_external_wrenches
+    )
+
+    # Assert residual is close to zero
+    assert jnp.allclose(
+        residual, jnp.zeros_like(residual), atol=1e-4
+    ), f"Residual max: {jnp.abs(residual).max()}"
+
+    # Verify batch variation
+    assert not jnp.allclose(adam_qdd[0], adam_qdd[1], atol=1e-6)

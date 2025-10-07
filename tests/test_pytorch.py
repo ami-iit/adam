@@ -130,3 +130,59 @@ def test_gravity_term(setup_test):
     idyn_gravity = robot_cfg.idyn_function_values.gravity_term
     adam_gravity = adam_kin_dyn.gravity_term(state.H, state.joints_pos)
     assert idyn_gravity - to_numpy(adam_gravity) == pytest.approx(0.0, abs=1e-4)
+
+
+def test_aba(setup_test):
+    adam_kin_dyn, robot_cfg, state = setup_test
+    torques = (
+        torch.randn(
+            len(state.joints_pos),
+            dtype=state.joints_pos.dtype,
+            device=state.joints_pos.device,
+        )
+        * 10
+    )
+    H = state.H
+    joints_pos = state.joints_pos
+    base_vel = state.base_vel
+    joints_vel = state.joints_vel
+
+    wrenches = {
+        "l_sole": torch.randn(
+            6, dtype=state.joints_pos.dtype, device=state.joints_pos.device
+        )
+        * 10,
+        "torso_1": torch.randn(
+            6, dtype=state.joints_pos.dtype, device=state.joints_pos.device
+        )
+        * 10,
+        "head": torch.randn(
+            6, dtype=state.joints_pos.dtype, device=state.joints_pos.device
+        )
+        * 10,
+    }
+
+    adam_qdd = adam_kin_dyn.aba(
+        base_transform=H,
+        joint_positions=joints_pos,
+        base_velocity=base_vel,
+        joint_velocities=joints_vel,
+        joint_torques=torques,
+        external_wrenches=wrenches,
+    )
+
+    M = adam_kin_dyn.mass_matrix(H, joints_pos)
+    h = adam_kin_dyn.bias_force(H, joints_pos, base_vel, joints_vel)
+
+    generalized_external_wrenches = torch.zeros(
+        6 + len(joints_pos), dtype=H.dtype, device=H.device
+    )
+    for frame, wrench in wrenches.items():
+        J = adam_kin_dyn.jacobian(frame, H, joints_pos)
+        generalized_external_wrenches += J.T @ wrench
+
+    base_wrench = torch.zeros(6, dtype=H.dtype, device=H.device)
+    full_tau = torch.concatenate([base_wrench, torques])
+    residual = M @ adam_qdd + h - full_tau - generalized_external_wrenches
+
+    assert to_numpy(residual) == pytest.approx(0.0, abs=1e-4)

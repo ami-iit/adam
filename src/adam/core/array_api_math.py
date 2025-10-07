@@ -238,3 +238,15 @@ class ArrayAPISpatialMath(SpatialMath):
     def transpose(self, x: ArrayAPILike, dims: tuple) -> ArrayAPILike:
         xp = self._xp(x.array)
         return self.factory.asarray(xp.permute_dims(x.array, dims))
+
+    def inv(self, x: ArrayAPILike) -> ArrayAPILike:
+        xp = self._xp(x.array)
+        return self.factory.asarray(xp.linalg.inv(x.array))
+
+    def mtimes(self, A: ArrayAPILike, B: ArrayAPILike) -> ArrayAPILike:
+        xp = self._xp(A.array, B.array)
+        return self.factory.asarray(xp.matmul(A.array, B.array))
+
+    def solve(self, A: ArrayAPILike, B: ArrayAPILike) -> ArrayAPILike:
+        xp = self._xp(A.array, B.array)
+        return self.factory.asarray(xp.linalg.solve(A.array, B.array))

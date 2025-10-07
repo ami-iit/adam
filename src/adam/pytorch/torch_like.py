@@ -38,3 +38,7 @@ class TorchLikeFactory(ArrayAPIFactory):
 class SpatialMath(ArrayAPISpatialMath):
     def __init__(self, spec: ArraySpec | None = None):
         super().__init__(TorchLikeFactory(spec=spec))
+
+    def solve(self, A: ArrayAPILike, B: ArrayAPILike) -> ArrayAPILike:
+        """Override solve to use torch.linalg.solve directly to avoid array_api_compat bug"""
+        return self.factory.asarray(torch.linalg.solve(A.array, B.array))
