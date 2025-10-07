@@ -487,7 +487,7 @@ class KinDynComputations:
             external_wrenches (dict[str, cs.SX], optional): External wrenches applied to the robot. Defaults to None.
 
         Returns:
-            cs.SX: The joint accelerations and the base acceleration
+            cs.SX: The base acceleration and the joint accelerations
         """
         if (
             isinstance(base_transform, cs.MX)

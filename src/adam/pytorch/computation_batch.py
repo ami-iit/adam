@@ -300,7 +300,7 @@ class KinDynComputationsBatch:
             external_wrenches (dict[str, torch.Tensor], optional): External wrenches applied to the robot. Defaults to None.
 
         Returns:
-            torch.Tensor: The batch of joint accelerations and the base acceleration
+            torch.Tensor: The batch of base acceleration and the joint accelerations
         """
 
         return self.rbdalgos.aba(

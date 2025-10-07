@@ -288,7 +288,7 @@ class KinDynComputations:
             external_wrenches (dict[str, np.ndarray], optional): External wrenches applied to the robot. Defaults to None.
 
         Returns:
-            np.ndarray: The joint accelerations and the base acceleration
+            np.ndarray: The base acceleration and the joint accelerations
         """
 
         return self.rbdalgos.aba(
