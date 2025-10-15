@@ -1,7 +1,7 @@
 # adam
 
-[![adam](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ami-iit/ADAM/actions/workflows/tests.yml)
-[![](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://github.com/ami-iit/ADAM/blob/main/LICENSE)
+[![adam](https://github.com/ami-iit/adam/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ami-iit/adam/actions/workflows/tests.yml)
+[![](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://github.com/ami-iit/adam/blob/main/LICENSE)
 
 **Automatic Differentiation for rigid-body-dynamics AlgorithMs**
 
@@ -56,10 +56,10 @@ The installation can be done either using the Python provided by apt (on Debian-
 
 ### 🐍 Installation with pip
 
-Install `python3`, if not installed (in **Ubuntu 20.04**):
+Install `python3`, if not installed, for example on  **Ubuntu**:
 
 ```bash
-sudo apt install python3.8
+sudo apt install python3 python3-pip python3-venv
 ```
 
 Create a [virtual environment](https://docs.python.org/3/library/venv.html#venv-def), if you prefer. For example:
@@ -99,7 +99,7 @@ Inside the virtual environment, install the library from pip:
 If you want the last version:
 
 ```bash
-pip install adam-robotics[selected-interface]@git+https://github.com/ami-iit/ADAM
+pip install adam-robotics[selected-interface]@git+https://github.com/ami-iit/adam
 ```
 
 or clone the repo and install:
@@ -173,7 +173,7 @@ Activate the environment, clone the repo and install the library:
 
 ```bash
 conda activate adamenv
-git clone https://github.com/ami-iit/ADAM.git
+git clone https://github.com/ami-iit/adam.git
 cd adam
 pip install --no-deps .
 ```
