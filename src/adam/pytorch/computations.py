@@ -23,7 +23,7 @@ class KinDynComputations:
         device: torch.device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         ),
-        dtypes: torch.dtype = torch.float64,
+        dtypes: torch.dtype = torch.float32,
         root_link: str = None,
         gravity: np.array = torch.tensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
