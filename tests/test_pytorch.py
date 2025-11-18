@@ -10,7 +10,10 @@ from adam.pytorch import KinDynComputations
 def setup_test(tests_setup, device) -> KinDynComputations | RobotCfg | State:
     robot_cfg, state = tests_setup
     adam_kin_dyn = KinDynComputations(
-        robot_cfg.model_path, robot_cfg.joints_name_list, device=device
+        robot_cfg.model_path,
+        robot_cfg.joints_name_list,
+        device=device,
+        dtype=torch.float64,
     )
     adam_kin_dyn.set_frame_velocity_representation(robot_cfg.velocity_representation)
     # convert state quantities to torch tensors
