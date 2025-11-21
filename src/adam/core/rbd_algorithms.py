@@ -943,15 +943,16 @@ class RBDAlgorithms:
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
         ):
-            B_X_BI = math.factory.eye(batch_shape + (6,))
-            BI_X_B = math.factory.eye(batch_shape + (6,))
+            B_X_BI = BI_X_B = math.factory.eye(batch_shape + (6,))
         else:
             raise NotImplementedError(
                 "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
             )
 
         base_velocity_body = math.mxv(B_X_BI, base_velocity)
-        base_ext_body = math.mxv(BI_X_B, base_ext)
+        
+        B_star_BI = math.swapaxes(BI_X_B, -2, -1)
+        base_ext_body = math.mxv(B_star_BI, base_ext)
 
         a0_input = math.mxv(math.adjoint_mixed_inverse(base_transform), g)
 
@@ -1116,7 +1117,7 @@ class RBDAlgorithms:
             self.frame_velocity_representation
             == Representations.INERTIAL_FIXED_REPRESENTATION
         ):
-            X = math.adjoint(base_transform)
+            X = math.adjoint(base_transform) 
             base_vel_inertial = math.mxv(X, base_velocity_body)
             X_dot = math.adjoint_derivative(base_transform, base_vel_inertial)
             base_acc = math.mxv(X, a_base) + math.mxv(X_dot, base_velocity_body)
