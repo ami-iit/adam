@@ -645,7 +645,6 @@ class RBDAlgorithms:
             == Representations.BODY_FIXED_REPRESENTATION
         ):
 
-
             top = self.math.concatenate([Xm, Z6n], axis=-1)
             bot = self.math.concatenate([Zn6, In], axis=-1)
             X = self.math.concatenate([top, bot], axis=-2)
