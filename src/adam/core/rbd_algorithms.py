@@ -497,7 +497,7 @@ class RBDAlgorithms:
             B_v_I = base_velocity
         else:
             raise NotImplementedError(
-                "Only BODY_FIXED_REPRESENTATION and MIXED_REPRESENTATION are implemented"
+                "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION, and INERTIAL_FIXED_REPRESENTATION are implemented"
             )
 
         v = self.math.mxv(self.math.adjoint(L_H_B), B_v_I)
