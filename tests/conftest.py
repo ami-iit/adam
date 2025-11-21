@@ -54,6 +54,7 @@ class RobotCfg:
 VELOCITY_REPRESENTATIONS = [
     Representations.MIXED_REPRESENTATION,
     Representations.BODY_FIXED_REPRESENTATION,
+    Representations.INERTIAL_FIXED_REPRESENTATION,
 ]
 
 ROBOTS = [
@@ -126,6 +127,8 @@ def tests_setup(request) -> RobotCfg | State:
         idyn_representation = idyntree.BODY_FIXED_REPRESENTATION
     elif velocity_representation == Representations.MIXED_REPRESENTATION:
         idyn_representation = idyntree.MIXED_REPRESENTATION
+    elif velocity_representation == Representations.INERTIAL_FIXED_REPRESENTATION:
+        idyn_representation = idyntree.INERTIAL_FIXED_REPRESENTATION
     else:
         raise ValueError(f"Unknown velocity representation: {velocity_representation}")
     kin_dyn.setFrameVelocityRepresentation(idyn_representation)
