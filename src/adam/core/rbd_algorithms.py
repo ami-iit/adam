@@ -765,8 +765,7 @@ class RBDAlgorithms:
             == Representations.INERTIAL_FIXED_REPRESENTATION
         ):
             B_X_BI = math.adjoint_inverse(base_transform)
-            B_X_BI_dot = math.adjoint_inverse_derivative(base_transform, base_velocity)
-            transformed_acc = math.mxv(B_X_BI_dot, base_velocity)
+            transformed_acc = math.factory.zeros(batch_shape + (6,))
         else:
             raise NotImplementedError(
                 "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
