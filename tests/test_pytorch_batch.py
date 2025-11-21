@@ -12,7 +12,10 @@ def setup_test(tests_setup, device) -> KinDynComputationsBatch | RobotCfg | Stat
     robot_cfg, state = tests_setup
 
     adam_kin_dyn = KinDynComputationsBatch(
-        robot_cfg.model_path, robot_cfg.joints_name_list, device=device
+        robot_cfg.model_path,
+        robot_cfg.joints_name_list,
+        device=device,
+        dtype=torch.float64,
     )
     adam_kin_dyn.set_frame_velocity_representation(robot_cfg.velocity_representation)
 

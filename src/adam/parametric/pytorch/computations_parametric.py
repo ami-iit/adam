@@ -26,7 +26,7 @@ class KinDynComputationsParametric:
         device: torch.device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         ),
-        dtypes: torch.dtype = torch.float64,
+        dtype: torch.dtype = torch.float64,
         root_link: str = None,
         gravity: np.array = torch.tensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
@@ -37,9 +37,9 @@ class KinDynComputationsParametric:
             links_name_list (list): list of parametric links
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
-        ref = torch.tensor(0.0, dtype=dtypes, device=device)
+        ref = torch.tensor(0.0, dtype=dtype, device=device)
         self.math = SpatialMath(spec=spec_from_reference(ref))
-        self.g = gravity.to(dtype=dtypes, device=device)
+        self.g = gravity.to(dtype=dtype, device=device)
         self.links_name_list = links_name_list
         self.joints_name_list = joints_name_list
         self.urdfstring = urdfstring

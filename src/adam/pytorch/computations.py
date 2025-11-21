@@ -23,7 +23,7 @@ class KinDynComputations:
         device: torch.device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         ),
-        dtypes: torch.dtype = torch.float64,
+        dtype: torch.dtype = torch.float32,
         root_link: str = None,
         gravity: np.array = torch.tensor([0, 0, -9.80665, 0, 0, 0]),
     ) -> None:
@@ -33,14 +33,14 @@ class KinDynComputations:
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
-        ref = torch.tensor(0.0, dtype=dtypes, device=device)
+        ref = torch.tensor(0.0, dtype=dtype, device=device)
         spec = spec_from_reference(ref)
         math = SpatialMath(spec=spec)
         factory = URDFModelFactory(path=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
-        self.g = gravity.to(dtype=dtypes, device=device)
+        self.g = gravity.to(dtype=dtype, device=device)
         if root_link is not None:
             warnings.warn(
                 "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF",
