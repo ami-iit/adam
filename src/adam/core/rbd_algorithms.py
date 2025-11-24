@@ -480,28 +480,31 @@ class RBDAlgorithms:
         L_H_B = self.math.homogeneous_inverse(B_H_L)
 
         if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            B_v_I = self.math.mxv(
+            # frame C = B[I] for mixed representation
+            B_v_C = self.math.mxv(
                 self.math.adjoint_mixed_inverse(base_transform), base_velocity
             )
         elif (
             self.frame_velocity_representation
             == Representations.INERTIAL_FIXED_REPRESENTATION
         ):
-            B_v_I = self.math.mxv(
+            # frame C = I for inertial-fixed representation
+            B_v_C = self.math.mxv(
                 self.math.adjoint_inverse(base_transform), base_velocity
             )
         elif (
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
         ):
-            B_v_I = base_velocity
+            # frame C = B for body-fixed representation
+            B_v_C = base_velocity
         else:
             raise NotImplementedError(
                 "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION, and INERTIAL_FIXED_REPRESENTATION are implemented"
             )
 
-        v = self.math.mxv(self.math.adjoint(L_H_B), B_v_I)
-        a = self.math.mxv(self.math.adjoint_derivative(L_H_B, v), B_v_I)
+        v = self.math.mxv(self.math.adjoint(L_H_B), B_v_C)
+        a = self.math.mxv(self.math.adjoint_derivative(L_H_B, v), B_v_C)
 
         J_base_full = self.math.adjoint_inverse(B_H_L)
         J_base_cols = [J_base_full[..., :, i : i + 1] for i in range(6)]
@@ -580,7 +583,7 @@ class RBDAlgorithms:
         X = self.math.concatenate([top, bottom], axis=-2)
 
         B_H_I = self.math.homogeneous_inverse(base_transform)
-        B_H_I_deriv = adj_derivative(B_H_I, -B_v_I)
+        B_H_I_deriv = adj_derivative(B_H_I, -B_v_C)
 
         Z_NxN = self.math.factory.zeros(batch_size + (self.NDoF, self.NDoF))
         topd = self.math.concatenate([B_H_I_deriv, Z_6xN], axis=-1)
@@ -725,21 +728,24 @@ class RBDAlgorithms:
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
         ):
-            B_X_I = math.factory.eye(batch_shape + (6,))
+            # frame C = B for body-fixed representation
+            B_X_C = math.factory.eye(batch_shape + (6,))
             transformed_acc = math.factory.zeros(batch_shape + (6,))
         elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            B_X_I = math.adjoint_mixed_inverse(base_transform)
+            # frame C = B[I] for mixed representation
+            B_X_C = math.adjoint_mixed_inverse(base_transform)
             omega = base_velocity[..., 3:]
             vlin = base_velocity[..., :3]
             skew_omega_times_vlin = math.mxv(math.skew(omega), vlin)
-            top3 = -math.mxv(B_X_I[..., :3, :3], skew_omega_times_vlin)
+            top3 = -math.mxv(B_X_C[..., :3, :3], skew_omega_times_vlin)
             bot3 = math.factory.zeros(batch_shape + (3,))
             transformed_acc = math.concatenate([top3, bot3], axis=-1)
         elif (
             self.frame_velocity_representation
             == Representations.INERTIAL_FIXED_REPRESENTATION
         ):
-            B_X_I = math.adjoint_inverse(base_transform)
+            # frame C = I for inertial-fixed representation
+            B_X_C = math.adjoint_inverse(base_transform)
             transformed_acc = math.factory.zeros(batch_shape + (6,))
         else:
             raise NotImplementedError(
@@ -766,7 +772,7 @@ class RBDAlgorithms:
 
             if idx == root_idx:
                 Xup[idx] = self._root_spatial_transform
-                v[idx] = math.mxv(B_X_I, base_velocity)
+                v[idx] = math.mxv(B_X_C, base_velocity)
                 a[idx] = math.mxv(Xup[idx], a0)
                 continue
 
@@ -816,7 +822,7 @@ class RBDAlgorithms:
                         math.swapaxes(Xup[idx], -2, -1), Fi
                     )
 
-        tau_base = math.mxv(math.swapaxes(B_X_I, -2, -1), tau_base)
+        tau_base = math.mxv(math.swapaxes(B_X_C, -2, -1), tau_base)
 
         if n > 0:
             zero_tau = math.factory.zeros(batch_shape + (1,))
