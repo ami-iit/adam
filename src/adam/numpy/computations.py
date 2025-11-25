@@ -6,12 +6,13 @@ import numpy as np
 
 from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
-from adam.model import Model, URDFModelFactory
+from adam.model import Model, build_model_factory
+from adam.model.kindyn_mixin import KinDynFactoryMixin
 from adam.numpy.numpy_like import SpatialMath
 from adam.core.array_api_math import spec_from_reference
 
 
-class KinDynComputations:
+class KinDynComputations(KinDynFactoryMixin):
     """This is a small class that retrieves robot quantities using NumPy for Floating Base systems."""
 
     def __init__(
@@ -24,13 +25,13 @@ class KinDynComputations:
     ) -> None:
         """
         Args:
-            urdfstring (str): either path or string of the urdf
+            urdfstring (str): path/string of a URDF, a Mujoco MjModel or XML string, or a ModelFactory
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
         ref = np.array(0.0, dtype=dtype)
         math = SpatialMath(spec_from_reference(ref))
-        factory = URDFModelFactory(path=urdfstring, math=math)
+        factory = build_model_factory(description=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = model.NDoF
