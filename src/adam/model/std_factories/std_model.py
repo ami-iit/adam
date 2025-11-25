@@ -5,7 +5,9 @@ import xml.etree.ElementTree as ET
 import urdf_parser_py.urdf
 
 from adam.core.spatial_math import SpatialMath
-from adam.model import ModelFactory, StdJoint, StdLink
+from adam.model.abc_factories import ModelFactory
+from adam.model.std_factories.std_joint import StdJoint
+from adam.model.std_factories.std_link import StdLink
 
 
 def urdf_remove_sensors_tags(xml_string):
