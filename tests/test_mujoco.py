@@ -11,13 +11,7 @@ from adam import Representations
 from adam.numpy.computations import KinDynComputations
 
 
-SUPPORTED_JOINTS = {
-    mujoco.mjtJoint.mjJNT_HINGE,
-    mujoco.mjtJoint.mjJNT_SLIDE,
-    mujoco.mjtJoint.mjJNT_FREE,  # floating base handled separately
-}
-
-DESCRIPTION_NAME = "g1_mj_description"
+DESCRIPTION_NAME = "apollo_mj_description"
 CACHE_PATH = "/home/glerario-iit.local/adam/mujoco_menagerie"
 
 
@@ -60,7 +54,7 @@ def _base_velocity_transform(
     base_rotation: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    MuJoCo encodes a free-joint qvel as [I v_B, B ω_B] (I v_B = I \dot{p}_B).
+    MuJoCo encodes a free-joint qvel as [I v_B, B ω_B] (I v_B = I \\dot{p}_B).
     ADAM mixed vel representation uses [I v_B, I ω_B]. Given R_IB = base_rotation,
       I ω_B = R_IB @ (B ω_B).
     Adj maps qvel_MJ -> nu_ADAM for the base; Adj_inv reverses it.
