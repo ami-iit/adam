@@ -62,8 +62,7 @@ def _normalize_quaternion(quat: np.ndarray) -> np.ndarray:
 
 def _rotate_vector(quat: np.ndarray, vec: np.ndarray) -> np.ndarray:
     """Rotate a vector using quaternion [w, x, y, z]."""
-    # rot = _rotation_matrix_from_quat(quat)
-    rot = R.from_quat([quat[1], quat[2], quat[3], quat[0]]).as_matrix()
+    rot = R.from_quat(quat, scalar_first=True).as_matrix()
     return rot @ vec
 
 
@@ -98,15 +97,8 @@ class MujocoModelFactory(ModelFactory):
         if isinstance(path, self.mujoco.MjModel):
             return path
 
-        path_obj = pathlib.Path(path)
-        if path_obj.exists():
-            return self.mujoco.MjModel.from_xml_path(str(path_obj))
-
-        if isinstance(path, str) and "<mujoco" in path:
-            return self.mujoco.MjModel.from_xml_string(path)
-
         raise ValueError(
-            f"Cannot load Mujoco model from {path}. Provide a valid file path or mujoco XML string."
+            f"Cannot load Mujoco model from {path}. Provide a valid file path."
         )
 
     def _body_name(self, body_id: int) -> str:
@@ -139,7 +131,7 @@ class MujocoModelFactory(ModelFactory):
         )
         origin = MujocoOrigin(
             xyz=ipos,
-            rpy=R.from_quat([iquat[1], iquat[2], iquat[3], iquat[0]]).as_euler("xyz"),
+            rpy=R.from_quat(iquat, scalar_first=True).as_euler("xyz"),
         )
         return MujocoInertial(mass=mass, inertia=inertia, origin=origin)
 
@@ -175,9 +167,7 @@ class MujocoModelFactory(ModelFactory):
             j_pos = np.array(self.mj_model.jnt_pos[joint_id], dtype=float)
             if np.linalg.norm(j_pos) > 0.0:
                 xyz = xyz + _rotate_vector(body_quat, j_pos)
-        rpy = R.from_quat(
-            [body_quat[1], body_quat[2], body_quat[3], body_quat[0]]
-        ).as_euler("xyz")
+        rpy = R.from_quat(body_quat, scalar_first=True).as_euler("xyz")
         return MujocoOrigin(xyz=xyz, rpy=rpy)
 
     def _build_limits(self, joint_id: int, joint_type: str) -> Optional[Limits]:
@@ -194,7 +184,6 @@ class MujocoModelFactory(ModelFactory):
             return "revolute"
         if mj_type == self.mujoco.mjtJoint.mjJNT_SLIDE:
             return "prismatic"
-        # Floating base or ball joints are handled outside of the articulated chain.
         return "unsupported"
 
     def _build_joint(
