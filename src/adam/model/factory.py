@@ -16,7 +16,7 @@ def build_model_factory(description: Any, math) -> ModelFactory:
     """Return a ModelFactory from a URDF string/path or a Mujoco model."""
 
     if _is_mujoco_model(description):
-        from adam.model.std_factories.mujoco_model import MujocoModelFactory
+        from adam.model.mj_factory.mujoco_model import MujocoModelFactory
 
         return MujocoModelFactory(path=description, math=math)
 
