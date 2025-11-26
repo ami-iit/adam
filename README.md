@@ -403,7 +403,7 @@ J = kinDyn.jacobian('frame_name', w_H_b, joints)
 > When using `from_mujoco_model`, adam automatically extracts the joint names from the MuJoCo model. You can also specify `use_mujoco_actuators=True` to use actuator names instead of joint names.
 
 > [!WARNING]
-> MuJoCo uses a different velocity representation for the floating base. The free joint velocity in MuJoCo is `[I_\dot{p}_B, B_ω_B]`, while mixed representation uses `[I_\dot{p}_B, I_ω_B]`. Make sure to handle this transformation when comparing with MuJoCo computations.
+> MuJoCo uses a different velocity representation for the floating base. The free joint velocity in MuJoCo is `[I \dot{p}_B, B \omega_B]`, while mixed representation uses `[I \dot{p}_B, I \omega_B]`. Make sure to handle this transformation when comparing with MuJoCo computations.
 
 ### Inverse Kinematics
 
