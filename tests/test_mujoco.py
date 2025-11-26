@@ -1,4 +1,5 @@
 import os
+import tempfile
 from pathlib import Path
 
 import mujoco
@@ -11,12 +12,18 @@ from adam import Representations
 from adam.numpy.computations import KinDynComputations
 
 
-DESCRIPTION_NAME = "apollo_mj_description"
-CACHE_PATH = "/home/glerario-iit.local/adam/mujoco_menagerie"
-
+DESCRIPTION_NAME = "g1_mj_description"
+CACHE_PATH = Path(
+    os.environ.get(
+        "ROBOT_DESCRIPTIONS_CACHE",
+        Path(tempfile.gettempdir()) / "robot_descriptions_cache",
+    )
+)
+DEFAULT_MENAGERIE_URL = "https://raw.githubusercontent.com/deepmind/mujoco_menagerie/main"
 
 def _load_model(description: str, cache_dir: Path | str) -> mujoco.MjModel:
-    os.environ["ROBOT_DESCRIPTIONS_CACHE"] = str(cache_dir)
+    os.environ.setdefault("ROBOT_DESCRIPTIONS_CACHE", str(cache_dir))
+    os.environ.setdefault("ROBOT_DESCRIPTIONS_URL", DEFAULT_MENAGERIE_URL)
     print(f"Loading robot description '{description}' with cache dir '{cache_dir}'")
     try:
         model = load_robot_description(description)
