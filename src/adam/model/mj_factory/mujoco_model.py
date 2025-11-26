@@ -98,7 +98,7 @@ class MujocoModelFactory(ModelFactory):
             return path
 
         raise ValueError(
-            f"Cannot load Mujoco model from {path}. Provide a valid file path."
+            f"Expected a MuJoCo MjModel object, but got {type(path).__name__}."
         )
 
     def _body_name(self, body_id: int) -> str:
