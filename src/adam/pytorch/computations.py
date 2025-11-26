@@ -30,7 +30,7 @@ class KinDynComputations(KinDynFactoryMixin):
     ) -> None:
         """
         Args:
-            urdfstring (str): path/string of a URDF or a MuJoCo MjModel. 
+            urdfstring (str): path/string of a URDF or a MuJoCo MjModel.
                 NOTE: The parameter name `urdfstring` is deprecated and will be renamed to `model` in a future release.
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
