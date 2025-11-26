@@ -31,9 +31,9 @@
     - [CasADi interface](#casadi-interface)
     - [PyTorch interface](#pytorch-interface)
     - [PyTorch Batched interface](#pytorch-batched-interface)
+    - [MuJoCo interface](#mujoco-interface)
     - [Inverse Kinematics](#inverse-kinematics)
   - [🦸‍♂️ Contributing](#️-contributing)
-  - [Todo](#todo)
 
 ## 🐍 Dependencies
 
@@ -352,6 +352,59 @@ M = kinDyn.mass_matrix(w_H_b_batch, joints_batch)
 w_H_f = kinDyn.forward_kinematics('frame_name', w_H_b_batch, joints_batch)
 ```
 
+### MuJoCo interface
+
+adam supports loading models directly from [MuJoCo](https://mujoco.org/) `MjModel` objects. This is useful when working with MuJoCo simulations or models from [robot_descriptions](https://github.com/robot-descriptions/robot_descriptions.py).
+
+```python
+import mujoco
+import numpy as np
+from adam import Representations
+from adam.numpy import KinDynComputations
+
+# Load a MuJoCo model (e.g., from robot_descriptions)
+from robot_descriptions.loaders.mujoco import load_robot_description
+mj_model = load_robot_description("g1_mj_description")
+
+# Create KinDynComputations directly from MuJoCo model
+kinDyn = KinDynComputations.from_mujoco_model(mj_model)
+
+# Set velocity representation (default is mixed)
+kinDyn.set_frame_velocity_representation(Representations.MIXED_REPRESENTATION)
+
+# Set gravity to match MuJoCo settings
+kinDyn.g = np.concatenate([mj_model.opt.gravity, np.zeros(3)])
+
+# Create MuJoCo data and set state
+mj_data = mujoco.MjData(mj_model)
+mj_data.qpos[:] = your_qpos  # Your configuration
+mj_data.qvel[:] = your_qvel  # Your velocities
+mujoco.mj_forward(mj_model, mj_data)
+
+# Extract base transform from MuJoCo state (for floating-base robots)
+from scipy.spatial.transform import Rotation as R
+base_rot = R.from_quat(mj_data.qpos[3:7], scalar_first=True).as_matrix()
+base_pos = mj_data.qpos[0:3]
+w_H_b = np.eye(4)
+w_H_b[:3, :3] = base_rot
+w_H_b[:3, 3] = base_pos
+
+# Joint positions (excluding free joint).
+# Be sure the serialization between mujoco and adam is the same
+joints = mj_data.qpos[7:]
+
+# Compute dynamics quantities
+M = kinDyn.mass_matrix(w_H_b, joints)
+com_pos = kinDyn.CoM_position(w_H_b, joints)
+J = kinDyn.jacobian('frame_name', w_H_b, joints)
+```
+
+> [!NOTE]
+> When using `from_mujoco_model`, adam automatically extracts the joint names from the MuJoCo model. You can also specify `use_mujoco_actuators=True` to use actuator names instead of joint names.
+
+> [!WARNING]
+> MuJoCo uses a different velocity representation for the floating base. The free joint velocity in MuJoCo is `[I_\dot{p}_B, B_ω_B]`, while mixed representation uses `[I_\dot{p}_B, I_ω_B]`. Make sure to handle this transformation when comparing with MuJoCo computations.
+
 ### Inverse Kinematics
 
 adam provides an interface for solving inverse kinematics problems using CasADi. The solver supports
@@ -400,13 +453,3 @@ Open an issue with your feature request or if you spot a bug. Then, you can also
 
 > [!WARNING]
 > REPOSITORY UNDER DEVELOPMENT! We cannot guarantee stable API
-
-## Todo
-
-- [x] Center of Mass position
-- [x] Jacobians
-- [x] Forward kinematics
-- [x] Mass Matrix via CRBA
-- [x] Centroidal Momentum Matrix via CRBA
-- [x] Recursive Newton-Euler algorithm (still no acceleration in the algorithm, since it is used only for the computation of the bias force)
-- [ ] Articulated Body algorithm
