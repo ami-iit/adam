@@ -1,6 +1,5 @@
-import pathlib
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -9,6 +8,10 @@ from adam.core.spatial_math import SpatialMath
 from adam.model.abc_factories import Limits, ModelFactory
 from adam.model.std_factories.std_joint import StdJoint
 from adam.model.std_factories.std_link import StdLink
+
+# Type checking only - doesn't execute at runtime
+if TYPE_CHECKING:
+    import mujoco
 
 
 @dataclass
@@ -69,10 +72,10 @@ def _rotate_vector(quat: np.ndarray, vec: np.ndarray) -> np.ndarray:
 class MujocoModelFactory(ModelFactory):
     """Factory that builds a model starting from a mujoco.MjModel."""
 
-    def __init__(self, path: str | pathlib.Path, math: SpatialMath):
+    def __init__(self, mj_model: "mujoco.MjModel", math: SpatialMath):
         self.math = math
         self.mujoco = self._import_mujoco()
-        self.mj_model = self._load_model(path)
+        self.mj_model = self._model_exists(mj_model)
         fallback_name = "mujoco_model"
         self.name = getattr(self.mj_model, "name", None) or fallback_name
 
@@ -89,12 +92,12 @@ class MujocoModelFactory(ModelFactory):
             ) from exc
         return mujoco
 
-    def _load_model(self, path: str | pathlib.Path):
-        if isinstance(path, self.mujoco.MjModel):
-            return path
+    def _model_exists(self, mj_model):
+        if isinstance(mj_model, self.mujoco.MjModel):
+            return mj_model
 
         raise ValueError(
-            f"Expected a MuJoCo MjModel object, but got {type(path).__name__}."
+            f"Expected a MuJoCo MjModel object, but got {type(mj_model).__name__}."
         )
 
     def _body_name(self, body_id: int) -> str:
