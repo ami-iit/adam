@@ -89,7 +89,7 @@ class MujocoModelFactory(ModelFactory):
             import mujoco
         except ImportError as exc:  # pragma: no cover - dependency optional
             raise ImportError(
-                "The 'mujoco' package is required to load Mujoco models."
+                "The 'MuJoCo' package is required to load MuJoCo models."
             ) from exc
         return mujoco
 
