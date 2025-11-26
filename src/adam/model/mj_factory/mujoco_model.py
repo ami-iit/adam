@@ -73,11 +73,7 @@ class MujocoModelFactory(ModelFactory):
         self.math = math
         self.mujoco = self._import_mujoco()
         self.mj_model = self._load_model(path)
-        fallback_name = (
-            pathlib.Path(path).stem
-            if isinstance(path, (str, pathlib.Path))
-            else "mujoco_model"
-        )
+        fallback_name = "mujoco_model"
         self.name = getattr(self.mj_model, "name", None) or fallback_name
 
         self._links = self._build_links()
