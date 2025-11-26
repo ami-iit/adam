@@ -22,15 +22,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        env:
-          ROBOT_DESCRIPTIONS_CACHE: ${{ runner.temp }}/robot_descriptions_cache
         run: |
           python -m pip install --upgrade pip
           pip install .[test]
       - name: Test with pytest
-        env:
-          ROBOT_DESCRIPTIONS_CACHE: ${{ runner.temp }}/robot_descriptions_cache
-          ROBOT_DESCRIPTIONS_URL: https://raw.githubusercontent.com/deepmind/mujoco_menagerie/main
         run: |
-          mkdir -p "${ROBOT_DESCRIPTIONS_CACHE}"
           pytest

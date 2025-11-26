@@ -13,18 +13,10 @@ from adam.numpy.computations import KinDynComputations
 
 
 DESCRIPTION_NAME = "g1_mj_description"
-CACHE_PATH = Path(
-    os.environ.get(
-        "ROBOT_DESCRIPTIONS_CACHE",
-        Path(tempfile.gettempdir()) / "robot_descriptions_cache",
-    )
-)
-DEFAULT_MENAGERIE_URL = "https://raw.githubusercontent.com/deepmind/mujoco_menagerie/main"
 
-def _load_model(description: str, cache_dir: Path | str) -> mujoco.MjModel:
-    os.environ.setdefault("ROBOT_DESCRIPTIONS_CACHE", str(cache_dir))
-    os.environ.setdefault("ROBOT_DESCRIPTIONS_URL", DEFAULT_MENAGERIE_URL)
-    print(f"Loading robot description '{description}' with cache dir '{cache_dir}'")
+
+def _load_model(description: str) -> mujoco.MjModel:
+    print(f"Loading robot description '{description}'")
     try:
         model = load_robot_description(description)
     except Exception as exc:  # pragma: no cover - environment dependent
@@ -162,7 +154,7 @@ def _bias_forces(
 
 @pytest.fixture(scope="module")
 def mujoco_setup():
-    model = _load_model(DESCRIPTION_NAME, CACHE_PATH)
+    model = _load_model(DESCRIPTION_NAME)
 
     rng = np.random.default_rng(42)
     qpos = _random_configuration(model, rng)
