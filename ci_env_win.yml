@@ -19,3 +19,7 @@ dependencies:
   - requests
   - liecasadi
   - array-api-compat
+  - mujoco
+  - pip
+  - pip:
+      - robot_descriptions
