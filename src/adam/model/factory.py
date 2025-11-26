@@ -8,8 +8,11 @@ from adam.model.std_factories.std_model import URDFModelFactory
 
 
 def _is_mujoco_model(obj: Any) -> bool:
-    class_name = obj.__class__.__name__
-    return class_name == "MjModel"
+    try:
+        from mujoco import MjModel
+    except ImportError:
+        return False
+    return isinstance(obj, MjModel)
 
 
 def build_model_factory(description: Any, math) -> ModelFactory:
