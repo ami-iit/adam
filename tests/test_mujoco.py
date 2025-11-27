@@ -238,9 +238,9 @@ def test_jacobian(mujoco_setup):
         J_mj = np.vstack([jacp, jacr])
         J_mj_joint = J_mj[:, 6:]
         J_mj_joint_reordered = J_mj_joint @ P
-        J_expected_base = J_adam[:, :6] @ C
-        np.testing.assert_allclose(J_mj[:, :6], J_expected_base, atol=1e-4, rtol=1e-4)
-        np.testing.assert_allclose(J_adam_j, J_mj_joint_reordered, atol=1e-4, rtol=1e-4)
+        J_adam_base = J_adam[:, :6] @ C
+        np.testing.assert_allclose(J_mj[:, :6], J_adam_base, atol=1e-4, rtol=1e-4)
+        np.testing.assert_allclose(J_mj_joint_reordered, J_adam_j, atol=1e-4, rtol=1e-4)
 
 
 def test_mass_matrix(mujoco_setup):
