@@ -23,5 +23,4 @@ dependencies:
   - liecasadi
   - mujoco
   - pip
-  - pip:
-      - robot_descriptions
+  - robot_descriptions

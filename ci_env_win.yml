@@ -21,5 +21,4 @@ dependencies:
   - array-api-compat
   - mujoco
   - pip
-  - pip:
-      - robot_descriptions
+  - robot_descriptions
