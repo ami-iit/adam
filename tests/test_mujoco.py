@@ -8,8 +8,7 @@ from adam import Representations
 from adam.numpy.computations import KinDynComputations
 
 
-DESCRIPTION_NAME = "g1_mj_description"
-
+DESCRIPTION_NAMES = ["g1_mj_description", "aliengo_mj_description"]
 
 def _load_model(description: str) -> mujoco.MjModel:
     print(f"Loading robot description '{description}'")
@@ -148,9 +147,9 @@ def _bias_forces(
     return data.qfrc_bias.copy()
 
 
-@pytest.fixture(scope="module")
-def mujoco_setup():
-    model = _load_model(DESCRIPTION_NAME)
+@pytest.fixture(scope="module", params=DESCRIPTION_NAMES)
+def mujoco_setup(request):
+    model = _load_model(request.param)
 
     rng = np.random.default_rng(42)
     qpos = _random_configuration(model, rng)
