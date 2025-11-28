@@ -8,11 +8,12 @@ import torch
 from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.pytorch.torch_like import SpatialMath
-from adam.model import Model, URDFModelFactory
+from adam.model import Model, build_model_factory
+from adam.model.kindyn_mixin import KinDynFactoryMixin
 from adam.core.array_api_math import spec_from_reference
 
 
-class KinDynComputationsBatch:
+class KinDynComputationsBatch(KinDynFactoryMixin):
     """
     A PyTorch-based class for batch kinematic and dynamic computations on robotic systems.
 
@@ -33,13 +34,14 @@ class KinDynComputationsBatch:
     ) -> None:
         """
         Args:
-            urdfstring (str): path of the urdf
+            urdfstring (str): path/string of a URDF or a MuJoCo MjModel.
+                NOTE: The parameter name `urdfstring` is deprecated and will be renamed to `model` in a future release.
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
         ref = torch.tensor(0.0, dtype=dtype, device=device)
         math = SpatialMath(spec_from_reference(ref))
-        factory = URDFModelFactory(path=urdfstring, math=math)
+        factory = build_model_factory(description=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF

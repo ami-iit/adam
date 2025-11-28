@@ -8,10 +8,11 @@ import numpy as np
 from adam.casadi.casadi_like import SpatialMath
 from adam.core import RBDAlgorithms
 from adam.core.constants import Representations
-from adam.model import Model, URDFModelFactory
+from adam.model import Model, build_model_factory
+from adam.model.kindyn_mixin import KinDynFactoryMixin
 
 
-class KinDynComputations:
+class KinDynComputations(KinDynFactoryMixin):
     """Class that retrieves robot quantities using CasADi for Floating Base systems."""
 
     def __init__(
@@ -24,12 +25,13 @@ class KinDynComputations:
     ) -> None:
         """
         Args:
-            urdfstring (str): either path or string of the urdf
+            urdfstring (str): path/string of a URDF or a MuJoCo MjModel.
+                NOTE: The parameter name `urdfstring` is deprecated and will be renamed to `model` in a future release.
             joints_name_list (list): list of the actuated joints
             root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
         """
         math = SpatialMath()
-        factory = URDFModelFactory(path=urdfstring, math=math)
+        factory = build_model_factory(description=urdfstring, math=math)
         model = Model.build(factory=factory, joints_name_list=joints_name_list)
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
         self.NDoF = self.rbdalgos.NDoF
