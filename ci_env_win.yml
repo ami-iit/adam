@@ -20,5 +20,4 @@ dependencies:
   - liecasadi
   - array-api-compat
   - mujoco
-  - pip
   - robot_descriptions
