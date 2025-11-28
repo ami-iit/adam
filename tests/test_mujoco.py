@@ -206,7 +206,7 @@ def test_forward_kinematics(mujoco_setup):
     for link_name in kd.rbdalgos.model.links:
         body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, link_name)
         if body_id < 0:
-            pytest.skip(f"{DESCRIPTION_NAME} missing body {link_name} in mujoco model")
+            pytest.skip(f"Missing body {link_name} in mujoco model")
         T_adam = kd.forward_kinematics(link_name, base_transform, q_joints)
         R_body = data.xmat[body_id].reshape(3, 3)
         p = data.xpos[body_id]
