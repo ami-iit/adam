@@ -10,6 +10,7 @@ from adam.numpy.computations import KinDynComputations
 
 DESCRIPTION_NAMES = ["g1_mj_description", "aliengo_mj_description"]
 
+
 def _load_model(description: str) -> mujoco.MjModel:
     print(f"Loading robot description '{description}'")
     try:
