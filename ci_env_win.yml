@@ -19,3 +19,5 @@ dependencies:
   - requests
   - liecasadi
   - array-api-compat
+  - mujoco
+  - robot_descriptions

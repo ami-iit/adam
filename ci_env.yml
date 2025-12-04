@@ -21,3 +21,5 @@ dependencies:
   - requests
   - array-api-compat
   - liecasadi
+  - mujoco
+  - robot_descriptions
