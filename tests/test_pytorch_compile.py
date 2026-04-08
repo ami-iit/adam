@@ -14,7 +14,7 @@ def _compile_joint_torques(
     *,
     batch_size: int | None = None,
 ) -> torch.Tensor:
-    rng = np.random.default_rng(7 if batch_size is None else 77)
+    rng = np.random.default_rng(7 if batch_size is None else 77) # Arbitrary seed for reproducibility
     shape = (n_joints,) if batch_size is None else (batch_size, n_joints)
     return torch.as_tensor(
         rng.standard_normal(shape) * 10.0,
