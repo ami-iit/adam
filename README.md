@@ -209,6 +209,14 @@ M = kinDyn.mass_matrix(w_H_b, joints)
 print(M)
 ```
 
+`adam.pytorch.KinDynComputations` also works with `torch.compile()` for the
+main kinematics and dynamics methods. Support is currently experimental:
+
+```python
+compiled_mass_matrix = torch.compile(kinDyn.mass_matrix, backend="eager")
+M = compiled_mass_matrix(w_H_b, joints)
+```
+
 ### PyTorch Batched
 
 Use `pytorch.KinDynComputations` to process also multiple configurations.

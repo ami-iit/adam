@@ -109,6 +109,24 @@ Common Operations
     J_com = kinDyn.CoM_jacobian(w_H_b, joints)
 
 
+torch.compile
+-------------
+
+``adam.pytorch.KinDynComputations`` can be used with ``torch.compile``.
+Support is currently experimental and validated on the main kinematics and
+dynamics entry points such as ``mass_matrix()``, ``forward_kinematics()``,
+``jacobian()``, ``CoM_position()``, ``bias_force()``, ``aba()``, and
+``link_poses()``.
+
+For the most predictable results, compile fixed-frame call sites instead of
+passing different frame names through the same compiled function.
+
+.. code-block:: python
+
+    compiled_mass_matrix = torch.compile(kinDyn.mass_matrix, backend="eager")
+    M = compiled_mass_matrix(w_H_b, joints)
+
+
 Learning-Based Control
 ----------------------
 
