@@ -4,12 +4,12 @@
 import numpy as np
 import torch
 
+from adam.core.array_api_math import ArraySpec
 from adam.core.constants import Representations
 from adam.core.rbd_algorithms import RBDAlgorithms
 from adam.model import Model, build_model_factory
 from adam.model.kindyn_mixin import KinDynFactoryMixin
 from adam.pytorch.torch_like import SpatialMath
-from adam.core.array_api_math import spec_from_reference
 
 
 class KinDynComputations(KinDynFactoryMixin):
@@ -34,8 +34,7 @@ class KinDynComputations(KinDynFactoryMixin):
             root_link (str, optional): the link to use as the floating base.
                 When ``None`` the link with no parent in the URDF is used.
         """
-        ref = torch.tensor(0.0, dtype=dtype, device=device)
-        spec = spec_from_reference(ref)
+        spec = ArraySpec(xp=torch, dtype=dtype, device=device)
         math = SpatialMath(spec=spec)
         factory = build_model_factory(description=urdfstring, math=math)
         model = Model.build(
@@ -210,9 +209,7 @@ class KinDynComputations(KinDynFactoryMixin):
         Returns:
             CoM (torch.tensor): The CoM position
         """
-        return self.rbdalgos.CoM_position(
-            base_transform, joint_positions
-        ).array.squeeze()
+        return self.rbdalgos.CoM_position(base_transform, joint_positions).array
 
     def CoM_jacobian(
         self, base_transform: torch.Tensor, joint_positions: torch.Tensor
@@ -253,7 +250,7 @@ class KinDynComputations(KinDynFactoryMixin):
             base_velocity,
             joint_velocities,
             self.g,
-        ).array.squeeze()
+        ).array
 
     def coriolis_term(
         self,
@@ -281,7 +278,7 @@ class KinDynComputations(KinDynFactoryMixin):
             base_velocity,
             joint_velocities,
             torch.zeros(6, dtype=base_transform.dtype, device=base_transform.device),
-        ).array.squeeze()
+        ).array
 
     def gravity_term(
         self, base_transform: torch.Tensor, joint_positions: torch.Tensor
@@ -304,7 +301,7 @@ class KinDynComputations(KinDynFactoryMixin):
                 self.NDoF, dtype=base_transform.dtype, device=base_transform.device
             ),
             self.g,
-        ).array.squeeze()
+        ).array
 
     def aba(
         self,
@@ -337,7 +334,7 @@ class KinDynComputations(KinDynFactoryMixin):
             joint_torques,
             self.g,
             external_wrenches,
-        ).array.squeeze()
+        ).array
 
     def get_total_mass(self) -> float:
         """Returns the total mass of the robot

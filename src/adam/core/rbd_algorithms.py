@@ -131,7 +131,7 @@ class RBDAlgorithms:
                     Xup[idx],
                 )
 
-        def block_index(node_idx: int) -> int | None:
+        def block_index(node_idx):
             if node_idx == root_idx:
                 return 0
             joint_idx = joint_indices[node_idx]
@@ -385,7 +385,7 @@ class RBDAlgorithms:
         ):
             return J_tot
         if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            w_H_L = w_H_B @ B_H_L
+            w_H_L = self.math.mtimes(w_H_B, B_H_L)
             LI_X_L = self.math.adjoint_mixed(w_H_L)
 
             top_left = self.math.adjoint_mixed_inverse(base_transform)
@@ -402,14 +402,14 @@ class RBDAlgorithms:
             bottom = self.math.concatenate([bottom_left, bottom_right], axis=-1)
             X = self.math.concatenate([top, bottom], axis=-2)
 
-            J_tot = LI_X_L @ J_tot @ X
+            J_tot = self.math.mtimes(self.math.mtimes(LI_X_L, J_tot), X)
             return J_tot
 
         if (
             self.frame_velocity_representation
             == Representations.INERTIAL_FIXED_REPRESENTATION
         ):
-            w_H_L = w_H_B @ B_H_L
+            w_H_L = self.math.mtimes(w_H_B, B_H_L)
             I_X_L = self.math.adjoint(w_H_L)
 
             top_left = self.math.adjoint_inverse(base_transform)
@@ -426,7 +426,7 @@ class RBDAlgorithms:
             bottom = self.math.concatenate([bottom_left, bottom_right], axis=-1)
             X = self.math.concatenate([top, bottom], axis=-2)
 
-            return I_X_L @ J_tot @ X
+            return self.math.mtimes(self.math.mtimes(I_X_L, J_tot), X)
 
         raise NotImplementedError(
             "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
@@ -466,7 +466,7 @@ class RBDAlgorithms:
         elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
             B_H_L = traversal.root_to_target
             LI_X_L = self.math.adjoint_mixed(B_H_L)
-            return LI_X_L @ J
+            return self.math.mtimes(LI_X_L, J)
 
         elif (
             self.frame_velocity_representation
@@ -474,7 +474,7 @@ class RBDAlgorithms:
         ):
             B_H_L = traversal.root_to_target
             I_X_L = self.math.adjoint(B_H_L)
-            return I_X_L @ J
+            return self.math.mtimes(I_X_L, J)
 
         raise NotImplementedError(
             "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
@@ -559,12 +559,12 @@ class RBDAlgorithms:
                 continue
 
             q_dot = joint_velocities[..., joint.idx]
-            L_H_j = L_H_B @ B_H_j
+            L_H_j = self.math.mtimes(L_H_B, B_H_j)
             S = joint.motion_subspace()
-            J_j = self.math.adjoint(L_H_j) @ S
+            J_j = self.math.mtimes(self.math.adjoint(L_H_j), S)
 
             v = v + self.math.vxs(J_j, q_dot)
-            J_dot_j = self.math.adjoint_derivative(L_H_j, v) @ S
+            J_dot_j = self.math.mtimes(self.math.adjoint_derivative(L_H_j, v), S)
             a = a + self.math.vxs(J_dot_j, q_dot)
 
             if joint.idx is not None:
@@ -599,7 +599,7 @@ class RBDAlgorithms:
             raise NotImplementedError(
                 "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
             )
-        I_H_L = base_transform @ B_H_L
+        I_H_L = self.math.mtimes(base_transform, B_H_L)
         I_X_L = adj(I_H_L)
         I_v_L = self.math.mxv(I_X_L, v)
         I_X_L_dot = adj_derivative(I_H_L, I_v_L)
@@ -615,14 +615,20 @@ class RBDAlgorithms:
         X = self.math.concatenate([top, bottom], axis=-2)
 
         B_H_I = self.math.homogeneous_inverse(base_transform)
-        B_H_I_deriv = adj_derivative(B_H_I, -B_v_C)
+        B_H_I_deriv = adj_derivative(B_H_I, self.math.neg(B_v_C))
 
         Z_NxN = self.math.factory.zeros(batch_size + (self.NDoF, self.NDoF))
         topd = self.math.concatenate([B_H_I_deriv, Z_6xN], axis=-1)
         bottomd = self.math.concatenate([Z_Nx6, Z_NxN], axis=-1)
         X_dot = self.math.concatenate([topd, bottomd], axis=-2)
 
-        return (I_X_L_dot @ J @ X) + (I_X_L @ J_dot @ X) + (I_X_L @ J @ X_dot)
+        return self.math.add(
+            self.math.add(
+                self.math.mtimes(self.math.mtimes(I_X_L_dot, J), X),
+                self.math.mtimes(self.math.mtimes(I_X_L, J_dot), X),
+            ),
+            self.math.mtimes(self.math.mtimes(I_X_L, J), X_dot),
+        )
 
     def CoM_position(
         self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
@@ -649,10 +655,10 @@ class RBDAlgorithms:
         for idx, node in enumerate(self.model.tree):
             link = node.link
             I_H_l = root_to_link[idx]
-            I_H_com = I_H_l @ link.homogeneous()
+            I_H_com = self.math.mtimes(I_H_l, link.homogeneous())
             link_pos = I_H_com[..., :3, 3:4]
-            com_pos += self.math.vxs(link_pos, link.inertial.mass)
-        com_pos /= self._convert_to_arraylike(self.get_total_mass())
+            com_pos = self.math.add(com_pos, self.math.vxs(link_pos, link.inertial.mass))
+        com_pos = self.math.div(com_pos, self._convert_to_arraylike(self.get_total_mass()))
         return com_pos
 
     def CoM_jacobian(
@@ -686,7 +692,7 @@ class RBDAlgorithms:
             top = self.math.concatenate([Xm, Z6n], axis=-1)
             bot = self.math.concatenate([Zn6, In], axis=-1)
             X = self.math.concatenate([top, bot], axis=-2)
-            Jcm = Jcm @ X
+            Jcm = self.math.mtimes(Jcm, X)
         elif (
             ori_frame_velocity_representation
             == Representations.INERTIAL_FIXED_REPRESENTATION
@@ -696,7 +702,7 @@ class RBDAlgorithms:
             top = self.math.concatenate([A, Z6n], axis=-1)
             bot = self.math.concatenate([Zn6, In], axis=-1)
             X = self.math.concatenate([top, bot], axis=-2)
-            Jcm = Jcm @ X
+            Jcm = self.math.mtimes(Jcm, X)
         self.frame_velocity_representation = ori_frame_velocity_representation
         return Jcm[..., :3, :] / self._convert_to_arraylike(self.get_total_mass())
 
@@ -772,7 +778,7 @@ class RBDAlgorithms:
             omega = base_velocity[..., 3:]
             vlin = base_velocity[..., :3]
             skew_omega_times_vlin = math.mxv(math.skew(omega), vlin)
-            top3 = -math.mxv(B_X_C[..., :3, :3], skew_omega_times_vlin)
+            top3 = math.neg(math.mxv(B_X_C[..., :3, :3], skew_omega_times_vlin))
             bot3 = math.factory.zeros(batch_shape + (3,))
             transformed_acc = math.concatenate([top3, bot3], axis=-1)
         elif (
@@ -787,7 +793,7 @@ class RBDAlgorithms:
                 "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
             )
 
-        a0 = -(math.mxv(gravity_X, g)) + transformed_acc
+        a0 = math.add(math.neg(math.mxv(gravity_X, g)), transformed_acc)
 
         if n > 0:
             zero_q = math.zeros_like(joint_positions[..., 0])
@@ -824,17 +830,23 @@ class RBDAlgorithms:
             Phi_i = motion_subspaces[idx]
             phi_qd = math.vxs(Phi_i, qd)
             v[idx] = math.mxv(X, v[parent]) + phi_qd
-            a[idx] = math.mxv(X, a[parent]) + math.mxv(
-                math.spatial_skew(v[idx]), phi_qd
+            a[idx] = math.add(
+                math.mxv(X, a[parent]),
+                math.mxv(math.spatial_skew(v[idx]), phi_qd),
             )
 
-            f[idx] = math.mxv(Ic[idx], a[idx]) + math.mxv(
-                math.spatial_skew_star(v[idx]), math.mxv(Ic[idx], v[idx])
+            f[idx] = math.add(
+                math.mxv(Ic[idx], a[idx]),
+                math.mxv(math.spatial_skew_star(v[idx]), math.mxv(Ic[idx], v[idx])),
             )
 
         # Root wrench contribution (skipped in loop above)
-        f[root_idx] = math.mxv(Ic[root_idx], a[root_idx]) + math.mxv(
-            math.spatial_skew_star(v[root_idx]), math.mxv(Ic[root_idx], v[root_idx])
+        f[root_idx] = math.add(
+            math.mxv(Ic[root_idx], a[root_idx]),
+            math.mxv(
+                math.spatial_skew_star(v[root_idx]),
+                math.mxv(Ic[root_idx], v[root_idx]),
+            ),
         )
 
         tau_base = None
@@ -853,8 +865,9 @@ class RBDAlgorithms:
                     tau_joint_cols[joint_idx] = math.mxv(Phi_T, Fi)
                 parent = parent_indices[idx]
                 if parent >= 0:
-                    f[parent] = f[parent] + math.mxv(
-                        math.swapaxes(Xup[idx], -2, -1), Fi
+                    f[parent] = math.add(
+                        f[parent],
+                        math.mxv(math.swapaxes(Xup[idx], -2, -1), Fi),
                     )
 
         tau_base = math.mxv(math.swapaxes(B_X_C, -2, -1), tau_base)
@@ -931,8 +944,9 @@ class RBDAlgorithms:
             for frame, wrench in external_wrenches.items():
                 wrench_arr = self._convert_to_arraylike(wrench)
                 J = self.jacobian(frame, base_transform, joint_positions)
-                generalized_ext = generalized_ext + math.mxv(
-                    math.swapaxes(J, -2, -1), wrench_arr
+                generalized_ext = math.add(
+                    generalized_ext,
+                    math.mxv(math.swapaxes(J, -2, -1), wrench_arr),
                 )
 
             base_ext = generalized_ext[..., :6]
@@ -1071,15 +1085,21 @@ class RBDAlgorithms:
                 )
                 gain = math.mtimes(inv_d, expand_to_match(u_i, inv_d))
                 gain_vec = gain[..., 0]
-                pa = pA[idx] + math.mxv(Ia, c[idx]) + math.mxv(U_i, gain_vec)
+                pa = math.add(
+                    math.add(pA[idx], math.mxv(Ia, c[idx])),
+                    math.mxv(U_i, gain_vec),
+                )
             else:
                 Ia = IA[idx]
-                pa = pA[idx] + math.mxv(Ia, c[idx])
+                pa = math.add(pA[idx], math.mxv(Ia, c[idx]))
 
             IA[parent] = IA[parent] + math.mtimes(math.mtimes(Xpt, Ia), Xup[idx])
-            pA[parent] = pA[parent] + math.mxv(Xpt, pa)
+            pA[parent] = math.add(pA[parent], math.mxv(Xpt, pa))
 
-        rhs_root = base_ext_body - pA[root_idx] + math.mxv(IA[root_idx], a0_input)
+        rhs_root = math.add(
+            math.sub(base_ext_body, pA[root_idx]),
+            math.mxv(IA[root_idx], a0_input),
+        )
         a_base = math.solve(IA[root_idx], rhs_root)
 
         a = [None] * node_count
@@ -1094,7 +1114,7 @@ class RBDAlgorithms:
             parent = parent_indices[idx]
             a_pre = math.mxv(Xup[idx], a[parent]) + c[idx]
             free_acc = g_acc[idx]
-            rel_acc = a_pre - free_acc if free_acc is not None else a_pre
+            rel_acc = math.sub(a_pre, free_acc) if free_acc is not None else a_pre
 
             Si = Scols[idx]
             joint_idx = joint_indices[idx]
@@ -1102,7 +1122,7 @@ class RBDAlgorithms:
             if Si is not None and joint_idx is not None:
                 U_i = U_list[idx]
                 U_T_rel_acc = math.mxv(math.swapaxes(U_i, -2, -1), rel_acc)[..., 0]
-                num = u_list[idx] - U_T_rel_acc
+                num = math.sub(u_list[idx], U_T_rel_acc)
                 inv_d = inv_d_list[idx]
                 num_expanded = expand_to_match(num, inv_d)
                 gain_qdd = math.mtimes(inv_d, num_expanded)
@@ -1127,7 +1147,10 @@ class RBDAlgorithms:
             Xm = math.adjoint_mixed(base_transform)
             base_vel_mixed = math.mxv(Xm, base_velocity_body)
             Xm_dot = math.adjoint_mixed_derivative(base_transform, base_vel_mixed)
-            base_acc = math.mxv(Xm, a_base) + math.mxv(Xm_dot, base_velocity_body)
+            base_acc = math.add(
+                math.mxv(Xm, a_base),
+                math.mxv(Xm_dot, base_velocity_body),
+            )
         elif (
             self.frame_velocity_representation
             == Representations.INERTIAL_FIXED_REPRESENTATION
@@ -1135,7 +1158,10 @@ class RBDAlgorithms:
             X = math.adjoint(base_transform)
             base_vel_inertial = math.mxv(X, base_velocity_body)
             X_dot = math.adjoint_derivative(base_transform, base_vel_inertial)
-            base_acc = math.mxv(X, a_base) + math.mxv(X_dot, base_velocity_body)
+            base_acc = math.add(
+                math.mxv(X, a_base),
+                math.mxv(X_dot, base_velocity_body),
+            )
         else:
             base_acc = a_base
 
@@ -1188,7 +1214,7 @@ class RBDAlgorithms:
         root_to_joint: list[ArrayLike] = [None] * len(chain)
         for idx, joint in enumerate(chain):
             q = joint_positions[..., joint.idx] if joint.idx is not None else zero_q
-            current = current @ joint.homogeneous(q=q)
+            current = self.math.mtimes(current, joint.homogeneous(q=q))
             root_to_joint[idx] = current
 
         return ChainTraversal(
@@ -1221,7 +1247,9 @@ class RBDAlgorithms:
                 continue
 
             q = joint_positions[..., joint.idx] if joint.idx is not None else zero_q
-            root_to_link[idx] = root_to_link[parent_idx] @ joint.homogeneous(q=q)
+            root_to_link[idx] = self.math.mtimes(
+                root_to_link[parent_idx], joint.homogeneous(q=q)
+            )
 
         return tuple(root_to_link)
 
@@ -1242,9 +1270,9 @@ class RBDAlgorithms:
         for joint, B_H_j in zip(traversal.joints, traversal.root_to_joint):
             if joint.idx is None:
                 continue
-            L_H_j = L_H_B @ B_H_j
+            L_H_j = self.math.mtimes(L_H_B, B_H_j)
             S = joint.motion_subspace()
-            cols[joint.idx] = self.math.adjoint(L_H_j) @ S
+            cols[joint.idx] = self.math.mtimes(self.math.adjoint(L_H_j), S)
 
         zero_col = self.math.factory.zeros(batch_size + (6, 1))
         cols = [zero_col if col is None else col for col in cols]
