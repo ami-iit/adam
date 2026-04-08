@@ -4,15 +4,16 @@ import torch
 from scipy.spatial.transform import Rotation as R
 from conftest import RobotCfg, State, compute_idyntree_values, to_numpy
 
-from adam.pytorch import KinDynComputationsBatch
+from adam.pytorch import KinDynComputations
 
 
 @pytest.fixture(scope="module")
-def setup_test(tests_setup, device) -> KinDynComputationsBatch | RobotCfg | State:
+def setup_test(tests_setup, device) -> KinDynComputations | RobotCfg | State:
     robot_cfg, state = tests_setup
     if robot_cfg.root_link is not None:
         pytest.skip("root link parametrization tested in numpy and casadi only")
-    adam_kin_dyn = KinDynComputationsBatch(
+
+    adam_kin_dyn = KinDynComputations(
         robot_cfg.model_path,
         robot_cfg.joints_name_list,
         device=device,
