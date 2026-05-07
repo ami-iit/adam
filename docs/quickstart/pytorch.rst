@@ -323,7 +323,7 @@ Load models from OpenUSD and use them with autograd:
     from adam.pytorch import KinDynComputations
 
     kinDyn = KinDynComputations.from_usd(
-        "robot.usda",
+        "robot.usd",
         robot_prim_path="/Robot",
         joints_name_list=["joint_1", "joint_2"],
     )
