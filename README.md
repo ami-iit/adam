@@ -315,7 +315,7 @@ from adam.numpy import KinDynComputations
 
 # Load directly from any existing USD file
 kinDyn = KinDynComputations.from_usd(
-    "robot.usda",
+    "robot.usd",
     robot_prim_path="/Robot",
     joints_name_list=["joint_1", "joint_2"],
 )
@@ -340,8 +340,8 @@ joints_name_list = ["joint_1", "joint_2"]
 factory = build_model_factory(description=model_path, math=SpatialMath())
 model = Model.build(factory=factory, joints_name_list=joints_name_list)
 
-# Export to USD (use .usda for text, .usdc for binary)
-model.to_usd("robot.usda", robot_prim_path="/Robot")
+# Export to USD
+model.to_usd("robot.usd", robot_prim_path="/Robot")
 ```
 
 ### Visualization
@@ -354,7 +354,7 @@ For quick inspection from the terminal, use the bundled viewer command:
 ```bash
 adam-model-view --urdf path/to/robot.urdf
 adam-model-view --mujoco path/to/model.xml
-adam-model-view --usd path/to/robot.usda --robot-prim-path /Robot
+adam-model-view --usd path/to/robot.usd --robot-prim-path /Robot
 ```
 
 ```python
@@ -390,7 +390,7 @@ With other model sources, only the loader changes:
 kindyn = KinDynComputations.from_mujoco_model(mj_model)
 
 # USD
-kindyn = KinDynComputations.from_usd("robot.usda", robot_prim_path="/Robot")
+kindyn = KinDynComputations.from_usd("robot.usd", robot_prim_path="/Robot")
 ```
 
 Batched visualization is available through the same `ModelHandle` API by passing
