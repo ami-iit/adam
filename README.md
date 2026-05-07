@@ -304,39 +304,44 @@ J = kinDyn.jacobian('frame_name', w_H_b, joints)
 
 ### OpenUSD
 
-adam supports both exporting a model to OpenUSD and loading it back for computations.
+adam supports loading robot models directly from OpenUSD files and exporting models to OpenUSD.
+
+**Loading directly from a USD file:**
 
 ```python
 import numpy as np
 from adam import Representations
-from adam.model import Model, build_model_factory
 from adam.numpy import KinDynComputations
+
+# Load directly from any existing USD file
+kinDyn = KinDynComputations.from_usd(
+    "robot.usda",
+    robot_prim_path="/Robot",
+    joints_name_list=["joint_1", "joint_2"],
+)
+kinDyn.set_frame_velocity_representation(Representations.MIXED_REPRESENTATION)
+
+# Compute quantities as usual
+w_H_b = np.eye(4)
+q = np.zeros(kinDyn.NDoF)
+M = kinDyn.mass_matrix(w_H_b, q)
+com = kinDyn.CoM_position(w_H_b, q)
+```
+
+**Exporting a model to USD** (e.g. to convert a URDF to USD):
+
+```python
+from adam.model import Model, build_model_factory
 from adam.numpy.numpy_like import SpatialMath
 
-# You can convert a URDF to a USD
 model_path = "robot.urdf"
 joints_name_list = ["joint_1", "joint_2"]
 
 factory = build_model_factory(description=model_path, math=SpatialMath())
 model = Model.build(factory=factory, joints_name_list=joints_name_list)
 
-# Export robot articulation to USD (use .usda for text, .usdc for binary)
-usd_path = "robot.usda"
-model.to_usd(usd_path, robot_prim_path="/Robot")
-
-# If you have an existing USD file, start from this to create a KinDynComputations instance
-kinDyn = KinDynComputations.from_usd(
-    usd_path,
-    robot_prim_path="/Robot",
-    joints_name_list=joints_name_list,
-)
-kinDyn.set_frame_velocity_representation(Representations.MIXED_REPRESENTATION)
-
-# Compute quantities as usual
-w_H_b = np.eye(4)
-q = np.zeros(len(joints_name_list))
-M = kinDyn.mass_matrix(w_H_b, q)
-com = kinDyn.CoM_position(w_H_b, q)
+# Export to USD (use .usda for text, .usdc for binary)
+model.to_usd("robot.usda", robot_prim_path="/Robot")
 ```
 
 ### Visualization
