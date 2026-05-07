@@ -222,7 +222,7 @@ Load models from OpenUSD for symbolic workflows:
     from adam.casadi import KinDynComputations
 
     kinDyn = KinDynComputations.from_usd(
-        "robot.usda",
+        "robot.usd",
         robot_prim_path="/Robot",
         joints_name_list=["joint_1", "joint_2"],
     )

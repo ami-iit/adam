@@ -29,7 +29,7 @@ Use ``from_usd()`` with a USD path:
     from adam import Representations
     from adam.numpy import KinDynComputations
 
-    usd_path = "robot.usda"
+    usd_path = "robot.usd"
     joints_name_list = ["joint_1", "joint_2"]
 
     kinDyn = KinDynComputations.from_usd(
@@ -50,7 +50,7 @@ Use ``from_usd_stage()`` with an in-memory ``pxr.Usd.Stage``:
     from pxr import Usd
     from adam.numpy import KinDynComputations
 
-    stage = Usd.Stage.Open("robot.usda")
+    stage = Usd.Stage.Open("robot.usd")
     kinDyn = KinDynComputations.from_usd_stage(
         stage,
         robot_prim_path="/Robot",
@@ -73,7 +73,7 @@ Build an adam model and export with ``model.to_usd()``:
     factory = build_model_factory(description=urdf_path, math=SpatialMath())
     model = Model.build(factory=factory, joints_name_list=joints_name_list)
 
-    model.to_usd("robot.usda", robot_prim_path="/Robot")
+    model.to_usd("robot.usd", robot_prim_path="/Robot")
 
 Conversion API
 --------------
@@ -84,7 +84,7 @@ You can also use the functional converter API:
 
     from adam.model.conversions import model_to_usd
 
-    model_to_usd(model, "robot.usda", robot_prim_path="/Robot")
+    model_to_usd(model, "robot.usd", robot_prim_path="/Robot")
 
 
 
@@ -100,7 +100,7 @@ USD loading is available through all backend frontends:
     from adam.casadi import KinDynComputations as CasadiKinDynComputations
     from adam.pytorch import KinDynComputations as TorchKinDynComputations
 
-    kinDyn = NumpyKinDynComputations.from_usd("robot.usda", robot_prim_path="/Robot", joints_name_list=["joint_1", "joint_2"])
+    kinDyn = NumpyKinDynComputations.from_usd("robot.usd", robot_prim_path="/Robot", joints_name_list=["joint_1", "joint_2"])
 
 See Also
 --------

@@ -62,7 +62,7 @@ If you just want to inspect a model quickly, use the bundled ``adam-model-view``
 
     adam-model-view --urdf path/to/robot.urdf
     adam-model-view --mujoco path/to/model.xml
-    adam-model-view --usd path/to/robot.usda --robot-prim-path /Robot
+    adam-model-view --usd path/to/robot.usd --robot-prim-path /Robot
 
 The viewer loads the requested model, starts a viser server, adds a default ground plane,
 and exposes one joint-slider panel per robot when the model has actuated joints.
