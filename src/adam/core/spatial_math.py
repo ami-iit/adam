@@ -141,6 +141,88 @@ class ArrayLikeFactory(abc.ABC):
         pass
 
 
+class ArrayLikeOps(abc.ABC):
+    """Backend primitive operations used by SpatialMath."""
+
+    @abc.abstractmethod
+    def sin(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def cos(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def skew(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def outer(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def vertcat(self, *x: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def horzcat(self, *x: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def stack(self, x: npt.ArrayLike, axis: int = 0) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def concatenate(self, x: npt.ArrayLike, axis: int = 0) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def swapaxes(
+        self, x: npt.ArrayLike, axis1: int, axis2: int
+    ) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def expand_dims(self, x: npt.ArrayLike, axis: int) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def transpose(self, x: npt.ArrayLike, dims: tuple) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def inv(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def matmul(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def solve(self, A: npt.ArrayLike, B: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def add(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def sub(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def mul(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def div(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+    @abc.abstractmethod
+    def neg(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        pass
+
+
 class SpatialMath:
     """Class implementing the main geometric functions used for computing rigid-body algorithm
 
@@ -149,15 +231,21 @@ class SpatialMath:
 
     """
 
-    def __init__(self, factory: ArrayLikeFactory):
+    def __init__(self, factory: ArrayLikeFactory, ops: ArrayLikeOps | None = None):
         self._factory = factory
+        self._ops = ops
 
     @property
     def factory(self) -> ArrayLikeFactory:
         return self._factory
 
-    @abc.abstractmethod
-    def vertcat(self, x: npt.ArrayLike) -> npt.ArrayLike:
+    @property
+    def ops(self) -> ArrayLikeOps:
+        if self._ops is None:
+            raise NotImplementedError("This SpatialMath backend does not define ops")
+        return self._ops
+
+    def vertcat(self, *x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             x (npt.ArrayLike): elements
@@ -165,10 +253,9 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: vertical concatenation of elements x
         """
-        pass
+        return self.ops.vertcat(*x)
 
-    @abc.abstractmethod
-    def horzcat(self, x: npt.ArrayLike) -> npt.ArrayLike:
+    def horzcat(self, *x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
             x (npt.ArrayLike): elements
@@ -176,9 +263,8 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: horizontal concatenation of elements x
         """
-        pass
+        return self.ops.horzcat(*x)
 
-    @abc.abstractmethod
     def concatenate(self, x: npt.ArrayLike, axis: int) -> npt.ArrayLike:
         """
         Args:
@@ -188,9 +274,8 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: concatenation of elements x along axis
         """
-        pass
+        return self.ops.concatenate(x, axis=axis)
 
-    @abc.abstractmethod
     def stack(self, x: npt.ArrayLike, axis: int) -> npt.ArrayLike:
         """
         Args:
@@ -200,21 +285,8 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: stacked elements x along axis
         """
-        pass
+        return self.ops.stack(x, axis=axis)
 
-    @abc.abstractmethod
-    def tile(self, x: npt.ArrayLike, reps: tuple) -> npt.ArrayLike:
-        """
-        Args:
-            x (npt.ArrayLike): input array
-            reps (tuple): repetition factors for each dimension
-
-        Returns:
-            npt.ArrayLike: tiled array
-        """
-        pass
-
-    @abc.abstractmethod
     def transpose(self, x: npt.ArrayLike, dims: tuple) -> npt.ArrayLike:
         """
         Args:
@@ -224,9 +296,8 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: transposed array
         """
-        pass
+        return self.ops.transpose(x, dims)
 
-    @abc.abstractmethod
     def inv(self, x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
@@ -235,13 +306,11 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: inverse of the array
         """
-        pass
+        return self.ops.inv(x)
 
-    @abc.abstractmethod
     def mtimes(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
-        pass
+        return self.ops.matmul(x, y)
 
-    @abc.abstractmethod
     def sin(self, x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
@@ -250,9 +319,8 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: sin value of x
         """
-        pass
+        return self.ops.sin(x)
 
-    @abc.abstractmethod
     def cos(self, x: npt.ArrayLike) -> npt.ArrayLike:
         """
         Args:
@@ -261,11 +329,24 @@ class SpatialMath:
         Returns:
             npt.ArrayLike: cos value of angle x
         """
-        pass
+        return self.ops.cos(x)
 
-    @abc.abstractmethod
     def skew(self, x):
-        pass
+        return self.ops.skew(x)
+
+    def outer(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        return self.ops.outer(x, y)
+
+    def swapaxes(
+        self, x: npt.ArrayLike, axis1: int, axis2: int
+    ) -> npt.ArrayLike:
+        return self.ops.swapaxes(x, axis1, axis2)
+
+    def expand_dims(self, x: npt.ArrayLike, axis: int) -> npt.ArrayLike:
+        return self.ops.expand_dims(x, axis)
+
+    def solve(self, A: npt.ArrayLike, B: npt.ArrayLike) -> npt.ArrayLike:
+        return self.ops.solve(A, B)
 
     def R_from_axis_angle(self, axis, q):
         """
@@ -384,21 +465,15 @@ class SpatialMath:
 
             # Ensure xyz is batched using standard numpy-style broadcasting
             if xyz.ndim == 1:
-                xp = self._xp(xyz.array)
-                xyz_batched = xp.tile(xyz.array[None, :], (batch_size, 1))
-                xyz = self.factory.asarray(xyz_batched)
+                xyz = self.tile(xyz[None, :], (batch_size, 1))
 
             # Ensure rpy is batched
             if rpy.ndim == 1:
-                xp = self._xp(rpy.array)
-                rpy_batched = xp.tile(rpy.array[None, :], (batch_size, 1))
-                rpy = self.factory.asarray(rpy_batched)
+                rpy = self.tile(rpy[None, :], (batch_size, 1))
 
             # Ensure axis is batched
             if axis.ndim == 1:
-                xp = self._xp(axis.array)
-                axis_batched = xp.tile(axis.array[None, :], (batch_size, 1))
-                axis = self.factory.asarray(axis_batched)
+                axis = self.tile(axis[None, :], (batch_size, 1))
         R_rpy = self.R_from_RPY(rpy)
         R_axis = self.R_from_axis_angle(axis, q)
         R = self.mtimes(R_rpy, R_axis)
@@ -407,7 +482,7 @@ class SpatialMath:
     def homogeneous(self, R, p):
         # Ensure p has the right shape for concatenation
         if p.ndim == R.ndim - 1:
-            p = self.factory.asarray(p.array[..., None])  # Add last dimension
+            p = self.expand_dims(p, axis=-1)
         top = self.concatenate([R, p], axis=-1)  # (...,3,4)
         zeros_row = self.factory.zeros_like(R[..., :1, :])  # (...,1,3)
         ones_col = self.factory.ones_like(R[..., :1, :1])  # (...,1,1)
@@ -855,18 +930,28 @@ class SpatialMath:
         return self.factory.asarray(x)
 
     def add(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        if self._ops is not None:
+            return self.ops.add(x, y)
         return x + y
 
     def sub(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        if self._ops is not None:
+            return self.ops.sub(x, y)
         return x - y
 
     def mul(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        if self._ops is not None:
+            return self.ops.mul(x, y)
         return x * y
 
     def div(self, x: npt.ArrayLike, y: npt.ArrayLike) -> npt.ArrayLike:
+        if self._ops is not None:
+            return self.ops.div(x, y)
         return x / y
 
     def neg(self, x: npt.ArrayLike) -> npt.ArrayLike:
+        if self._ops is not None:
+            return self.ops.neg(x)
         return -x
 
     def zeros_like(self, x: npt.ArrayLike) -> npt.ArrayLike:

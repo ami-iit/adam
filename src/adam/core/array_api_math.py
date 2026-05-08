@@ -1,10 +1,15 @@
-from adam.core.spatial_math import ArrayLike, SpatialMath, ArrayLikeFactory
-import array_api_compat as aac
-from typing import Any, Callable
 from dataclasses import dataclass
 from types import ModuleType
 from typing import Any, Optional
+
 import array_api_compat as aac
+
+from adam.core.spatial_math import (
+    ArrayLike,
+    ArrayLikeFactory,
+    ArrayLikeOps,
+    SpatialMath,
+)
 
 
 @dataclass(frozen=True)
@@ -33,8 +38,10 @@ def spec_from_reference(ref: Any) -> ArraySpec:
     return ArraySpec(xp=xp, dtype=dtype, device=device)
 
 
-def xp_getter(*xs: Any):
-    return aac.array_namespace(*xs)  # use_compat=True?
+def unwrap(value: Any) -> Any:
+    if isinstance(value, ArrayAPILike):
+        return value.array
+    return value
 
 
 @dataclass
@@ -51,53 +58,42 @@ class ArrayAPILike(ArrayLike):
         return self.array.shape
 
     def reshape(self, *args):
-        xp = xp_getter(self.array)
-        return xp.reshape(self.array, *args)
+        return self.__class__(self.array.reshape(*args))
 
     @property
     def T(self) -> "ArrayAPILike":
         if getattr(self.array, "ndim", 0) == 0:
             return self.__class__(self.array)
-        xp = xp_getter(self.array)
         return self.__class__(
-            xp.swapaxes(self.array, 0, -1)  # if self.array.ndim != 0 else self.array
+            self.array.swapaxes(0, -1)  # if self.array.ndim != 0 else self.array
         )
 
     def __matmul__(self, other):
-        xp = xp_getter(self.array, other.array)
-        return self.__class__(xp.matmul(self.array, other.array))
+        return self.__class__(self.array @ unwrap(other))
 
     def __rmatmul__(self, other) -> "ArrayAPILike":
-        xp = xp_getter(self.array, other.array)
-        return self.__class__(xp.matmul(other.array, self.array))
+        return self.__class__(unwrap(other) @ self.array)
 
     def __mul__(self, other) -> "ArrayAPILike":
-        xp = xp_getter(self.array, other.array)
-        return self.__class__(xp.multiply(self.array, other.array))
+        return self.__class__(self.array * unwrap(other))
 
     def __rmul__(self, other) -> "ArrayAPILike":
-        xp = xp_getter(self.array, other.array)
-        return self.__class__(xp.multiply(self.array, other.array))
+        return self.__class__(unwrap(other) * self.array)
 
     def __truediv__(self, other) -> "ArrayAPILike":
-        xp = xp_getter(self.array, other.array)
-        return self.__class__(xp.divide(self.array, other.array))
+        return self.__class__(self.array / unwrap(other))
 
     def __add__(self, other) -> "ArrayAPILike":
-        xp = xp_getter(self.array, other.array)
-        return self.__class__(xp.add(self.array, other.array))
+        return self.__class__(self.array + unwrap(other))
 
     def __radd__(self, other) -> "ArrayAPILike":
-        xp = xp_getter(self.array, other.array)
-        return self.__class__(other.array + self.array)
+        return self.__class__(unwrap(other) + self.array)
 
     def __sub__(self, other) -> "ArrayAPILike":
-        xp = xp_getter(self.array, other.array)
-        return self.__class__(self.array - other.array)
+        return self.__class__(self.array - unwrap(other))
 
     def __rsub__(self, other) -> "ArrayAPILike":
-        xp = xp_getter(self.array, other.array)
-        return self.__class__(xp.squeeze(other.array) - xp.squeeze(self.array))
+        return self.__class__(unwrap(other) - self.array)
 
     def __neg__(self) -> "ArrayAPILike":
         return self.__class__(-self.array)
@@ -145,10 +141,8 @@ class ArrayAPIFactory(ArrayLikeFactory):
         )
 
     def asarray(self, x) -> ArrayAPILike:
-        # preserve the gradient if x is a torch tensor (check if it has "requires_grad_" attribute)
-        # it could be moved to the torch-like class, but maybe here is more visible
-        if getattr(x, "requires_grad_", False):
-            return self._like(x.to(device=self._device, dtype=self._dtype))
+        if isinstance(x, ArrayAPILike):
+            return x
         return self._like(self._xp.asarray(x, dtype=self._dtype, device=self._device))
 
     def zeros_like(self, x: ArrayAPILike) -> ArrayAPILike:
@@ -161,92 +155,97 @@ class ArrayAPIFactory(ArrayLikeFactory):
         return self._like(self._xp.tile(x.array, reps))
 
 
-class ArrayAPISpatialMath(SpatialMath):
-    """A drop-in SpatialMath that implements sin/cos/outer/concat/skew with the Array API.
+class ArrayAPIOps(ArrayLikeOps):
+    """Array API primitive operations used by SpatialMath."""
 
-    Works for NumPy, PyTorch, and JAX; CasADi should keep its own subclass.
-    """
+    def __init__(self, factory: ArrayAPIFactory, xp):
+        self._factory = factory
+        self._xp = xp
 
-    def __init__(self, factory, xp_getter: Callable[..., Any] = xp_getter):
-        super().__init__(factory)
-        self._xp_getter = xp_getter
+    def sin(self, x: ArrayAPILike) -> ArrayAPILike:
+        return self._factory.asarray(self._xp.sin(unwrap(x)))
 
-    def _xp(self, *xs: Any):
-        return self._xp_getter(*xs)
+    def cos(self, x: ArrayAPILike) -> ArrayAPILike:
+        return self._factory.asarray(self._xp.cos(unwrap(x)))
 
-    def sin(self, x):
-        xp = self._xp(x.array)
-        x = x.array
-        return self.factory.asarray(xp.sin(x))
+    def matmul(self, x: ArrayAPILike, y: ArrayAPILike) -> ArrayAPILike:
+        return self._factory.asarray(self._xp.matmul(unwrap(x), unwrap(y)))
 
-    def cos(self, x):
-        xp = self._xp(x.array)
-        x = x.array
-        return self.factory.asarray(xp.cos(x))
+    def add(self, x: ArrayAPILike, y: ArrayAPILike) -> ArrayAPILike:
+        return self._factory.asarray(unwrap(x) + unwrap(y))
 
-    def skew(self, x):
-        xp = self._xp(x.array)
-        a = x.array
-        # if x is batched (shape (B, 3, 1)), remove the last dimension
-        if a.ndim >= 2 and a.shape[-1] == 1:
-            a = a[..., 0]
-        x0, x1, x2 = a[..., 0], a[..., 1], a[..., 2]
-        z = x0 * 0
-        row0 = xp.stack([z, -x2, x1], axis=-1)
-        row1 = xp.stack([x2, z, -x0], axis=-1)
-        row2 = xp.stack([-x1, x0, z], axis=-1)
-        return self.factory.asarray(xp.stack([row0, row1, row2], axis=-2))  # (...,3,3)
+    def sub(self, x: ArrayAPILike, y: ArrayAPILike) -> ArrayAPILike:
+        return self._factory.asarray(unwrap(x) - unwrap(y))
 
-    def outer(self, x, y):
-        xp = self._xp(x.array, y.array)
-        a = x.array
-        b = y.array
-        # normalize to (...,3)
+    def mul(self, x: ArrayAPILike, y: ArrayAPILike) -> ArrayAPILike:
+        return self._factory.asarray(unwrap(x) * unwrap(y))
+
+    def div(self, x: ArrayAPILike, y: ArrayAPILike) -> ArrayAPILike:
+        return self._factory.asarray(unwrap(x) / unwrap(y))
+
+    def neg(self, x: ArrayAPILike) -> ArrayAPILike:
+        return self._factory.asarray(-unwrap(x))
+
+    def stack(self, x, axis=0) -> ArrayAPILike:
+        return self._factory.asarray(
+            self._xp.stack([unwrap(xi) for xi in x], axis=axis)
+        )
+
+    def concatenate(self, x, axis=0) -> ArrayAPILike:
+        return self._factory.asarray(
+            self._xp.concatenate([unwrap(xi) for xi in x], axis=axis)
+        )
+
+    def vertcat(self, *x) -> ArrayAPILike:
+        return self._factory.asarray(self._xp.vstack([unwrap(xi) for xi in x]))
+
+    def horzcat(self, *x) -> ArrayAPILike:
+        return self._factory.asarray(self._xp.hstack([unwrap(xi) for xi in x]))
+
+    def swapaxes(self, x: ArrayAPILike, axis1: int, axis2: int) -> ArrayAPILike:
+        return self._factory.asarray(self._xp.swapaxes(unwrap(x), axis1, axis2))
+
+    def expand_dims(self, x: ArrayAPILike, axis: int) -> ArrayAPILike:
+        return self._factory.asarray(self._xp.expand_dims(unwrap(x), axis=axis))
+
+    def transpose(self, x: ArrayAPILike, dims: tuple) -> ArrayAPILike:
+        xp_transpose = getattr(self._xp, "permute_dims", None)
+        if xp_transpose is not None:
+            return self._factory.asarray(xp_transpose(unwrap(x), dims))
+        return self._factory.asarray(self._xp.transpose(unwrap(x), dims))
+
+    def inv(self, x: ArrayAPILike) -> ArrayAPILike:
+        return self._factory.asarray(self._xp.linalg.inv(unwrap(x)))
+
+    def solve(self, A: ArrayAPILike, B: ArrayAPILike) -> ArrayAPILike:
+        return self._factory.asarray(self._xp.linalg.solve(unwrap(A), unwrap(B)))
+
+    def outer(self, x: ArrayAPILike, y: ArrayAPILike) -> ArrayAPILike:
+        a = unwrap(x)
+        b = unwrap(y)
         if a.ndim >= 2 and a.shape[-2] == 3 and a.shape[-1] == 1:
             a = a[..., :, 0]
         if b.ndim >= 2 and b.shape[-2] == 3 and b.shape[-1] == 1:
             b = b[..., :, 0]
-        # (...,3,1) @ (...,1,3) -> (...,3,3)
-        A = a[..., :, None]
-        B = b[..., None, :]
-        return self.factory.asarray(xp.matmul(A, B))
+        return self._factory.asarray(self._xp.matmul(a[..., :, None], b[..., None, :]))
 
-    def vertcat(self, *x):
-        xp = self._xp(*[xi.array for xi in x])
-        return self.factory.asarray(xp.vstack([xi.array for xi in x]))
+    def skew(self, x: ArrayAPILike) -> ArrayAPILike:
+        a = unwrap(x)
+        if a.ndim >= 2 and a.shape[-1] == 1:
+            a = a[..., 0]
+        x0, x1, x2 = a[..., 0], a[..., 1], a[..., 2]
+        z = x0 * 0
+        row0 = self.stack([z, -x2, x1], axis=-1)
+        row1 = self.stack([x2, z, -x0], axis=-1)
+        row2 = self.stack([-x1, x0, z], axis=-1)
+        return self.stack([row0, row1, row2], axis=-2)
 
-    def horzcat(self, *x):
-        xp = self._xp(*[xi.array for xi in x])
-        return self.factory.asarray(xp.hstack([xi.array for xi in x]))
 
-    def stack(self, x, axis=0):
-        xp = self._xp(x[0].array)
-        return self.factory.asarray(xp.stack([xi.array for xi in x], axis=axis))
+class ArrayAPISpatialMath(SpatialMath):
+    """SpatialMath wired to an Array API factory and ops implementation.
 
-    def concatenate(self, x, axis=0):
-        xp = self._xp(x[0].array)
-        return self.factory.asarray(xp.concatenate([xi.array for xi in x], axis=axis))
+    Works for NumPy, PyTorch, and JAX; CasADi should keep its own subclass.
+    """
 
-    def swapaxes(self, x: ArrayAPILike, axis1: int, axis2: int) -> ArrayAPILike:
-        xp = self._xp(x.array)
-        return self.factory.asarray(xp.swapaxes(x.array, axis1, axis2))
-
-    def expand_dims(self, x: ArrayAPILike, axis: int) -> ArrayAPILike:
-        xp = self._xp(x.array)
-        return self.factory.asarray(xp.expand_dims(x.array, axis=axis))
-
-    def transpose(self, x: ArrayAPILike, dims: tuple) -> ArrayAPILike:
-        xp = self._xp(x.array)
-        return self.factory.asarray(xp.permute_dims(x.array, dims))
-
-    def inv(self, x: ArrayAPILike) -> ArrayAPILike:
-        xp = self._xp(x.array)
-        return self.factory.asarray(xp.linalg.inv(x.array))
-
-    def mtimes(self, A: ArrayAPILike, B: ArrayAPILike) -> ArrayAPILike:
-        xp = self._xp(A.array, B.array)
-        return self.factory.asarray(xp.matmul(A.array, B.array))
-
-    def solve(self, A: ArrayAPILike, B: ArrayAPILike) -> ArrayAPILike:
-        xp = self._xp(A.array, B.array)
-        return self.factory.asarray(xp.linalg.solve(A.array, B.array))
+    def __init__(self, factory, ops):
+        super().__init__(factory, ops)

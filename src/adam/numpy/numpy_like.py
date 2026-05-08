@@ -2,16 +2,14 @@
 
 
 from dataclasses import dataclass
-from typing import Union
 
 import numpy as np
-import numpy.typing as npt
 
-from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
 from adam.core.array_api_math import (
+    ArrayAPIOps,
     ArrayAPISpatialMath,
-    ArrayAPILike,
     ArrayAPIFactory,
+    ArrayAPILike,
     ArraySpec,
 )
 
@@ -34,4 +32,5 @@ class NumpyLikeFactory(ArrayAPIFactory):
 
 class SpatialMath(ArrayAPISpatialMath):
     def __init__(self, spec: ArraySpec | None = None):
-        super().__init__(NumpyLikeFactory(spec))
+        factory = NumpyLikeFactory(spec)
+        super().__init__(factory, ArrayAPIOps(factory, np))
