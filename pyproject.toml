@@ -41,25 +41,20 @@ pytorch = ["torch"]
 mujoco = ["mujoco"]
 usd = ["usd-core", "trimesh"]
 visualization = ["viser", "trimesh"]
+conversion = ["idyntree"]
+all = [
+  "adam-robotics[jax,casadi,pytorch,mujoco,usd,conversion,visualization]",
+]
 test = [
+  "adam-robotics[jax,casadi,pytorch,mujoco,usd,conversion,visualization]",
   "jax<=0.6.0",
-  "jaxlib",
-  "casadi",
-  "torch",
-  "viser",
-  "trimesh",
   "urdf-usd-converter",
-  "mujoco",
   "robot_descriptions",
   "pytest",
-  "idyntree",
   "icub-models",
   "black",
   "requests",
-  "liecasadi",
 ]
-conversion = ["idyntree"]
-all = ["jax", "jaxlib", "casadi>=3.6", "torch", "viser", "trimesh"]
 
 [project.urls]
 Documentation = "https://adam-robotics.readthedocs.io/en/latest/"
