@@ -9,7 +9,11 @@ from adam.casadi import KinDynComputations
 @pytest.fixture(scope="module")
 def setup_test(tests_setup) -> KinDynComputations | RobotCfg | State:
     robot_cfg, state = tests_setup
-    adam_kin_dyn = KinDynComputations(robot_cfg.model_path, robot_cfg.joints_name_list)
+    adam_kin_dyn = KinDynComputations(
+        robot_cfg.model_path,
+        robot_cfg.joints_name_list,
+        root_link=robot_cfg.root_link,
+    )
     adam_kin_dyn.set_frame_velocity_representation(robot_cfg.velocity_representation)
     return adam_kin_dyn, robot_cfg, state
 
@@ -119,6 +123,18 @@ def test_fk(setup_test):
         adam_kin_dyn.forward_kinematics_fun("l_sole")(state.H, state.joints_pos)
     )
     assert idyn_H - adam_H == pytest.approx(0.0, abs=1e-5)
+
+
+def test_link_poses(setup_test):
+    adam_kin_dyn, _robot_cfg, state = setup_test
+    link_poses = adam_kin_dyn.link_poses(state.H, state.joints_pos)
+    link_name = next(iter(link_poses))
+    adam_H = adam_kin_dyn.forward_kinematics(link_name, state.H, state.joints_pos)
+
+    assert cs.DM(link_poses[link_name]) - cs.DM(adam_H) == pytest.approx(
+        0.0,
+        abs=1e-5,
+    )
 
 
 def test_fk_non_actuated(setup_test):

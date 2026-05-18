@@ -1,7 +1,5 @@
 # Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
-import warnings
-
 import jax.numpy as jnp
 import numpy as np
 
@@ -29,21 +27,22 @@ class KinDynComputations(KinDynFactoryMixin):
             urdfstring (str): path/string of a URDF or a MuJoCo MjModel.
                 NOTE: The parameter name `urdfstring` is deprecated and will be renamed to `model` in a future release.
             joints_name_list (list): list of the actuated joints
-            root_link (str, optional): Deprecated. The root link is automatically chosen as the link with no parent in the URDF. Defaults to None.
+            root_link (str, optional): the link to use as the floating base.
+                When ``None`` the link with no parent in the URDF is used.
         """
         ref = jnp.array(0.0, dtype=dtype)
         math = SpatialMath(spec_from_reference(ref))
         factory = build_model_factory(description=urdfstring, math=math)
-        model = Model.build(factory=factory, joints_name_list=joints_name_list)
+        model = Model.build(
+            factory=factory,
+            joints_name_list=joints_name_list,
+            root_link=root_link,
+        )
         self.rbdalgos = RBDAlgorithms(model=model, math=math)
+        self._factory = factory
+        self._joints_name_list = model.actuated_joints
         self.NDoF = self.rbdalgos.NDoF
         self.g = jnp.asarray(gravity, dtype=dtype)
-        if root_link is not None:
-            warnings.warn(
-                "The root_link argument is not used. The root link is automatically chosen as the link with no parent in the URDF",
-                DeprecationWarning,
-                stacklevel=2,
-            )
 
     def set_frame_velocity_representation(
         self, representation: Representations
@@ -54,6 +53,20 @@ class KinDynComputations(KinDynFactoryMixin):
             representation (Representations): The representation of the velocity
         """
         self.rbdalgos.set_frame_velocity_representation(representation)
+
+    def set_root_link(self, root_link: str) -> None:
+        """Changes the floating base of the robot model.
+
+        Args:
+            root_link (str): name of the link to use as the new floating base.
+        """
+        model = Model.build(
+            factory=self._factory,
+            joints_name_list=self._joints_name_list,
+            root_link=root_link,
+        )
+        self.rbdalgos.set_root_link(model)
+        self.NDoF = model.NDoF
 
     def mass_matrix(self, base_transform: jnp.array, joint_positions: jnp.array):
         """Returns the Mass Matrix functions computed the CRBA
@@ -135,6 +148,26 @@ class KinDynComputations(KinDynFactoryMixin):
         return self.rbdalgos.forward_kinematics(
             frame, base_transform, joint_positions
         ).array
+
+    def link_poses(
+        self, base_transform: jnp.array, joint_positions: jnp.array
+    ) -> dict[str, jnp.array]:
+        """Return root-to-link transforms for the whole model.
+
+        Args:
+            base_transform (jnp.array): Homogenous transform from base to world
+            joint_positions (jnp.array): The joints position
+
+        Returns:
+            dict[str, jnp.array]: Link poses as homogenous transformation matrices
+        """
+        return {
+            name: transform.array
+            for name, transform in self.rbdalgos.link_poses(
+                base_transform,
+                joint_positions,
+            ).items()
+        }
 
     def jacobian(
         self, frame: str, base_transform: jnp.array, joint_positions: jnp.array

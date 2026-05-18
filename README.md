@@ -36,6 +36,9 @@ pip install adam-robotics[mujoco]
 # OpenUSD support
 pip install adam-robotics[usd]
 
+# Visualization support
+pip install adam-robotics[visualization]
+
 # All backends
 pip install adam-robotics[all]
 ```
@@ -64,7 +67,7 @@ conda create -n adamenv -c conda-forge adam-robotics-all
 ```bash
 git clone https://github.com/ami-iit/adam.git
 cd adam
-pip install .[jax]  # or [casadi], [pytorch], [mujoco], [usd], [all]
+pip install .[jax]  # or [casadi], [pytorch], [mujoco], [usd], [visualization], [all]
 ```
 
 ## 🚀 Quick Start
@@ -301,40 +304,152 @@ J = kinDyn.jacobian('frame_name', w_H_b, joints)
 
 ### OpenUSD
 
-adam supports both exporting a model to OpenUSD and loading it back for computations.
+adam supports loading robot models directly from OpenUSD files and exporting models to OpenUSD.
+
+**Loading directly from a USD file:**
 
 ```python
 import numpy as np
 from adam import Representations
-from adam.model import Model, build_model_factory
 from adam.numpy import KinDynComputations
+
+# Load directly from any existing USD file
+kinDyn = KinDynComputations.from_usd(
+    "robot.usd",
+    robot_prim_path="/Robot",
+    joints_name_list=["joint_1", "joint_2"],
+)
+kinDyn.set_frame_velocity_representation(Representations.MIXED_REPRESENTATION)
+
+# Compute quantities as usual
+w_H_b = np.eye(4)
+q = np.zeros(kinDyn.NDoF)
+M = kinDyn.mass_matrix(w_H_b, q)
+com = kinDyn.CoM_position(w_H_b, q)
+```
+
+**Exporting a model to USD** (e.g. to convert a URDF to USD):
+
+```python
+from adam.model import Model, build_model_factory
 from adam.numpy.numpy_like import SpatialMath
 
-# You can convert a URDF to a USD
 model_path = "robot.urdf"
 joints_name_list = ["joint_1", "joint_2"]
 
 factory = build_model_factory(description=model_path, math=SpatialMath())
 model = Model.build(factory=factory, joints_name_list=joints_name_list)
 
-# Export robot articulation to USD (use .usda for text, .usdc for binary)
-usd_path = "robot.usda"
-model.to_usd(usd_path, robot_prim_path="/Robot")
-
-# If you have an existing USD file, start from this to create a KinDynComputations instance
-kinDyn = KinDynComputations.from_usd(
-    usd_path,
-    robot_prim_path="/Robot",
-    joints_name_list=joints_name_list,
-)
-kinDyn.set_frame_velocity_representation(Representations.MIXED_REPRESENTATION)
-
-# Compute quantities as usual
-w_H_b = np.eye(4)
-q = np.zeros(len(joints_name_list))
-M = kinDyn.mass_matrix(w_H_b, q)
-com = kinDyn.CoM_position(w_H_b, q)
+# Export to USD
+model.to_usd("robot.usd", robot_prim_path="/Robot")
 ```
+
+### Visualization
+
+adam also provides a lightweight visualization layer based on [viser](https://viser.studio/).
+It works with the same normalized model API, so URDF, MuJoCo, and USD models can all be rendered through the same interface.
+
+For quick inspection from the terminal, use the bundled viewer command:
+
+```bash
+adam-model-view --urdf path/to/robot.urdf
+adam-model-view --mujoco path/to/model.xml
+adam-model-view --usd path/to/robot.usd --robot-prim-path /Robot
+```
+
+```python
+import numpy as np
+import icub_models
+from adam.numpy import KinDynComputations
+from adam.visualization import Visualizer
+
+kindyn = KinDynComputations.from_urdf(
+    icub_models.get_model_file("iCubGazeboV2_5")
+)
+
+visualizer = Visualizer(
+    world_axes=True,
+    ground=True,
+    camera_position=(2.5, -2.0, 1.5),
+    camera_look_at=(0.0, 0.0, 0.6),
+)
+
+robot = visualizer.add_model(kindyn, root_name="/icub")
+
+w_H_b = np.eye(4)
+w_H_b[2, 3] = 0.6
+q = np.zeros(kindyn.NDoF)
+robot.update(w_H_b, q)
+robot.add_joint_sliders(folder_name="iCub")
+```
+
+With other model sources, only the loader changes:
+
+```python
+# MuJoCo
+kindyn = KinDynComputations.from_mujoco_model(mj_model)
+
+# USD
+kindyn = KinDynComputations.from_usd("robot.usd", robot_prim_path="/Robot")
+```
+
+Batched visualization is available through the same `ModelHandle` API by passing
+`num_instances` to `add_model()`. The model is rendered with viser batched meshes,
+and each `update()` call accepts base transforms with shape `(B, 4, 4)` and joint
+positions with shape `(B, N)`:
+
+```python
+num_instances = 16
+robot = visualizer.add_model(
+    kindyn,
+    root_name="/g1_batch",
+    num_instances=num_instances,
+)
+
+w_H_b = np.repeat(np.eye(4)[None, :, :], num_instances, axis=0)
+q = np.zeros((num_instances, kindyn.NDoF))
+robot.update(w_H_b, q)
+```
+
+For a ready-to-run MuJoCo example with a batch of Unitree G1 robots:
+
+```bash
+python examples/visualization/visualize_g1_batch.py
+```
+
+The batched example animates `left_hip_pitch_joint` by default with a phase offset
+per instance. Frames and joint sliders are scalar-model conveniences and are not
+enabled for batched models.
+
+Examples are available in:
+
+- `examples/visualization/visualize_mujoco.py`
+- `examples/visualization/visualize_g1_batch.py`
+- `examples/visualization/visualize_usd.py`
+- `examples/visualization/visualize_multi_robot.py`
+- `examples/visualization/visualize_urdf.py`
+
+### Configurable Floating Base
+
+By default adam uses the root link of the URDF as the floating base. You can choose any other link as the floating base at construction time or at runtime:
+
+```python
+from adam.numpy import KinDynComputations
+
+# Construction-time: use "l_ankle_2" as the floating base
+kinDyn = KinDynComputations(model_path, joints_name_list, root_link="l_ankle_2")
+
+# Runtime setter (rebuilds the kinematic tree)
+kinDyn.set_root_link("chest")
+```
+
+adam re-roots the kinematic tree internally by reversing the joints along the path from the new root to the original URDF root. All dynamics quantities (mass matrix, Jacobians, bias forces, …) are then consistent with the new floating base. Results match iDynTree's `setFloatingBase` API.
+
+> [!IMPORTANT]
+> **Joint serialization is independent of the floating base.** The order of joints in the `joints` vector is fixed by `joints_name_list` at construction time and never changes — only the *base state* inputs (`w_H_b` and base velocity) reflect the new floating base.
+
+> [!NOTE]
+> `root_link` must be a **link** name, not a frame name. Passing a frame name raises a `ValueError` listing valid link names. Frames remain valid as targets for forward kinematics and Jacobians.
 
 ### Inverse Kinematics
 
@@ -370,9 +485,11 @@ print("Joint values:\n", q_sol)
 - **Kinematics**: Forward kinematics, Jacobians (frame and base)
 - **Dynamics**: Mass matrix, Coriolis/centrifugal forces and gravity, Articulated body algorithm
 - **Centroidal**: Centroidal momentum matrix and derivatives
+- **Configurable floating base**: Any link can be set as the floating base
 - **Differentiation**: Get gradients, Jacobians, and Hessians automatically
 - **Symbolic**: Build computation graphs with CasADi for optimization
 - **Batched**: Process multiple configurations in parallel with PyTorch
+- **Visualization**: Render URDF, MuJoCo, and USD robot models with viser
 
 ## 📖 Documentation
 

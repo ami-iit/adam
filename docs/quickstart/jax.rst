@@ -241,7 +241,7 @@ Load models from OpenUSD and use them with JAX transformations:
     from adam.jax import KinDynComputations
 
     kinDyn = KinDynComputations.from_usd(
-        "robot.usda",
+        "robot.usd",
         robot_prim_path="/Robot",
         joints_name_list=["joint_1", "joint_2"],
     )

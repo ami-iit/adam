@@ -10,7 +10,8 @@ from adam.pytorch import KinDynComputationsBatch
 @pytest.fixture(scope="module")
 def setup_test(tests_setup, device) -> KinDynComputationsBatch | RobotCfg | State:
     robot_cfg, state = tests_setup
-
+    if robot_cfg.root_link is not None:
+        pytest.skip("root link parametrization tested in numpy and casadi only")
     adam_kin_dyn = KinDynComputationsBatch(
         robot_cfg.model_path,
         robot_cfg.joints_name_list,
@@ -407,6 +408,16 @@ def test_fk(setup_test):
 
     # Verify batch variation (random inputs should produce different outputs)
     assert not torch.allclose(adam_H[0], adam_H[1], atol=1e-6)
+
+
+def test_link_poses(setup_test):
+    adam_kin_dyn, _robot_cfg, state, batch_size = setup_test
+    link_poses = adam_kin_dyn.link_poses(state.H, state.joints_pos)
+    link_name = next(iter(link_poses))
+    adam_H = adam_kin_dyn.forward_kinematics(link_name, state.H, state.joints_pos)
+
+    assert link_poses[link_name].shape == (batch_size, 4, 4)
+    assert torch.allclose(link_poses[link_name], adam_H, atol=1e-6)
 
 
 def test_fk_non_actuated(setup_test):

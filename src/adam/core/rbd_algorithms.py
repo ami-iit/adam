@@ -293,6 +293,27 @@ class RBDAlgorithms:
             joint_positions=joint_positions,
         ).root_to_target
 
+    def link_poses(
+        self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
+    ) -> dict[str, npt.ArrayLike]:
+        """Computes the forward kinematics for every link in one tree traversal.
+
+        Args:
+            base_transform (npt.ArrayLike): The homogenous transform from base to world frame
+            joint_positions (npt.ArrayLike): The joints position
+
+        Returns:
+            dict[str, npt.ArrayLike]: Root-to-link homogeneous transforms keyed by link name
+        """
+        base_transform, joint_positions = self._convert_to_arraylike(
+            base_transform, joint_positions
+        )
+        root_to_link = self._compute_tree_homogeneous_traversal(
+            base_transform=base_transform,
+            joint_positions=joint_positions,
+        )
+        return {self._node_names[idx]: root_to_link[idx] for idx in self._node_indices}
+
     def joints_jacobian(
         self, frame: str, joint_positions: npt.ArrayLike
     ) -> npt.ArrayLike:
@@ -1259,10 +1280,25 @@ class RBDAlgorithms:
                 converted.append(self.math.asarray(arg))
         return converted[0] if len(converted) == 1 else converted
 
+    def set_root_link(self, model: Model) -> None:
+        """Update the robot model to use a different root link.
+
+        Call this *after* rebuilding the model via
+        ``Model.build(factory, joints_name_list, root_link=new_root)``.
+
+        Args:
+            model (Model): pre-built model with the desired root link.
+        """
+        self.model = model
+        self.NDoF = model.NDoF
+        self.root_link = model.tree.root
+        self._prepare_tree_cache()
+
     def _prepare_tree_cache(self) -> None:
         """Pre-compute static tree data so the dynamic algorithms avoid repeated Python work."""
         nodes = list(self.model.tree)
         node_count = len(nodes)
+        self._node_names = tuple(node.name for node in nodes)
         self._node_indices = tuple(range(node_count))
         self._rev_node_indices = tuple(reversed(self._node_indices))
         self._parent_indices = [-1] * node_count
@@ -1294,9 +1330,13 @@ class RBDAlgorithms:
                 self._joint_indices_per_node[idx] = joint.idx
                 if joint.idx is not None:
                     self._joint_index_to_node[int(joint.idx)] = idx
+                # Use parent_arc from the tree so reversed joints are handled correctly.
+                self._joint_by_child[link.name] = joint
 
+        # Add joints whose child is a frame (frames are not tree nodes).
         for joint in self.model.joints.values():
-            self._joint_by_child[joint.child] = joint
+            if joint.child in self.model.frames:
+                self._joint_by_child[joint.child] = joint
 
         self._root_index = self.model.tree.get_idx_from_name(self.root_link)
         self._node_count = node_count

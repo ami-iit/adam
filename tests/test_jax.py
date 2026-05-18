@@ -11,7 +11,12 @@ config.update("jax_enable_x64", True)
 @pytest.fixture(scope="module")
 def setup_test(tests_setup) -> KinDynComputations | RobotCfg | State:
     robot_cfg, state = tests_setup
-    adam_kin_dyn = KinDynComputations(robot_cfg.model_path, robot_cfg.joints_name_list)
+    if robot_cfg.root_link is not None:
+        pytest.skip("root link parametrization tested in numpy and casadi only")
+    adam_kin_dyn = KinDynComputations(
+        robot_cfg.model_path,
+        robot_cfg.joints_name_list,
+    )
     adam_kin_dyn.set_frame_velocity_representation(robot_cfg.velocity_representation)
     return adam_kin_dyn, robot_cfg, state
 
@@ -87,6 +92,15 @@ def test_fk(setup_test):
     idyn_H = robot_cfg.idyn_function_values.forward_kinematics
     adam_H = adam_kin_dyn.forward_kinematics("l_sole", state.H, state.joints_pos)
     assert idyn_H - adam_H == pytest.approx(0.0, abs=1e-5)
+
+
+def test_link_poses(setup_test):
+    adam_kin_dyn, _robot_cfg, state = setup_test
+    link_poses = adam_kin_dyn.link_poses(state.H, state.joints_pos)
+    link_name = next(iter(link_poses))
+    adam_H = adam_kin_dyn.forward_kinematics(link_name, state.H, state.joints_pos)
+
+    assert link_poses[link_name] - adam_H == pytest.approx(0.0, abs=1e-5)
 
 
 def test_fk_non_actuated(setup_test):
