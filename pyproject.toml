@@ -47,7 +47,6 @@ all = [
 ]
 test = [
   "adam-robotics[jax,casadi,pytorch,mujoco,usd,conversion,visualization]",
-  "jax<=0.6.0",
   "urdf-usd-converter",
   "robot_descriptions",
   "pytest",
