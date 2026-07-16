@@ -1,6 +1,3 @@
-import functools
-import inspect
-
 import mujoco
 import numpy as np
 import pytest
@@ -13,12 +10,14 @@ from adam.numpy.computations import KinDynComputations
 DESCRIPTION_NAMES = ["g1_mj_description", "aliengo_mj_description"]
 
 
-@functools.lru_cache(maxsize=1)
-def _mj_fullM_uses_legacy_signature() -> bool:
+def _mj_full_mass_matrix(
+    model: mujoco.MjModel, data: mujoco.MjData, dst: np.ndarray
+) -> None:
     try:
-        return "qM" in inspect.signature(mujoco.mj_fullM).parameters
-    except (TypeError, ValueError):
-        return "qM" in (mujoco.mj_fullM.__doc__ or "")
+        mujoco.mj_fullM(model, data, dst)
+    except TypeError:
+        # MuJoCo Python bindings used both (model, data, dst) and (model, dst, qM).
+        mujoco.mj_fullM(model, dst, data.qM)
 
 
 def _load_model(description: str) -> mujoco.MjModel:
@@ -261,10 +260,7 @@ def test_mass_matrix(mujoco_setup):
     q_joints = mujoco_setup["q_joints"]
     S_inv = mujoco_setup["velocity_transform"]
     M_mj = np.zeros((model.nv, model.nv))
-    if _mj_fullM_uses_legacy_signature():
-        mujoco.mj_fullM(model, M_mj, data.qM)
-    else:
-        mujoco.mj_fullM(model, data, M_mj)
+    _mj_full_mass_matrix(model, data, M_mj)
     M_adam = kd.mass_matrix(base_transform, q_joints)
     # Remove MuJoCo joint armature (rotor inertia) from the full mass matrix.
     M_mj_no_arm = M_mj.copy()
