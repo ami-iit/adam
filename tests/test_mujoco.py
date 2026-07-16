@@ -252,9 +252,8 @@ def test_mass_matrix(mujoco_setup):
     M_mj = np.zeros((model.nv, model.nv))
     try:
         mujoco.mj_fullM(model, data, M_mj)
-    except TypeError as exc:
-        if "incompatible function arguments" not in str(exc):
-            raise
+    except TypeError:
+        # MuJoCo changed mj_fullM from (model, dst, qM) to (model, data, dst).
         mujoco.mj_fullM(model, M_mj, data.qM)
     M_adam = kd.mass_matrix(base_transform, q_joints)
     # Remove MuJoCo joint armature (rotor inertia) from the full mass matrix.
