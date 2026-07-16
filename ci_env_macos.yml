@@ -4,7 +4,7 @@ channels:
 dependencies:
   - python >=3.10,<3.13
   - numpy
-  - scipy <1.13
+  - scipy
   - casadi >=3.6
   - prettytable
   - urdfdom-py
@@ -16,7 +16,7 @@ dependencies:
   - pytest-repeat
   - icub-models
   - idyntree >=11.0.0
-  - jax<=0.6.0
+  - jax
   - pytorch
   - requests
   - array-api-compat
