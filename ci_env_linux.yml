@@ -4,7 +4,7 @@ channels:
 dependencies:
   - python >=3.10,<3.13
   - numpy
-  - scipy
+  - scipy <1.13
   - casadi >=3.6
   - prettytable
   - urdfdom-py
@@ -21,7 +21,7 @@ dependencies:
   - requests
   - array-api-compat
   - liecasadi
-  - mujoco >=3.10
+  - mujoco
   - robot_descriptions
   - trimesh
   - pip:

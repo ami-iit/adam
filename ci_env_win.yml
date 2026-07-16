@@ -19,7 +19,7 @@ dependencies:
   - requests
   - liecasadi
   - array-api-compat
-  - mujoco >=3.10
+  - mujoco
   - robot_descriptions
   - trimesh
   - pip:
