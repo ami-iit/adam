@@ -15,11 +15,14 @@ def _mj_full_mass_matrix(
 ) -> None:
     try:
         mujoco.mj_fullM(model, data, dst)
-    except TypeError as exc:
-        if "incompatible function arguments" not in str(exc):
-            raise
-        # MuJoCo Python bindings use both (model, data, dst) and (model, dst, qM).
-        mujoco.mj_fullM(model, dst, data.qM)
+        return
+    except TypeError as new_signature_error:
+        # Newer MuJoCo uses (model, data, dst); older bindings use (model, dst, qM).
+        try:
+            mujoco.mj_fullM(model, dst, data.qM)
+            return
+        except TypeError:
+            raise new_signature_error
 
 
 def _load_model(description: str) -> mujoco.MjModel:
