@@ -10,22 +10,6 @@ from adam.numpy.computations import KinDynComputations
 DESCRIPTION_NAMES = ["g1_mj_description", "aliengo_mj_description"]
 
 
-def _mj_full_mass_matrix(
-    model: mujoco.MjModel, data: mujoco.MjData, dst: np.ndarray
-) -> None:
-    try:
-        mujoco.mj_fullM(model, data, dst)
-        return
-    except TypeError as new_signature_error:
-        # The first call above tries the MuJoCo 3.11+ signature (model, data, dst).
-        # If it fails, retry with the legacy signature used by older bindings.
-        try:
-            mujoco.mj_fullM(model, dst, data.qM)
-            return
-        except TypeError:
-            raise new_signature_error
-
-
 def _load_model(description: str) -> mujoco.MjModel:
     print(f"Loading robot description '{description}'")
     try:
@@ -266,7 +250,7 @@ def test_mass_matrix(mujoco_setup):
     q_joints = mujoco_setup["q_joints"]
     S_inv = mujoco_setup["velocity_transform"]
     M_mj = np.zeros((model.nv, model.nv))
-    _mj_full_mass_matrix(model, data, M_mj)
+    mujoco.mj_fullM(model, data, M_mj)
     M_adam = kd.mass_matrix(base_transform, q_joints)
     # Remove MuJoCo joint armature (rotor inertia) from the full mass matrix.
     M_mj_no_arm = M_mj.copy()
