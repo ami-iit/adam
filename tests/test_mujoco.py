@@ -250,7 +250,10 @@ def test_mass_matrix(mujoco_setup):
     q_joints = mujoco_setup["q_joints"]
     S_inv = mujoco_setup["velocity_transform"]
     M_mj = np.zeros((model.nv, model.nv))
-    mujoco.mj_fullM(model, M_mj, data.qM)
+    try:
+        mujoco.mj_fullM(model, data, M_mj)
+    except TypeError:
+        mujoco.mj_fullM(model, M_mj, data.qM)
     M_adam = kd.mass_matrix(base_transform, q_joints)
     # Remove MuJoCo joint armature (rotor inertia) from the full mass matrix.
     M_mj_no_arm = M_mj.copy()
