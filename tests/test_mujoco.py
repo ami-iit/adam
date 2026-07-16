@@ -17,7 +17,8 @@ def _mj_full_mass_matrix(
         mujoco.mj_fullM(model, data, dst)
         return
     except TypeError as new_signature_error:
-        # MuJoCo 3.11+ uses (model, data, dst); older bindings use (model, dst, qM).
+        # The first call above tries the MuJoCo 3.11+ signature (model, data, dst).
+        # If it fails, retry with the legacy signature used by older bindings.
         try:
             mujoco.mj_fullM(model, dst, data.qM)
             return
