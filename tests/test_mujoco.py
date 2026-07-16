@@ -1,3 +1,6 @@
+import functools
+import inspect
+
 import mujoco
 import numpy as np
 import pytest
@@ -8,6 +11,14 @@ from adam import Representations
 from adam.numpy.computations import KinDynComputations
 
 DESCRIPTION_NAMES = ["g1_mj_description", "aliengo_mj_description"]
+
+
+@functools.lru_cache(maxsize=1)
+def _mj_fullM_uses_legacy_signature() -> bool:
+    try:
+        return "qM" in inspect.signature(mujoco.mj_fullM).parameters
+    except (TypeError, ValueError):
+        return "qM" in (mujoco.mj_fullM.__doc__ or "")
 
 
 def _load_model(description: str) -> mujoco.MjModel:
@@ -250,8 +261,7 @@ def test_mass_matrix(mujoco_setup):
     q_joints = mujoco_setup["q_joints"]
     S_inv = mujoco_setup["velocity_transform"]
     M_mj = np.zeros((model.nv, model.nv))
-    signature_doc = mujoco.mj_fullM.__doc__ or ""
-    if "qM" in signature_doc:
+    if _mj_fullM_uses_legacy_signature():
         mujoco.mj_fullM(model, M_mj, data.qM)
     else:
         mujoco.mj_fullM(model, data, M_mj)
