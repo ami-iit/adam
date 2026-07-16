@@ -15,8 +15,10 @@ def _mj_full_mass_matrix(
 ) -> None:
     try:
         mujoco.mj_fullM(model, data, dst)
-    except TypeError:
-        # MuJoCo Python bindings used both (model, data, dst) and (model, dst, qM).
+    except TypeError as exc:
+        if "incompatible function arguments" not in str(exc):
+            raise
+        # MuJoCo Python bindings use both (model, data, dst) and (model, dst, qM).
         mujoco.mj_fullM(model, dst, data.qM)
 
 
