@@ -35,14 +35,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-jax = ["jax<=0.6.0", "jaxlib"]
+jax = ["jax", "jaxlib"]
 casadi = ["casadi", "liecasadi"]
 pytorch = ["torch", "jax", "jaxlib"]
 mujoco = ["mujoco"]
 usd = ["usd-core", "trimesh"]
 visualization = ["viser", "trimesh"]
 test = [
-  "jax<=0.6.0",
+  "jax",
   "jaxlib",
   "casadi",
   "torch",
