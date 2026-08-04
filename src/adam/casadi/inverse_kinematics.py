@@ -39,7 +39,7 @@ class Target:
 class InverseKinematics:
     def __init__(
         self,
-        urdf_path: str,
+        model_path: Any,
         joints_list: list[str],
         joint_limits_active: bool = True,
         solver_settings: dict[str, Any] = None,
@@ -47,12 +47,13 @@ class InverseKinematics:
         """Initialize the InverseKinematics solver.
 
         Args:
-            urdf_path (str): Path to the URDF file.
+            model_path (Any): Path/string to a URDF or USD file, a MuJoCo MjModel, or a
+                USD stage/dict as accepted by KinDynComputations.
             joints_list (list[str]): List of joint names.
             joint_limits_active (bool, optional): If True, enforces joint limits. Defaults to True.
             solver_settings (dict[str, ], optional): Settings for the solver. Defaults to None.
         """
-        self.kd = KinDynComputations(urdf_path, joints_list)
+        self.kd = KinDynComputations(model_path, joints_list)
         self.ndof = len(joints_list)
         self.joints_list = joints_list
 
