@@ -467,7 +467,9 @@ class InverseKinematics:
             weight (float): Weight for the regularization term.
         """
         self.joint_position_target = self.opti.parameter(self.ndof)
-        self.cost_terms.append(weight * cs.sumsqr(self.joint_pos - self.joint_position_target))
+        self.cost_terms.append(
+            weight * cs.sumsqr(self.joint_pos - self.joint_position_target)
+        )
 
     def update_target_position(self, frame: str, position: np.ndarray):
         """Update the target position for a frame.
@@ -542,7 +544,11 @@ class InverseKinematics:
                 "Joint regularization has not been added. Call add_joint_regularization() first."
             )
         if joint_values is None:
-            joint_values = np.zeros(self.ndof) if self._cached_sol is None else self._cached_sol.value(self.joint_pos)
+            joint_values = (
+                np.zeros(self.ndof)
+                if self._cached_sol is None
+                else self._cached_sol.value(self.joint_pos)
+            )
             self.opti.set_value(self.joint_position_target, joint_values)
         else:
             self.opti.set_value(self.joint_position_target, joint_values)
