@@ -460,6 +460,15 @@ class InverseKinematics:
         else:
             raise ValueError("Unsupported target type")
 
+    def add_joint_regularization(self, weight: float = 1e-3):
+        """Add a regularization term to the cost function to minimize joint movement.
+
+        Args:
+            weight (float): Weight for the regularization term.
+        """
+        self.joint_position_target = self.opti.parameter(self.ndof)
+        self.cost_terms.append(weight * cs.sumsqr(self.joint_pos - self.joint_position_target))
+
     def update_target_position(self, frame: str, position: np.ndarray):
         """Update the target position for a frame.
 
@@ -521,6 +530,22 @@ class InverseKinematics:
             self.update_target_pose(frame, *target)  # type: ignore[arg-type]
         else:
             raise RuntimeError("Unknown target type")
+
+    def update_joint_regularization(self, joint_values: np.ndarray):
+        """Update the joint regularization target.
+
+        Args:
+            joint_values (np.ndarray): The new joint values to regularize towards.
+        """
+        if not hasattr(self, "joint_position_target"):
+            raise RuntimeError(
+                "Joint regularization has not been added. Call add_joint_regularization() first."
+            )
+        if joint_values is None:
+            joint_values = np.zeros(self.ndof) if self._cached_sol is None else self._cached_sol.value(self.joint_pos)
+            self.opti.set_value(self.joint_position_target, joint_values)
+        else:
+            self.opti.set_value(self.joint_position_target, joint_values)
 
     def set_initial_guess(self, base_transform: np.ndarray, joint_values: np.ndarray):
         """Set the initial guess for the optimization problem.
