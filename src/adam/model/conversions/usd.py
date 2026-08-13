@@ -71,11 +71,10 @@ def _inertia_to_principal_axes(I: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     if np.linalg.det(eigvecs) < 0.0:
         eigvecs[:, 0] *= -1.0
 
-    # USD stores principalAxes as the rotation from the body frame in which I
-    # is expressed to the principal-inertia frame, i.e. the transpose/inverse
-    # of the matrix whose columns are the principal axes expressed in the body
-    # frame.
-    quat_wxyz = R.from_matrix(eigvecs.T).as_quat(scalar_first=True)
+    # USD stores principalAxes as the rotation from the principal-inertia
+    # frame to the body frame in which I is expressed, i.e. the matrix whose
+    # columns are the principal axes expressed in the body frame.
+    quat_wxyz = R.from_matrix(eigvecs).as_quat(scalar_first=True)
     return eigvals, quat_wxyz
 
 
