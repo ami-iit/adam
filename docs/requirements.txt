@@ -1,7 +1,7 @@
 sphinx
 sphinx-rtd-theme
 sphinx-book-theme
-sphinx-shibuya
+shibuya
 sphinx-autodoc-typehints
 sphinx-book-theme
 sphinx-copybutton

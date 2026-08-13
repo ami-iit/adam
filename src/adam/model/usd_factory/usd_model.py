@@ -217,18 +217,18 @@ class USDModelFactory(ModelFactory):
             else self.Gf.Quatf(1.0, 0.0, 0.0, 0.0)
         )
 
-        # USD stores principalAxes as the rotation from the link frame to the
-        # principal-inertia frame (R_link_to_principal).  Rotate the diagonal
-        # inertia tensor back into the link frame directly, avoiding any
+        # USD stores principalAxes as the rotation from the principal-inertia
+        # frame to the link frame (R_principal_to_link).  Rotate the diagonal
+        # inertia tensor into the link frame directly, avoiding any
         # Euler-angle conversion and the associated gimbal-lock singularity.
         #
-        #   I_link = R^T @ diag(Ixx, Iyy, Izz) @ R
+        #   I_link = R @ diag(Ixx, Iyy, Izz) @ R^T
         #
-        # where R = R.from_quat(principal_axes) maps link → principal frame.
+        # where R = R.from_quat(principal_axes) maps principal → link frame.
         R_principal = _rotation_from_usd_quat(principal_axes)
         R_mat = R_principal.as_matrix()
         I_diag = np.diag(diagonal_inertia)
-        I_link = R_mat.T @ I_diag @ R_mat
+        I_link = R_mat @ I_diag @ R_mat.T
 
         return USDInertial(
             mass=mass,
