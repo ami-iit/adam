@@ -3,6 +3,7 @@ from typing import Iterable, Iterator, Union
 
 import numpy.typing as npt
 
+from adam.core.lie import SE3
 from adam.model.abc_factories import Joint, Link
 
 
@@ -40,14 +41,14 @@ class ReversedJoint(Joint):
         # (revolute/prismatic offset and fixed transform coincide at q=0).
         H0 = original.math.H_from_Pos_RPY(original.origin.xyz, original.origin.rpy)
         S_orig = original.motion_subspace()
-        adj_H0 = original.math.adjoint(H0)
+        adj_H0 = SE3(original.math, H0).adjoint().as_matrix()
         self._motion_subspace = -original.math.mtimes(adj_H0, S_orig)
 
     def homogeneous(self, q: npt.ArrayLike) -> npt.ArrayLike:
-        return self.math.homogeneous_inverse(self.original.homogeneous(q))
+        return SE3(self.math, self.original.homogeneous(q)).inverse().as_matrix()
 
     def spatial_transform(self, q: npt.ArrayLike) -> npt.ArrayLike:
-        return self.math.adjoint(self.original.homogeneous(q))
+        return SE3(self.math, self.original.homogeneous(q)).adjoint().as_matrix()
 
     def motion_subspace(self) -> npt.ArrayLike:
         return self._motion_subspace

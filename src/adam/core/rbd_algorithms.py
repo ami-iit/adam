@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import numpy.typing as npt
 
 from adam.core.constants import Representations
+from adam.core.lie import SE3
 from adam.core.spatial_math import ArrayLike, SpatialMath
 from adam.model import Model, Node, Joint
 
@@ -36,10 +37,8 @@ class RBDAlgorithms:
             Representations.MIXED_REPRESENTATION
         )  # default
         # Cache root quantities that are reused at every call
-        self._root_spatial_transform = self.math.spatial_transform(
-            self.math.factory.eye(3),
-            self.math.factory.zeros((3, 1)),
-        )
+        # spatial_transform(I, 0) is the 6x6 identity
+        self._root_spatial_transform = self.math.factory.eye(6)
         self._root_motion_subspace = self.math.factory.eye(6)
         self._prepare_tree_cache()
 
@@ -50,6 +49,13 @@ class RBDAlgorithms:
             representation (str): The representation of the frame velocity
         """
         self.frame_velocity_representation = representation
+
+    @property
+    def _as_mixed(self) -> bool:
+        """True when adjoints must be the rotation-only ``blkdiag(R, R)``."""
+        return (
+            self.frame_velocity_representation == Representations.MIXED_REPRESENTATION
+        )
 
     def crba(self, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike):
         """
@@ -226,50 +232,29 @@ class RBDAlgorithms:
         ):
             return M, Jcm
 
-        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            Xm = math.adjoint_mixed_inverse(base_transform)
-            In = math.factory.eye(batch_shape + (n,))
-            Z6n = math.factory.zeros(batch_shape + (6, n))
-            Zn6 = math.factory.zeros(batch_shape + (n, 6))
-
-            top = math.concatenate([Xm, Z6n], axis=-1)
-            bot = math.concatenate([Zn6, In], axis=-1)
-            X_to_mixed = math.concatenate([top, bot], axis=-2)
-
-            M_mixed = math.mtimes(
-                math.swapaxes(X_to_mixed, -2, -1), math.mtimes(M, X_to_mixed)
-            )
-            Jcm_mixed = math.mtimes(
-                math.swapaxes(Xm, -2, -1), math.mtimes(Jcm, X_to_mixed)
-            )
-            return M_mixed, Jcm_mixed
-
-        if (
-            self.frame_velocity_representation
-            == Representations.INERTIAL_FIXED_REPRESENTATION
+        if self.frame_velocity_representation not in (
+            Representations.MIXED_REPRESENTATION,
+            Representations.INERTIAL_FIXED_REPRESENTATION,
         ):
-            Xi = math.adjoint_inverse(base_transform)
-            In = math.factory.eye(batch_shape + (n,))
-            Z6n = math.factory.zeros(batch_shape + (6, n))
-            Zn6 = math.factory.zeros(batch_shape + (n, 6))
-
-            top = math.concatenate([Xi, Z6n], axis=-1)
-            bot = math.concatenate([Zn6, In], axis=-1)
-            X_to_inertial = math.concatenate([top, bot], axis=-2)
-
-            M_inertial = math.mtimes(
-                math.swapaxes(X_to_inertial, -2, -1), math.mtimes(M, X_to_inertial)
+            raise ValueError(
+                f"Unknown frame velocity representation: {self.frame_velocity_representation}"
             )
-            Xm = math.adjoint_mixed_inverse(base_transform)  # rotation-only, for cmm
-            wrench_transform = math.swapaxes(Xm, -2, -1)
-            Jcm_inertial = math.mtimes(
-                wrench_transform, math.mtimes(Jcm, X_to_inertial)
-            )
-            return M_inertial, Jcm_inertial
 
-        raise ValueError(
-            f"Unknown frame velocity representation: {self.frame_velocity_representation}"
-        )
+        B_H_w = SE3(math, base_transform).inverse()
+        X_base = B_H_w.adjoint(self._as_mixed).as_matrix()
+        In = math.factory.eye(batch_shape + (n,))
+        Z6n = math.factory.zeros(batch_shape + (6, n))
+        Zn6 = math.factory.zeros(batch_shape + (n, 6))
+
+        top = math.concatenate([X_base, Z6n], axis=-1)
+        bot = math.concatenate([Zn6, In], axis=-1)
+        X = math.concatenate([top, bot], axis=-2)
+
+        M_out = math.mtimes(math.swapaxes(X, -2, -1), math.mtimes(M, X))
+        # the CMM wrench is always transformed with the rotation-only adjoint
+        wrench_transform = math.swapaxes(B_H_w.adjoint(mixed=True).as_matrix(), -2, -1)
+        Jcm_out = math.mtimes(wrench_transform, math.mtimes(Jcm, X))
+        return M_out, Jcm_out
 
     def forward_kinematics(
         self, frame, base_transform: npt.ArrayLike, joint_positions: npt.ArrayLike
@@ -376,7 +361,7 @@ class RBDAlgorithms:
             joint_positions=joint_positions,
         )
         B_H_L = traversal.root_to_target
-        L_X_B = self.math.adjoint_inverse(B_H_L)
+        L_X_B = SE3(self.math, B_H_L).inverse().adjoint().as_matrix()
         J_tot = self.math.concatenate([L_X_B, J], axis=-1)
         w_H_B = base_transform
         if (
@@ -384,53 +369,28 @@ class RBDAlgorithms:
             == Representations.BODY_FIXED_REPRESENTATION
         ):
             return J_tot
-        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            w_H_L = w_H_B @ B_H_L
-            LI_X_L = self.math.adjoint_mixed(w_H_L)
-
-            top_left = self.math.adjoint_mixed_inverse(base_transform)
-            top_right = self.math.factory.zeros(
-                joint_positions.shape[:-1] + (6, self.NDoF)
-            )
-            bottom_left = self.math.factory.zeros(
-                joint_positions.shape[:-1] + (self.NDoF, 6)
-            )
-            bottom_right = self.math.factory.eye(
-                joint_positions.shape[:-1] + (self.NDoF,)
-            )
-            top = self.math.concatenate([top_left, top_right], axis=-1)
-            bottom = self.math.concatenate([bottom_left, bottom_right], axis=-1)
-            X = self.math.concatenate([top, bottom], axis=-2)
-
-            J_tot = LI_X_L @ J_tot @ X
-            return J_tot
-
-        if (
-            self.frame_velocity_representation
-            == Representations.INERTIAL_FIXED_REPRESENTATION
+        if self.frame_velocity_representation not in (
+            Representations.MIXED_REPRESENTATION,
+            Representations.INERTIAL_FIXED_REPRESENTATION,
         ):
-            w_H_L = w_H_B @ B_H_L
-            I_X_L = self.math.adjoint(w_H_L)
-
-            top_left = self.math.adjoint_inverse(base_transform)
-            top_right = self.math.factory.zeros(
-                joint_positions.shape[:-1] + (6, self.NDoF)
+            raise NotImplementedError(
+                "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
             )
-            bottom_left = self.math.factory.zeros(
-                joint_positions.shape[:-1] + (self.NDoF, 6)
-            )
-            bottom_right = self.math.factory.eye(
-                joint_positions.shape[:-1] + (self.NDoF,)
-            )
-            top = self.math.concatenate([top_left, top_right], axis=-1)
-            bottom = self.math.concatenate([bottom_left, bottom_right], axis=-1)
-            X = self.math.concatenate([top, bottom], axis=-2)
 
-            return I_X_L @ J_tot @ X
-
-        raise NotImplementedError(
-            "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
+        X_L = SE3(self.math, w_H_B @ B_H_L).adjoint(self._as_mixed).as_matrix()
+        top_left = (
+            SE3(self.math, base_transform).inverse().adjoint(self._as_mixed).as_matrix()
         )
+        top_right = self.math.factory.zeros(joint_positions.shape[:-1] + (6, self.NDoF))
+        bottom_left = self.math.factory.zeros(
+            joint_positions.shape[:-1] + (self.NDoF, 6)
+        )
+        bottom_right = self.math.factory.eye(joint_positions.shape[:-1] + (self.NDoF,))
+        top = self.math.concatenate([top_left, top_right], axis=-1)
+        bottom = self.math.concatenate([bottom_left, bottom_right], axis=-1)
+        X = self.math.concatenate([top, bottom], axis=-2)
+
+        return X_L @ J_tot @ X
 
     def relative_jacobian(
         self, frame: str, joint_positions: npt.ArrayLike
@@ -463,22 +423,15 @@ class RBDAlgorithms:
             == Representations.BODY_FIXED_REPRESENTATION
         ):
             return J
-        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            B_H_L = traversal.root_to_target
-            LI_X_L = self.math.adjoint_mixed(B_H_L)
-            return LI_X_L @ J
-
-        elif (
-            self.frame_velocity_representation
-            == Representations.INERTIAL_FIXED_REPRESENTATION
+        if self.frame_velocity_representation not in (
+            Representations.MIXED_REPRESENTATION,
+            Representations.INERTIAL_FIXED_REPRESENTATION,
         ):
-            B_H_L = traversal.root_to_target
-            I_X_L = self.math.adjoint(B_H_L)
-            return I_X_L @ J
-
-        raise NotImplementedError(
-            "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
-        )
+            raise NotImplementedError(
+                "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
+            )
+        X_L = SE3(self.math, traversal.root_to_target).adjoint(self._as_mixed)
+        return X_L.as_matrix() @ J
 
     def jacobian_dot(
         self,
@@ -517,39 +470,38 @@ class RBDAlgorithms:
             joint_positions=joint_positions,
         )
         B_H_L = traversal.root_to_target
-        L_H_B = self.math.homogeneous_inverse(B_H_L)
+        L_H_B = SE3(self.math, B_H_L).inverse()
+        L_X_B = L_H_B.adjoint()
 
-        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            # frame C = B[I] for mixed representation
-            B_v_C = self.math.mxv(
-                self.math.adjoint_mixed_inverse(base_transform), base_velocity
-            )
-        elif (
-            self.frame_velocity_representation
-            == Representations.INERTIAL_FIXED_REPRESENTATION
-        ):
-            # frame C = I for inertial-fixed representation
-            B_v_C = self.math.mxv(
-                self.math.adjoint_inverse(base_transform), base_velocity
-            )
-        elif (
+        if (
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
         ):
             # frame C = B for body-fixed representation
             B_v_C = base_velocity
+        elif self.frame_velocity_representation in (
+            Representations.MIXED_REPRESENTATION,
+            Representations.INERTIAL_FIXED_REPRESENTATION,
+        ):
+            # frame C = B[I] for mixed, C = I for inertial-fixed
+            B_v_C = (
+                SE3(self.math, base_transform)
+                .inverse()
+                .adjoint(self._as_mixed)
+                .act(base_velocity)
+            )
         else:
             raise NotImplementedError(
                 "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION, and INERTIAL_FIXED_REPRESENTATION are implemented"
             )
 
-        v = self.math.mxv(self.math.adjoint(L_H_B), B_v_C)
-        a = self.math.mxv(self.math.adjoint_derivative(L_H_B, v), B_v_C)
+        v = L_X_B.act(B_v_C)
+        L_X_B_dot = L_X_B.derivative(v)
+        a = self.math.mxv(L_X_B_dot, B_v_C)
 
-        J_base_full = self.math.adjoint_inverse(B_H_L)
-        J_base_cols = [J_base_full[..., :, i : i + 1] for i in range(6)]
-        J_dot_base_full = self.math.adjoint_derivative(L_H_B, v)
-        J_dot_base_cols = [J_dot_base_full[..., :, i : i + 1] for i in range(6)]
+        # Ad(L_H_B) == Ad(B_H_L)^-1, so the base block is the adjoint itself
+        J_base_cols = [L_X_B.as_matrix()[..., :, i : i + 1] for i in range(6)]
+        J_dot_base_cols = [L_X_B_dot[..., :, i : i + 1] for i in range(6)]
 
         cols: list = [None] * self.NDoF
         cols_dot: list = [None] * self.NDoF
@@ -559,12 +511,12 @@ class RBDAlgorithms:
                 continue
 
             q_dot = joint_velocities[..., joint.idx]
-            L_H_j = L_H_B @ B_H_j
+            L_X_j = (L_H_B @ B_H_j).adjoint()
             S = joint.motion_subspace()
-            J_j = self.math.adjoint(L_H_j) @ S
+            J_j = L_X_j.as_matrix() @ S
 
             v = v + self.math.vxs(J_j, q_dot)
-            J_dot_j = self.math.adjoint_derivative(L_H_j, v) @ S
+            J_dot_j = L_X_j.derivative(v) @ S
             a = a + self.math.vxs(J_dot_j, q_dot)
 
             if joint.idx is not None:
@@ -584,27 +536,20 @@ class RBDAlgorithms:
         ):
             return J_dot
 
-        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            adj = self.math.adjoint_mixed
-            adj_derivative = self.math.adjoint_mixed_derivative
-            adj_inverse = self.math.adjoint_mixed_inverse
-        elif (
-            self.frame_velocity_representation
-            == Representations.INERTIAL_FIXED_REPRESENTATION
+        if self.frame_velocity_representation not in (
+            Representations.MIXED_REPRESENTATION,
+            Representations.INERTIAL_FIXED_REPRESENTATION,
         ):
-            adj = self.math.adjoint
-            adj_derivative = self.math.adjoint_derivative
-            adj_inverse = self.math.adjoint_inverse
-        else:
             raise NotImplementedError(
                 "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
             )
-        I_H_L = base_transform @ B_H_L
-        I_X_L = adj(I_H_L)
-        I_v_L = self.math.mxv(I_X_L, v)
-        I_X_L_dot = adj_derivative(I_H_L, I_v_L)
+        I_X_L_adj = SE3(self.math, base_transform @ B_H_L).adjoint(self._as_mixed)
+        I_X_L = I_X_L_adj.as_matrix()
+        I_v_L = I_X_L_adj.act(v)
+        I_X_L_dot = I_X_L_adj.derivative(I_v_L)
 
-        adj_inv = adj_inverse(base_transform)
+        B_H_I_adj = SE3(self.math, base_transform).inverse().adjoint(self._as_mixed)
+        adj_inv = B_H_I_adj.as_matrix()
 
         Z_6xN = self.math.factory.zeros(batch_size + (6, self.NDoF))
         Z_Nx6 = self.math.factory.zeros(batch_size + (self.NDoF, 6))
@@ -614,8 +559,7 @@ class RBDAlgorithms:
         bottom = self.math.concatenate([Z_Nx6, I_N], axis=-1)
         X = self.math.concatenate([top, bottom], axis=-2)
 
-        B_H_I = self.math.homogeneous_inverse(base_transform)
-        B_H_I_deriv = adj_derivative(B_H_I, -B_v_C)
+        B_H_I_deriv = B_H_I_adj.derivative(-B_v_C)
 
         Z_NxN = self.math.factory.zeros(batch_size + (self.NDoF, self.NDoF))
         topd = self.math.concatenate([B_H_I_deriv, Z_6xN], axis=-1)
@@ -674,29 +618,28 @@ class RBDAlgorithms:
         ori_frame_velocity_representation = self.frame_velocity_representation
         self.frame_velocity_representation = Representations.MIXED_REPRESENTATION
         _, Jcm = self.crba(base_transform, joint_positions)
-        Xm = self.math.adjoint_mixed(base_transform)
-        In = self.math.factory.eye(batch_size + (self.NDoF,))
-        Z6n = self.math.factory.zeros(batch_size + (6, self.NDoF))
-        Zn6 = self.math.factory.zeros(batch_size + (self.NDoF, 6))
+        w_H_B = SE3(self.math, base_transform)
+        Xm = w_H_B.adjoint(mixed=True).as_matrix()
         if (
             ori_frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
         ):
-
-            top = self.math.concatenate([Xm, Z6n], axis=-1)
-            bot = self.math.concatenate([Zn6, In], axis=-1)
-            X = self.math.concatenate([top, bot], axis=-2)
-            Jcm = Jcm @ X
+            A = Xm
         elif (
             ori_frame_velocity_representation
             == Representations.INERTIAL_FIXED_REPRESENTATION
         ):
-            Xi = self.math.adjoint_inverse(base_transform)
-            A = self.math.mtimes(Xm, Xi)
+            A = self.math.mtimes(Xm, w_H_B.inverse().adjoint().as_matrix())
+        else:
+            A = None  # mixed: Jcm is already in the requested representation
+
+        if A is not None:
+            In = self.math.factory.eye(batch_size + (self.NDoF,))
+            Z6n = self.math.factory.zeros(batch_size + (6, self.NDoF))
+            Zn6 = self.math.factory.zeros(batch_size + (self.NDoF, 6))
             top = self.math.concatenate([A, Z6n], axis=-1)
             bot = self.math.concatenate([Zn6, In], axis=-1)
-            X = self.math.concatenate([top, bot], axis=-2)
-            Jcm = Jcm @ X
+            Jcm = Jcm @ self.math.concatenate([top, bot], axis=-2)
         self.frame_velocity_representation = ori_frame_velocity_representation
         return Jcm[..., :3, :] / self._convert_to_arraylike(self.get_total_mass())
 
@@ -751,13 +694,11 @@ class RBDAlgorithms:
             tuple(base_transform.shape[:-2]) if base_transform.ndim > 2 else ()
         )
 
-        if (
-            self.frame_velocity_representation
-            == Representations.INERTIAL_FIXED_REPRESENTATION
-        ):
-            gravity_X = math.adjoint_inverse(base_transform)
-        else:
-            gravity_X = math.adjoint_mixed_inverse(base_transform)  # (...,6,6)
+        B_H_w = SE3(math, base_transform).inverse()
+        gravity_X = B_H_w.adjoint(
+            mixed=self.frame_velocity_representation
+            != Representations.INERTIAL_FIXED_REPRESENTATION
+        ).as_matrix()
 
         if (
             self.frame_velocity_representation
@@ -765,27 +706,26 @@ class RBDAlgorithms:
         ):
             # frame C = B for body-fixed representation
             B_X_C = math.factory.eye(batch_shape + (6,))
-            transformed_acc = math.factory.zeros(batch_shape + (6,))
-        elif self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            # frame C = B[I] for mixed representation
-            B_X_C = math.adjoint_mixed_inverse(base_transform)
+        elif self.frame_velocity_representation in (
+            Representations.MIXED_REPRESENTATION,
+            Representations.INERTIAL_FIXED_REPRESENTATION,
+        ):
+            # frame C = B[I] for mixed, C = I for inertial-fixed
+            B_X_C = B_H_w.adjoint(self._as_mixed).as_matrix()
+        else:
+            raise NotImplementedError(
+                "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
+            )
+
+        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
             omega = base_velocity[..., 3:]
             vlin = base_velocity[..., :3]
             skew_omega_times_vlin = math.mxv(math.skew(omega), vlin)
             top3 = -math.mxv(B_X_C[..., :3, :3], skew_omega_times_vlin)
             bot3 = math.factory.zeros(batch_shape + (3,))
             transformed_acc = math.concatenate([top3, bot3], axis=-1)
-        elif (
-            self.frame_velocity_representation
-            == Representations.INERTIAL_FIXED_REPRESENTATION
-        ):
-            # frame C = I for inertial-fixed representation
-            B_X_C = math.adjoint_inverse(base_transform)
-            transformed_acc = math.factory.zeros(batch_shape + (6,))
         else:
-            raise NotImplementedError(
-                "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
-            )
+            transformed_acc = math.factory.zeros(batch_shape + (6,))
 
         a0 = -(math.mxv(gravity_X, g)) + transformed_acc
 
@@ -945,20 +885,18 @@ class RBDAlgorithms:
 
         joint_torques_eff = joint_torques + joint_ext
 
-        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            B_X_I = math.adjoint_mixed_inverse(base_transform)
-            I_X_B = math.adjoint_mixed(base_transform)
-        elif (
-            self.frame_velocity_representation
-            == Representations.INERTIAL_FIXED_REPRESENTATION
-        ):
-            B_X_I = math.adjoint_inverse(base_transform)
-            I_X_B = math.adjoint(base_transform)
-        elif (
+        if (
             self.frame_velocity_representation
             == Representations.BODY_FIXED_REPRESENTATION
         ):
             B_X_I = I_X_B = math.factory.eye(batch_shape + (6,))
+        elif self.frame_velocity_representation in (
+            Representations.MIXED_REPRESENTATION,
+            Representations.INERTIAL_FIXED_REPRESENTATION,
+        ):
+            I_X_B_adj = SE3(math, base_transform).adjoint(self._as_mixed)
+            I_X_B = I_X_B_adj.as_matrix()
+            B_X_I = I_X_B_adj.inverse().as_matrix()
         else:
             raise NotImplementedError(
                 "Only BODY_FIXED_REPRESENTATION, MIXED_REPRESENTATION and INERTIAL_FIXED_REPRESENTATION are implemented"
@@ -969,7 +907,7 @@ class RBDAlgorithms:
         B_star_BI = math.swapaxes(I_X_B, -2, -1)
         base_ext_body = math.mxv(B_star_BI, base_ext)
 
-        a0_input = math.mxv(math.adjoint_mixed_inverse(base_transform), g)
+        a0_input = SE3(math, base_transform).inverse().adjoint(mixed=True).act(g)
 
         def zeros6():
             return math.factory.zeros(batch_shape + (6,))
@@ -1123,19 +1061,14 @@ class RBDAlgorithms:
         else:
             joint_qdd = math.factory.zeros(batch_shape + (0,))
 
-        if self.frame_velocity_representation == Representations.MIXED_REPRESENTATION:
-            Xm = math.adjoint_mixed(base_transform)
-            base_vel_mixed = math.mxv(Xm, base_velocity_body)
-            Xm_dot = math.adjoint_mixed_derivative(base_transform, base_vel_mixed)
-            base_acc = math.mxv(Xm, a_base) + math.mxv(Xm_dot, base_velocity_body)
-        elif (
-            self.frame_velocity_representation
-            == Representations.INERTIAL_FIXED_REPRESENTATION
+        if self.frame_velocity_representation in (
+            Representations.MIXED_REPRESENTATION,
+            Representations.INERTIAL_FIXED_REPRESENTATION,
         ):
-            X = math.adjoint(base_transform)
-            base_vel_inertial = math.mxv(X, base_velocity_body)
-            X_dot = math.adjoint_derivative(base_transform, base_vel_inertial)
-            base_acc = math.mxv(X, a_base) + math.mxv(X_dot, base_velocity_body)
+            X = SE3(math, base_transform).adjoint(self._as_mixed)
+            base_vel = X.act(base_velocity_body)
+            X_dot = X.derivative(base_vel)
+            base_acc = X.act(a_base) + math.mxv(X_dot, base_velocity_body)
         else:
             base_acc = a_base
 
@@ -1237,14 +1170,13 @@ class RBDAlgorithms:
         if self.NDoF == 0:
             return self.math.factory.zeros(batch_size + (6, 0))
 
-        L_H_B = self.math.homogeneous_inverse(traversal.root_to_target)
+        L_H_B = SE3(self.math, traversal.root_to_target).inverse()
         cols: list = [None] * self.NDoF
         for joint, B_H_j in zip(traversal.joints, traversal.root_to_joint):
             if joint.idx is None:
                 continue
-            L_H_j = L_H_B @ B_H_j
             S = joint.motion_subspace()
-            cols[joint.idx] = self.math.adjoint(L_H_j) @ S
+            cols[joint.idx] = (L_H_B @ B_H_j).adjoint().as_matrix() @ S
 
         zero_col = self.math.factory.zeros(batch_size + (6, 1))
         cols = [zero_col if col is None else col for col in cols]

@@ -3,6 +3,7 @@ from typing import Union
 import numpy.typing as npt
 import urdf_parser_py.urdf
 
+from adam.core.lie import SE3
 from adam.core.spatial_math import SpatialMath
 from adam.model import Joint, Limits, Pose
 import math
@@ -101,19 +102,7 @@ class StdJoint(Joint):
         Returns:
             npt.ArrayLike: spatial transform of the joint given q
         """
-        if self.type == "fixed":
-            return self.math.X_fixed_joint(self.origin.xyz, self.origin.rpy)
-        elif self.type in ["revolute", "continuous"]:
-            return self.math.X_revolute_joint(
-                self.origin.xyz, self.origin.rpy, self.axis, q
-            )
-        elif self.type in ["prismatic"]:
-            return self.math.X_prismatic_joint(
-                self.origin.xyz,
-                self.origin.rpy,
-                self.axis,
-                q,
-            )
+        return SE3(self.math, self.homogeneous(q)).inverse().adjoint().as_matrix()
 
     def motion_subspace(self) -> npt.ArrayLike:
         """
