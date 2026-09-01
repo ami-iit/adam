@@ -1,13 +1,9 @@
 # Copyright (C) Istituto Italiano di Tecnologia (IIT). All rights reserved.
 
 from dataclasses import dataclass
-from typing import Union
 
-import numpy as np
-import numpy.typing as ntp
 import torch
 
-from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
 from adam.core.array_api_math import (
     ArrayAPISpatialMath,
     ArrayAPIFactory,

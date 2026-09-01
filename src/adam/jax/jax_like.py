@@ -2,12 +2,9 @@
 
 
 from dataclasses import dataclass
-from typing import Union
 
 import jax.numpy as jnp
-import numpy.typing as npt
 
-from adam.core.spatial_math import ArrayLike, ArrayLikeFactory, SpatialMath
 from adam.core.array_api_math import (
     ArrayAPISpatialMath,
     ArrayAPIFactory,
