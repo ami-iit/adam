@@ -161,6 +161,7 @@ class Inertial:
         """Set the origin of the inertial object"""
         self.origin = origin
 
+
 @dataclasses.dataclass
 class Link(abc.ABC):
     """Base Link class. You need to fill at least these fields"""
