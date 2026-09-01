@@ -149,6 +149,17 @@ class Inertial:
             origin=Pose(xyz=xyz, rpy=rpy),
         )
 
+    def set_mass(self, mass: npt.ArrayLike) -> "Inertial":
+        """Set the mass of the inertial object"""
+        self.mass = mass
+
+    def set_inertia(self, inertia: Inertia) -> "Inertial":
+        """Set the inertia of the inertial object"""
+        self.inertia = inertia
+
+    def set_origin(self, origin: Pose) -> "Inertial":
+        """Set the origin of the inertial object"""
+        self.origin = origin
 
 @dataclasses.dataclass
 class Link(abc.ABC):
