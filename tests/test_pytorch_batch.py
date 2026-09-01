@@ -4,15 +4,15 @@ import torch
 from scipy.spatial.transform import Rotation as R
 from conftest import RobotCfg, State, compute_idyntree_values, to_numpy
 
-from adam.pytorch import KinDynComputationsBatch
+from adam.pytorch import KinDynComputations
 
 
 @pytest.fixture(scope="module")
-def setup_test(tests_setup, device) -> KinDynComputationsBatch | RobotCfg | State:
+def setup_test(tests_setup, device) -> KinDynComputations | RobotCfg | State:
     robot_cfg, state = tests_setup
     if robot_cfg.root_link is not None:
         pytest.skip("root link parametrization tested in numpy and casadi only")
-    adam_kin_dyn = KinDynComputationsBatch(
+    adam_kin_dyn = KinDynComputations(
         robot_cfg.model_path,
         robot_cfg.joints_name_list,
         device=device,
@@ -45,7 +45,7 @@ def setup_test(tests_setup, device) -> KinDynComputationsBatch | RobotCfg | Stat
         .to(device)
         .requires_grad_()
     )
-    state.base_vel = (
+    state.base_vel = ( 
         torch.as_tensor(base_vel, dtype=torch.float64).to(device).requires_grad_()
     )
     state.joints_vel = (
@@ -603,3 +603,23 @@ def test_aba(setup_test):
 
     # Verify batch variation (random inputs should produce different outputs)
     assert not torch.allclose(adam_qdd[0], adam_qdd[1], atol=1e-6)
+
+
+def test_func_vmap(setup_test):
+    """torch.func.vmap over the batch axis must match natively-batched output."""
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+    H = state.H.detach()
+    q = state.joints_pos.detach()
+    batched = adam_kin_dyn.mass_matrix(H, q)
+    vmapped = torch.func.vmap(adam_kin_dyn.mass_matrix)(H, q)
+    assert torch.allclose(batched, vmapped, atol=1e-6)
+
+
+def test_compile(setup_test):
+    """torch.compile must trace the Lie/CRBA path and match eager output."""
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+    H = state.H.detach()
+    q = state.joints_pos.detach()
+    eager = adam_kin_dyn.mass_matrix(H, q)
+    compiled = torch.compile(adam_kin_dyn.mass_matrix)(H, q)
+    assert torch.allclose(eager, compiled, atol=1e-6)

@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import jax
 import jax.numpy as jnp
 from jax import grad, jacfwd, config
 from scipy.spatial.transform import Rotation as R
@@ -700,3 +701,19 @@ def test_aba(setup_test):
 
     # Verify batch variation
     assert not jnp.allclose(adam_qdd[0], adam_qdd[1], atol=1e-6)
+
+
+def test_jit(setup_test):
+    """jax.jit must trace the Lie/CRBA path and match eager output."""
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+    eager = adam_kin_dyn.mass_matrix(state.H, state.joints_pos)
+    jitted = jax.jit(adam_kin_dyn.mass_matrix)(state.H, state.joints_pos)
+    assert jnp.allclose(eager, jitted, atol=1e-6)
+
+
+def test_vmap(setup_test):
+    """jax.vmap over the batch axis must match the natively-batched output."""
+    adam_kin_dyn, robot_cfg, state, batch_size = setup_test
+    batched = adam_kin_dyn.mass_matrix(state.H, state.joints_pos)
+    vmapped = jax.vmap(adam_kin_dyn.mass_matrix)(state.H, state.joints_pos)
+    assert jnp.allclose(batched, vmapped, atol=1e-6)
