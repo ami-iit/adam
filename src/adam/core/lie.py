@@ -182,5 +182,4 @@ class Adjoint:
         return self.math.mxv(self._matrix, v)
 
     def __matmul__(self, other: "Adjoint") -> Any:
-        # ponytail: returns a raw matrix, no source SE3 to track for a composed adjoint.
         return self._matrix @ other._matrix
