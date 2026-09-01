@@ -4,3 +4,4 @@ from .constants import Representations
 from .rbd_algorithms import RBDAlgorithms
 from .spatial_math import SpatialMath
 from .array_api_math import ArrayAPISpatialMath, ArrayAPIFactory, ArrayAPILike
+from .lie import SO3, SE3, Adjoint
