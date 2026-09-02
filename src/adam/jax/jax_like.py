@@ -3,6 +3,7 @@
 
 from dataclasses import dataclass
 
+import jax
 import jax.numpy as jnp
 
 from adam.core.array_api_math import (
@@ -27,6 +28,14 @@ class JaxLikeFactory(ArrayAPIFactory):
             super().__init__(JaxLike, jnp, dtype=jnp.float64, device=None)
         else:
             super().__init__(JaxLike, spec.xp, dtype=spec.dtype, device=spec.device)
+
+    def asarray(self, x) -> ArrayAPILike:
+        # jnp.asarray(tracer, device=...) errors under jax.vmap/jax.jit in recent
+        # JAX: committing a device inside a trace is unsupported. Let JAX place
+        # tracers itself; concrete arrays still honor the spec device.
+        if isinstance(x, jax.core.Tracer):
+            return self._like(jnp.asarray(x, dtype=self._dtype))
+        return super().asarray(x)
 
 
 class SpatialMath(ArrayAPISpatialMath):
